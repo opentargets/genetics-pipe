@@ -15,8 +15,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
 import scopt.OptionParser
 
-case class CommandLineArgs(in: String = "", out: String = "",
-                           uri: String = "local[*]", kwargs: Map[String,String] = Map())
+case class CommandLineArgs(gtex: String = "", out: String = "",
+                           uri: String = "local[*]",
+                           sample: Double = 0,
+                           kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
   val progVersion = "0.1"
@@ -29,7 +31,7 @@ object Main extends LazyLogging {
       .setAppName(progName)
       .setMaster(s"${config.uri}")
 
-    val ss: SparkSession = SparkSession.builder
+    implicit val ss: SparkSession = SparkSession.builder
       .config(conf)
       .getOrCreate
 
@@ -38,9 +40,12 @@ object Main extends LazyLogging {
 
     logger.info("setting sparkcontext logging level to WARN or log-level from cli args")
     // set log level to WARN
-    ss.sparkContext
-      .setLogLevel(logLevel)
+    ss.sparkContext.setLogLevel(logLevel)
 
+    val gtexDF = GTEx.load(config.gtex, config.sample)
+
+    val numLines = gtexDF.count()
+    logger.info(s"number of lines in GTEx dataset $numLines using sample fraction ${config.sample}")
     ss
   }
 
@@ -61,15 +66,20 @@ object Main extends LazyLogging {
       .action( (x, c) => c.copy(uri = x) )
       .text("spark session uri and by default 'local[*]'")
 
-    opt[String]('i', "in").required()
+    opt[String]('g', "gtex").required()
       .valueName("<file>")
-      .action( (x, c) => c.copy(in = x) )
-      .text("in filename")
+      .action( (x, c) => c.copy(gtex = x) )
+      .text("gtex filename path")
 
     opt[String]('o', "out").required()
       .valueName("<folder>")
       .action( (x, c) => c.copy(out = x) )
       .text("out folder to save computed rdd partitions")
+
+    opt[Double]('a', "sample").required()
+      .valueName("fraction")
+      .action( (x, c) => c.copy(sample = x) )
+      .text("sample number to get from the data: .0 by default")
 
     opt[Map[String,String]]("kwargs")
       .valueName("k1=v1,k2=v2...")
