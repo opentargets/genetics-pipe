@@ -2,6 +2,7 @@ package ot.geckopipe
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
 
 object GTEx {
   // build the right data schema
@@ -16,6 +17,8 @@ object GTEx {
   )
 
   def loadEGenes(from: String, withSample: Double = .0)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
     val loaded = ss.read
       .format("csv")
       .option("header", "true")
@@ -24,6 +27,7 @@ object GTEx {
       .option("mode", "DROPMALFORMED")
       //.schema(schema)
       .load(from)
+      .withColumn("filename", input_file_name)
 
     if (withSample > .0)
       loaded.sample(withReplacement=false, withSample).toDF

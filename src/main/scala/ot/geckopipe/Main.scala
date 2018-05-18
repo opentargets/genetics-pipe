@@ -56,6 +56,8 @@ object Main extends LazyLogging {
 
     val gtexDF = GTEx.loadEGenes(config.gtex, config.sample)
 
+    gtexDF.show(10)
+
     gtexDF.createOrReplaceTempView("gtex")
 
     // persist the created table
