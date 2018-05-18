@@ -23,6 +23,18 @@ case class CommandLineArgs(gtex: String = "", out: String = "",
 object Main extends LazyLogging {
   val progVersion = "0.1"
   val progName = "gecko-pipe"
+  val entryText =
+    """
+      |
+      |NOTE:
+      |copy logback.xml locally, modify it with desired logger levels and specify
+      |-Dlogback.configurationFile=/path/to/customised/logback.xml. Keep in mind
+      |that "Logback-classic can scan for changes in its configuration file and
+      |automatically reconfigure itself when the configuration file changes".
+      |So, you even don't need to relaunch your process to change logging levels
+      | -- https://goo.gl/HMXCqY
+      |
+    """.stripMargin
 
   def run(config: CommandLineArgs): SparkSession = {
     val logLevel = config.kwargs.getOrElse("log-level", "WARN")
@@ -42,10 +54,21 @@ object Main extends LazyLogging {
     // set log level to WARN
     ss.sparkContext.setLogLevel(logLevel)
 
-    val gtexDF = GTEx.load(config.gtex, config.sample)
+    val gtexDF = GTEx.loadEGenes(config.gtex, config.sample)
 
-    val numLines = gtexDF.count()
-    logger.info(s"number of lines in GTEx dataset $numLines using sample fraction ${config.sample}")
+    gtexDF.createOrReplaceTempView("gtex")
+
+    // persist the created table
+    // ss.table("gtex").persist(StorageLevel.MEMORY_AND_DISK)
+
+    val qvalCount = ss.sql(s"""
+      SELECT count(*)
+      FROM gtex
+      WHERE (pval_nominal <= 0.05)
+      """).show()
+
+    // val numLines = gtexDF.count()
+    // logger.info(s"number of lines in GTEx dataset $numLines using sample fraction ${config.sample}")
     ss
   }
 
@@ -76,7 +99,7 @@ object Main extends LazyLogging {
       .action( (x, c) => c.copy(out = x) )
       .text("out folder to save computed rdd partitions")
 
-    opt[Double]('a', "sample").required()
+    opt[Double]('a', "sample")
       .valueName("fraction")
       .action( (x, c) => c.copy(sample = x) )
       .text("sample number to get from the data: .0 by default")
@@ -86,6 +109,6 @@ object Main extends LazyLogging {
       .action( (x, c) => c.copy(kwargs = x) )
       .text("other arguments")
 
-    note("You must to specify in and out parameters\n")
+    note(entryText)
   }
 }

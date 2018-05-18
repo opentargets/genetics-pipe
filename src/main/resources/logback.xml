@@ -8,7 +8,7 @@
         </encoder>
     </appender>
 
-    <root level="${ot.geckopipe.logging.level:-DEBUG}">
+    <root level="${ot.geckopipe.logging.level:-INFO}">
         <appender-ref ref="STDOUT" />
     </root>
 </configuration>
