@@ -1,5 +1,7 @@
 package ot.geckopipe
 
+import java.nio.file.{Path, Paths}
+
 import ch.qos.logback.classic.Logger
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark
@@ -13,14 +15,15 @@ import org.apache.spark.sql.Row
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
+import ot.geckopipe.GTEx.Tissue
 import scopt.OptionParser
 
-case class CommandLineArgs(gtex: String = "", out: String = "",
-                           uri: String = "local[*]",
-                           sample: Double = 0,
-                           kwargs: Map[String,String] = Map())
+import scala.util.{Failure, Success}
+
+case class CommandLineArgs(file: Path, kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
+  val defaultConfigFileName = Paths.get("application.conf")
   val progVersion = "0.1"
   val progName = "gecko-pipe"
   val entryText =
@@ -36,49 +39,67 @@ object Main extends LazyLogging {
       |
     """.stripMargin
 
-  def run(config: CommandLineArgs): SparkSession = {
-    val logLevel = config.kwargs.getOrElse("log-level", "WARN")
-    logger.info(s"runnning with cli args $config")
-    val conf: SparkConf = new SparkConf()
-      .setAppName(progName)
-      .setMaster(s"${config.uri}")
+  def run(config: CommandLineArgs): Unit = {
+    logger.debug(s"running ${progName} version ${progVersion}")
+    val conf = pureconfig.loadConfig[Configuration](config.file)
 
-    implicit val ss: SparkSession = SparkSession.builder
-      .config(conf)
-      .getOrCreate
+    conf match {
+      case Right(c) =>
+        logger.debug(s"running with cli args $config and with default configuracion ${c}")
+        val logLevel = c.logLevel
 
-    // needed to use the $notation
-    import ss.implicits._
+        val conf: SparkConf = new SparkConf()
+          .setAppName(progName)
+          .setMaster(s"${c.sparkUri}")
 
-    logger.info("setting sparkcontext logging level to WARN or log-level from cli args")
-    // set log level to WARN
-    ss.sparkContext.setLogLevel(logLevel)
+        implicit val ss: SparkSession = SparkSession.builder
+          .config(conf)
+          .getOrCreate
 
-    val gtexDF = GTEx.loadEGenes(config.gtex, config.sample)
+        // needed to use the $notation
+        import ss.implicits._
 
-    gtexDF.show(10)
+        logger.info("setting sparkcontext logging level to WARN or log-level from configuration.conf ")
+        // set log level to WARN
+        ss.sparkContext.setLogLevel(logLevel)
 
-    gtexDF.createOrReplaceTempView("gtex")
+        val tLUT = GTEx.buildTissueLUT(c.gtex.tissueMap)
 
-    // persist the created table
-    // ss.table("gtex").persist(StorageLevel.MEMORY_AND_DISK)
+        logger.whenInfoEnabled {
+          logger.info(s"check for a tissue brain cortex if loaded should be " +
+            s"${tLUT.getOrElse("Brain_Cortex.v7.egenes.txt.gz",Tissue("empty","")).code}")
+        }
 
-    val qvalCount = ss.sql(s"""
-      SELECT count(*)
-      FROM gtex
-      WHERE (pval_nominal <= 0.05)
-      """).show()
+        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, c.gtex.sampleFactor)
+        gtexEGenesDF.show(10)
+        gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
 
-    // val numLines = gtexDF.count()
-    // logger.info(s"number of lines in GTEx dataset $numLines using sample fraction ${config.sample}")
-    ss
+        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, c.gtex.sampleFactor)
+        gtexVGPairsDF.show(10)
+        gtexVGPairsDF.createOrReplaceTempView("gtex_vgpairs")
+
+        // persist the created table
+        // ss.table("gtex").persist(StorageLevel.MEMORY_AND_DISK)
+
+//        val qvalCount = ss.sql(s"""
+//          SELECT count(*)
+//          FROM gtex
+//          WHERE (pval_nominal <= 0.05)
+//          """).show()
+
+        // val numLines = gtexDF.count()
+        // logger.info(s"number of lines in GTEx dataset $numLines using sample fraction ${config.sample}")
+        ss.stop
+
+      case Left(failures) => logger.error(s"${failures.toString}")
+    }
   }
 
   def main(args: Array[String]) {
     // parser.parse returns Option[C]
-    parser.parse(args, CommandLineArgs()) match {
+    parser.parse(args, CommandLineArgs(file = defaultConfigFileName)) match {
       case Some(config) =>
-        run(config).stop
+        run(config)
       case None =>
     }
   }
@@ -86,25 +107,10 @@ object Main extends LazyLogging {
   val parser:OptionParser[CommandLineArgs] = new OptionParser[CommandLineArgs](progName) {
     head(progName, progVersion)
 
-    opt[String]('s', "spark-uri")
-      .valueName("<spark-session|local[*]>")
-      .action( (x, c) => c.copy(uri = x) )
-      .text("spark session uri and by default 'local[*]'")
-
-    opt[String]('g', "gtex").required()
-      .valueName("<file>")
-      .action( (x, c) => c.copy(gtex = x) )
-      .text("gtex filename path")
-
-    opt[String]('o', "out").required()
-      .valueName("<folder>")
-      .action( (x, c) => c.copy(out = x) )
-      .text("out folder to save computed rdd partitions")
-
-    opt[Double]('a', "sample")
-      .valueName("fraction")
-      .action( (x, c) => c.copy(sample = x) )
-      .text("sample number to get from the data: .0 by default")
+    opt[String]('f', "file")
+      .valueName("<config-file>")
+      .action( (x, c) => c.copy(file = Paths.get(x)) )
+      .text("file contains the configuration needed to run the pipeline")
 
     opt[Map[String,String]]("kwargs")
       .valueName("k1=v1,k2=v2...")
