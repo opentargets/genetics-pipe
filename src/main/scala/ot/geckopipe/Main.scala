@@ -40,7 +40,7 @@ object Main extends LazyLogging {
     """.stripMargin
 
   def run(config: CommandLineArgs): Unit = {
-    logger.debug(s"running ${progName} version ${progVersion}")
+    logger.info(s"running ${progName} version ${progVersion}")
     val conf = pureconfig.loadConfig[Configuration](config.file)
 
     conf match {
@@ -56,17 +56,14 @@ object Main extends LazyLogging {
           .config(conf)
           .getOrCreate
 
-        // needed to use the $notation
-        import ss.implicits._
-
-        logger.info("setting sparkcontext logging level to WARN or log-level from configuration.conf ")
+        logger.debug("setting sparkcontext logging level to log-level")
         // set log level to WARN
         ss.sparkContext.setLogLevel(logLevel)
 
         val tLUT = GTEx.buildTissueLUT(c.gtex.tissueMap)
 
-        logger.whenInfoEnabled {
-          logger.info(s"check for a tissue brain cortex if loaded should be " +
+        logger.whenDebugEnabled {
+          logger.debug(s"check for a tissue brain cortex if loaded should be " +
             s"${tLUT.getOrElse("Brain_Cortex.v7.egenes.txt.gz",Tissue("empty","")).code}")
         }
 
@@ -93,6 +90,7 @@ object Main extends LazyLogging {
 
       case Left(failures) => logger.error(s"${failures.toString}")
     }
+    logger.info("closing app... done.")
   }
 
   def main(args: Array[String]) {
