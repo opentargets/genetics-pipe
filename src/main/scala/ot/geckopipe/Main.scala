@@ -39,11 +39,14 @@ object Main extends LazyLogging {
     """.stripMargin
 
   def run(config: CommandLineArgs): Unit = {
-    logger.info(s"running ${progName} version ${progVersion}")
-    val conf = if (config.file.nonEmpty)
-        pureconfig.loadConfig[Configuration](config.file)
-      else
+    println(s"running ${progName} version ${progVersion}")
+    val conf = if (config.file.nonEmpty) {
+        logger.info(s"loading configuration from commandline as ${config.file}")
+        pureconfig.loadConfig[Configuration](Paths.get(config.file))
+      } else {
+        logger.info("load configuration from package resource")
         pureconfig.loadConfig[Configuration]
+      }
 
     conf match {
       case Right(c) =>
@@ -65,24 +68,20 @@ object Main extends LazyLogging {
           .getOrCreate
 
         logger.debug("setting sparkcontext logging level to log-level")
-        // set log level to WARN
         ss.sparkContext.setLogLevel(logLevel)
 
         val tLUT = GTEx.buildTissueLUT(c.gtex.tissueMap)
 
-        logger.whenDebugEnabled {
-          logger.debug(s"check for a tissue brain cortex if loaded should be " +
-            s"${tLUT.getOrElse("Brain_Cortex.v7.egenes.txt.gz",Tissue("empty","")).code}")
-        }
+//        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, tLUT, c.sampleFactor)
+//        gtexEGenesDF.show(10)
+//        gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
 
-        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, tLUT, c.gtex.sampleFactor)
-        gtexEGenesDF.show(10)
-        gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
-
-        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, tLUT, c.gtex.sampleFactor)
+        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, tLUT, c.sampleFactor)
         gtexVGPairsDF.show(10)
         gtexVGPairsDF.createOrReplaceTempView("gtex_vgpairs")
 
+        val transLUT = VEP.buildGeneTransLUT(c.vep.geneTranscriptPairs)
+        println(s"size of the transLUT ${transLUT.keySet.size}")
         // persist the created table
         // ss.table("gtex").persist(StorageLevel.MEMORY_AND_DISK)
 
@@ -92,13 +91,11 @@ object Main extends LazyLogging {
 //          WHERE (pval_nominal <= 0.05)
 //          """).show()
 
-        // val numLines = gtexDF.count()
-        // logger.info(s"number of lines in GTEx dataset $numLines using sample fraction ${config.sample}")
         ss.stop
 
-      case Left(failures) => logger.error(s"${failures.toString}")
+      case Left(failures) => println(s"configuration contains errors like ${failures.toString}")
     }
-    logger.info("closing app... done.")
+    println("closing app... done.")
   }
 
   def main(args: Array[String]) {
@@ -106,7 +103,7 @@ object Main extends LazyLogging {
     parser.parse(args, CommandLineArgs()) match {
       case Some(config) =>
         run(config)
-      case None =>
+      case None => println("problem parsing commandline args")
     }
   }
 

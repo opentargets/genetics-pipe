@@ -8,6 +8,9 @@ import org.apache.spark.sql.functions._
 import scala.util.Try
 
 object GTEx {
+  type TissueLUT = Map[String, Tissue]
+  case class Tissue(code: String = "", name: String = "")
+
   // build the right data schema
   val schema: StructType = StructType(
     StructField("ld_snp_rsID", StringType) ::
@@ -69,9 +72,6 @@ object GTEx {
     else
       loaded
   }
-
-  case class Tissue(code: String = "", name: String = "")
-  type TissueLUT = Map[String, Tissue]
 
   // build a map: TissueLUT from a filename with default ("","")
   def buildTissueLUT(from: String)(implicit ss: SparkSession): TissueLUT = {
