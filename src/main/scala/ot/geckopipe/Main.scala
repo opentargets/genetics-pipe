@@ -20,11 +20,10 @@ import scopt.OptionParser
 
 import scala.util.{Failure, Success}
 
-case class CommandLineArgs(file: Path, kwargs: Map[String,String] = Map())
+case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val defaultConfigFileName = Paths.get("application.conf")
-  val progVersion = "0.1"
+  val progVersion = "0.2"
   val progName = "gecko-pipe"
   val entryText =
     """
@@ -41,16 +40,25 @@ object Main extends LazyLogging {
 
   def run(config: CommandLineArgs): Unit = {
     logger.info(s"running ${progName} version ${progVersion}")
-    val conf = pureconfig.loadConfig[Configuration](config.file)
+    val conf = if (config.file.nonEmpty)
+        pureconfig.loadConfig[Configuration](config.file)
+      else
+        pureconfig.loadConfig[Configuration]
 
     conf match {
       case Right(c) =>
         logger.debug(s"running with cli args $config and with default configuracion ${c}")
         val logLevel = c.logLevel
 
-        val conf: SparkConf = new SparkConf()
-          .setAppName(progName)
-          .setMaster(s"${c.sparkUri}")
+        val conf: SparkConf =
+          if (c.sparkUri.nonEmpty)
+            new SparkConf()
+              .setAppName(progName)
+              .setMaster(s"${c.sparkUri}")
+          else
+            new SparkConf()
+              .setAppName(progName)
+
 
         implicit val ss: SparkSession = SparkSession.builder
           .config(conf)
@@ -67,11 +75,11 @@ object Main extends LazyLogging {
             s"${tLUT.getOrElse("Brain_Cortex.v7.egenes.txt.gz",Tissue("empty","")).code}")
         }
 
-        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, c.gtex.sampleFactor)
+        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, tLUT, c.gtex.sampleFactor)
         gtexEGenesDF.show(10)
         gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
 
-        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, c.gtex.sampleFactor)
+        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, tLUT, c.gtex.sampleFactor)
         gtexVGPairsDF.show(10)
         gtexVGPairsDF.createOrReplaceTempView("gtex_vgpairs")
 
@@ -95,7 +103,7 @@ object Main extends LazyLogging {
 
   def main(args: Array[String]) {
     // parser.parse returns Option[C]
-    parser.parse(args, CommandLineArgs(file = defaultConfigFileName)) match {
+    parser.parse(args, CommandLineArgs()) match {
       case Some(config) =>
         run(config)
       case None =>
@@ -107,7 +115,7 @@ object Main extends LazyLogging {
 
     opt[String]('f', "file")
       .valueName("<config-file>")
-      .action( (x, c) => c.copy(file = Paths.get(x)) )
+      .action( (x, c) => c.copy(file = x) )
       .text("file contains the configuration needed to run the pipeline")
 
     opt[Map[String,String]]("kwargs")
