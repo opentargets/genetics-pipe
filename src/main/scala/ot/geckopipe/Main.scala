@@ -12,6 +12,7 @@ import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
 import org.apache.spark.sql.Row
+import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
@@ -80,8 +81,10 @@ object Main extends LazyLogging {
         gtexVGPairsDF.show(10)
         gtexVGPairsDF.createOrReplaceTempView("gtex_vgpairs")
 
-        val transLUT = VEP.buildGeneTransLUT(c.vep.geneTranscriptPairs)
-        println(s"size of the transLUT ${transLUT.keySet.size}")
+        val geneTransDF = VEP.loadGeneTrans(c.vep.geneTranscriptPairs)
+        geneTransDF.show(10)
+
+        // gtexVGPairsDF.join(geneTransDF, "gene1", "left_outer").show(10)
         // persist the created table
         // ss.table("gtex").persist(StorageLevel.MEMORY_AND_DISK)
 
