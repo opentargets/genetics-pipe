@@ -71,27 +71,18 @@ object Main extends LazyLogging {
         logger.debug("setting sparkcontext logging level to log-level")
         ss.sparkContext.setLogLevel(logLevel)
 
-//        val tLUT = GTEx.buildTissueLUT(c.gtex.tissueMap)
+        val tLUT = GTEx.buildTissueLUT(c.gtex.tissueMap)
 
-//        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, tLUT, c.sampleFactor)
-//        gtexEGenesDF.show(10)
-//        gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
+        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, tLUT)
+        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, tLUT)
 
-//        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, tLUT, c.sampleFactor)
-//        gtexVGPairsDF.show(10)
-//        gtexVGPairsDF.createOrReplaceTempView("gtex_vgpairs")
-//
-//        val geneTransDF = VEP.loadGeneTrans(c.vep.geneTranscriptPairs)
-//        geneTransDF.show(10)
+        val geneTrans = VEP.loadGeneTrans(c.vep.geneTranscriptPairs)
+        val veps = VEP.loadHumanVEP(c.vep.homoSapiensCons)
+        val vepsGenes= veps.join(geneTrans,Seq("transID"), "left_outer")
+        vepsGenes.show(10)
 
-        val hvepDF = VEP.loadHumanVEP(c.vep.homoSapiensCons)
-        hvepDF.show(10)
-
-//        val hvepCount = hvepDF.count
-//        println(s"number of lines for vep dataframe $hvepCount")
-
-        // gtexVGPairsDF.join(geneTransDF, "gene1", "left_outer").show(10)
         // persist the created table
+        // gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
         // ss.table("gtex").persist(StorageLevel.MEMORY_AND_DISK)
 
 //        val qvalCount = ss.sql(s"""

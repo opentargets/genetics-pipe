@@ -2,6 +2,7 @@ package ot.geckopipe
 
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Encoders, Row, SparkSession}
 
 object VEP {
@@ -20,12 +21,11 @@ object VEP {
       .option("inferSchema", "true")
       .option("delimiter","\t")
       .option("mode", "DROPMALFORMED")
-      .load(from).toDF("gene_id", "trans_id")
+      .load(from).toDF("geneID", "transID")
 
     transcripts
   }
 
-  // TODO FIX here!
   def loadHumanVEP(from: String)(implicit ss: SparkSession): DataFrame = {
     def extractCons(from: String): Array[Array[String]] = {
       val csql = from.split(";")
@@ -49,15 +49,17 @@ object VEP {
         for {
           vep <- veps
         } yield VEPRecord(row(0), row(1).toLong,
-            row(2), row(3),
-            row(4), row(5),
-            row(6), vep.toList)
+          row(2), row(3),
+          row(4), row(5),
+          row(6), vep.toList)
+
       })
 
     val vepsDF = vepsRDD.toDF
-    vepsDF.show(10)
-
-
     vepsDF.select("chr", "pos", "rsid", "refAllele", "altAllele", "csq")
+      .withColumn("csq", explode($"csq"))
+      .withColumn("csq", split($"csq", "\\|"))
+      .withColumn("consequence", $"csq".getItem(1))
+      .withColumn("transID", $"csq".getItem(3))
   }
 }

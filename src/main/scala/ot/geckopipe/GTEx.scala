@@ -11,7 +11,7 @@ object GTEx {
   type TissueLUT = Map[String, Tissue]
   case class Tissue(code: String = "", name: String = "")
 
-  def loadEGenes(from: String, withLUT: TissueLUT, withSample: Double = .0)(implicit ss: SparkSession): DataFrame = {
+  def loadEGenes(from: String, withLUT: TissueLUT)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
     val t2c = udf((filename: String) =>
@@ -30,14 +30,10 @@ object GTEx {
         when($"filename".isNotNull, t2c($"filename"))
           .otherwise(""))
 
-
-    if (withSample > .0)
-      loaded.sample(withReplacement=false, withSample).toDF
-    else
-      loaded
+    loaded
   }
 
-  def loadVGPairs(from: String, withLUT: TissueLUT, withSample: Double = .0)(implicit ss: SparkSession): DataFrame = {
+  def loadVGPairs(from: String, withLUT: TissueLUT)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
     val t2c = udf((filename: String) =>
@@ -56,10 +52,7 @@ object GTEx {
         when($"filename".isNotNull, t2c($"filename"))
           .otherwise(""))
 
-    if (withSample > .0)
-      loaded.sample(withReplacement=false, withSample).toDF
-    else
-      loaded
+    loaded
   }
 
   // build a map: TissueLUT from a filename with default ("","")
