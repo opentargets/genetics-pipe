@@ -11,17 +11,6 @@ object GTEx {
   type TissueLUT = Map[String, Tissue]
   case class Tissue(code: String = "", name: String = "")
 
-  // build the right data schema
-  val schema: StructType = StructType(
-    StructField("ld_snp_rsID", StringType) ::
-      StructField("chrom", StringType) ::
-      StructField("pos", IntegerType) ::
-      StructField("GRCh38_chrom", StringType) ::
-      StructField("Nearest", DoubleType) ::
-      StructField("Regulome", DoubleType) ::
-      StructField("VEP_reg", DoubleType) :: Nil
-  )
-
   def loadEGenes(from: String, withLUT: TissueLUT, withSample: Double = .0)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 

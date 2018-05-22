@@ -71,18 +71,24 @@ object Main extends LazyLogging {
         logger.debug("setting sparkcontext logging level to log-level")
         ss.sparkContext.setLogLevel(logLevel)
 
-        val tLUT = GTEx.buildTissueLUT(c.gtex.tissueMap)
+//        val tLUT = GTEx.buildTissueLUT(c.gtex.tissueMap)
 
 //        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, tLUT, c.sampleFactor)
 //        gtexEGenesDF.show(10)
 //        gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
 
-        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, tLUT, c.sampleFactor)
-        gtexVGPairsDF.show(10)
-        gtexVGPairsDF.createOrReplaceTempView("gtex_vgpairs")
+//        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, tLUT, c.sampleFactor)
+//        gtexVGPairsDF.show(10)
+//        gtexVGPairsDF.createOrReplaceTempView("gtex_vgpairs")
+//
+//        val geneTransDF = VEP.loadGeneTrans(c.vep.geneTranscriptPairs)
+//        geneTransDF.show(10)
 
-        val geneTransDF = VEP.loadGeneTrans(c.vep.geneTranscriptPairs)
-        geneTransDF.show(10)
+        val hvepDF = VEP.loadHumanVEP(c.vep.homoSapiensCons)
+        hvepDF.show(10)
+
+//        val hvepCount = hvepDF.count
+//        println(s"number of lines for vep dataframe $hvepCount")
 
         // gtexVGPairsDF.join(geneTransDF, "gene1", "left_outer").show(10)
         // persist the created table
