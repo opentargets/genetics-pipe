@@ -4,10 +4,9 @@ package ot.geckopipe
   * Case class to map to a gtex section in the configuration file.
   *
   * @param tissueMap a file to the tsv file containing "tissuename\tcode"
-  * @param egenes a file pattern to the tsv file containing eGenes wildcarding all tissues
   * @param variantGenePairs a file pattern to the tsv file containing significative variant gene pairs
   */
-case class GTExSection(tissueMap: String, egenes: String, variantGenePairs: String)
+case class GTExSection(tissueMap: String, variantGenePairs: String)
 
 case class VEPSection(geneTranscriptPairs: String, homoSapiensCons: String)
 /**

@@ -16,7 +16,6 @@ import org.apache.spark.sql.catalyst.plans.JoinType
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
-import ot.geckopipe.GTEx.Tissue
 import scopt.OptionParser
 
 import scala.util.{Failure, Success}
@@ -71,15 +70,14 @@ object Main extends LazyLogging {
         logger.debug("setting sparkcontext logging level to log-level")
         ss.sparkContext.setLogLevel(logLevel)
 
-        val tLUT = GTEx.buildTissueLUT(c.gtex.tissueMap)
+        val gtex = Dataset.buildGTEx(c)
+        gtex.show
 
-        val gtexEGenesDF = GTEx.loadEGenes(c.gtex.egenes, tLUT)
-        val gtexVGPairsDF = GTEx.loadVGPairs(c.gtex.variantGenePairs, tLUT)
+        val vep = Dataset.buildVEP(c)
+        vep.show
 
-        val geneTrans = VEP.loadGeneTrans(c.vep.geneTranscriptPairs)
-        val veps = VEP.loadHumanVEP(c.vep.homoSapiensCons)
-        val vepsGenes= veps.join(geneTrans,Seq("transID"), "left_outer")
-        vepsGenes.show(10)
+        val gtexAndVep = gtex.join(vep, Seq("variant_id"), "inner")
+        gtexAndVep.show
 
         // persist the created table
         // gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
