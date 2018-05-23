@@ -16,7 +16,8 @@ case class VEPSection(geneTranscriptPairs: String, homoSapiensCons: String)
   * @param sparkUri the uri to connect to spark empty by default
   * @param gtex the GTExSection main section
   */
-case class Configuration(sampleFactor: Double,
+case class Configuration(output: String,
+                         sampleFactor: Double,
                          sparkUri: String,
                          logLevel: String,
                          gtex: GTExSection,

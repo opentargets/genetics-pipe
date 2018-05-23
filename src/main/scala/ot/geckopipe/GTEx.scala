@@ -15,6 +15,13 @@ object GTEx {
     val removeBuild = udf((variantID: String) =>
       variantID.stripSuffix("_b37"))
 
+    val cleanGeneID = udf((geneID: String) => {
+      if (geneID.nonEmpty && geneID.contains("."))
+        geneID.split("\\.")(0)
+      else
+        geneID
+    })
+
     val loaded = ss.read
       .format("csv")
       .option("header", "true")
@@ -27,6 +34,9 @@ object GTEx {
       .withColumn("filename",
         when($"filename".isNotNull, f2t($"filename"))
           .otherwise(""))
+      .withColumn("gene_id",
+        when($"gene_id".contains("."),cleanGeneID($"gene_id"))
+      )
       .withColumn("variant_id", removeBuild($"variant_id"))
 
     loaded

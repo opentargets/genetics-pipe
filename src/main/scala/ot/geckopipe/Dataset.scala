@@ -26,7 +26,16 @@ object Dataset extends LazyLogging  {
     val vepsGenes= veps.join(geneTrans,Seq("transID"), "left_outer")
         .withColumn("variant_id",
           concat_ws("_", $"chr", $"pos", $"refAllele", $"altAllele"))
+        .drop("transID")
+        .drop("csq")
+        .withColumnRenamed("geneID", "gene_id")
 
     vepsGenes
+  }
+
+  def joinGTExAndVEP(gtex: DataFrame, vep: DataFrame): DataFrame = {
+    // drop ma_samples, ma_count, maf, pval_nominal_threshold, min_pval_nominal
+    gtex.join(vep, Seq("variant_id", "gene_id"), "full_outer")
+      .drop("ma_samples", "ma_count", "maf", "pval_nominal_threshold", "min_pval_nominal")
   }
 }

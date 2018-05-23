@@ -71,13 +71,28 @@ object Main extends LazyLogging {
         ss.sparkContext.setLogLevel(logLevel)
 
         val gtex = Dataset.buildGTEx(c)
-        gtex.show
-
         val vep = Dataset.buildVEP(c)
-        vep.show
+        val gtexAndVep = Dataset.joinGTExAndVEP(gtex, vep)
 
-        val gtexAndVep = gtex.join(vep, Seq("variant_id"), "inner")
-        gtexAndVep.show
+//        if (c.sampleFactor > 0d)
+//          gtexAndVep
+//            .sample(withReplacement = false, c.sampleFactor)
+//            .show(10000, false)
+//        else
+//          gtexAndVep.show(10000, false)
+
+        if (c.sampleFactor > 0d)
+          gtexAndVep.sample(withReplacement = false, c.sampleFactor)
+            .write.format("csv")
+            .option("sep", "\t")
+            .option("header", "true")
+            .save(c.output)
+        else
+          gtexAndVep.write
+            .format("csv")
+            .option("sep", "\t")
+            .option("header", "true")
+            .save(c.output)
 
         // persist the created table
         // gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
