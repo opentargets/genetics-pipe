@@ -52,7 +52,6 @@ object Dataset extends LazyLogging  {
 
   def joinGTExAndVEP(gtex: DataFrame, vep: DataFrame): DataFrame = {
     vep.join(gtex, Seq("variant_id", "gene_id"), "full_outer")
-      .na.fill(0.0)
   }
 
   def saveToFile(dataset: DataFrame, filename: String)(implicit sampleFactor: Double = 0d): Unit = {
