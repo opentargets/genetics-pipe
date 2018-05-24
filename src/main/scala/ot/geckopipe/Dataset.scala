@@ -8,15 +8,30 @@ import org.apache.spark.sql.types._
 
 object Dataset extends LazyLogging  {
   def buildGTEx(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
     logger.info(s"build gtex dataframe using map ${conf.gtex.tissueMap}")
     val tissues = GTEx.buildTissue(conf.gtex.tissueMap)
+    val tissueList = tissues.collect.map(r => r(2)).toList
 
     // TODO still unclear if using egenes or vgpairs or allgenes one
     val vgPairs = GTEx.loadVGPairs(conf.gtex.variantGenePairs)
     val vgPairsWithTissues = vgPairs.join(tissues, Seq("filename"), "left_outer")
-        .drop("filename")
+      .withColumnRenamed("uberon_code", "tissue_code")
+      .drop("filename", "gtex_tissue", "ma_samples",
+        "ma_count", "maf", "pval_nominal_threshold", "min_pval_nominal")
+      .repartition($"variant_id", $"gene_id").persist
 
-    vgPairsWithTissues
+    val vgPivot = vgPairsWithTissues
+      .groupBy("gene_id", "variant_id")
+      .pivot("tissue_code", tissueList)
+      .count()
+      .repartition($"variant_id", $"gene_id").persist
+
+    vgPairsWithTissues.join(vgPivot, Seq("gene_id", "variant_id"), "left_outer")
+      .drop("tissue_code")
+      .na.fill(0.0)
+      .repartition($"variant_id", $"gene_id").persist
   }
 
   def buildVEP(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
@@ -31,11 +46,29 @@ object Dataset extends LazyLogging  {
         .withColumnRenamed("geneID", "gene_id")
 
     vepsGenes
+      .repartition($"variant_id", $"gene_id")
+      .persist
   }
 
   def joinGTExAndVEP(gtex: DataFrame, vep: DataFrame): DataFrame = {
-    // drop ma_samples, ma_count, maf, pval_nominal_threshold, min_pval_nominal
-    gtex.join(vep, Seq("variant_id", "gene_id"), "full_outer")
-      .drop("ma_samples", "ma_count", "maf", "pval_nominal_threshold", "min_pval_nominal")
+    vep.join(gtex, Seq("variant_id", "gene_id"), "full_outer")
+      .na.fill(0.0)
+  }
+
+  def saveToFile(dataset: DataFrame, filename: String)(implicit sampleFactor: Double = 0d): Unit = {
+    if (sampleFactor > 0d) {
+      dataset
+        .sample(withReplacement = false, c.sampleFactor)
+        .write.format("csv")
+        .option("sep", "\t")
+        .option("header", "true")
+        .save(filename)
+    } else {
+      dataset
+        .write.format("csv")
+        .option("sep", "\t")
+        .option("header", "true")
+        .save(filename)
+    }
   }
 }

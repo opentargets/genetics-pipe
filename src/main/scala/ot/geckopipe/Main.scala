@@ -23,7 +23,7 @@ import scala.util.{Failure, Success}
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val progVersion = "0.2"
+  val progVersion = "0.3"
   val progName = "gecko-pipe"
   val entryText =
     """
@@ -70,29 +70,22 @@ object Main extends LazyLogging {
         logger.debug("setting sparkcontext logging level to log-level")
         ss.sparkContext.setLogLevel(logLevel)
 
+        // needed for save dataset function
+        implicit val sampleFactor = c.sampleFactor
+
         val gtex = Dataset.buildGTEx(c)
+        logger.whenDebugEnabled {
+          gtex.show(100, false)
+        }
+        Dataset.saveToFile(gtex, c.output.stripSuffix("/").concat("/gtex/"))
+
         val vep = Dataset.buildVEP(c)
+        logger.whenDebugEnabled {
+          vep.show(100, false)
+        }
+
         val gtexAndVep = Dataset.joinGTExAndVEP(gtex, vep)
-
-//        if (c.sampleFactor > 0d)
-//          gtexAndVep
-//            .sample(withReplacement = false, c.sampleFactor)
-//            .show(10000, false)
-//        else
-//          gtexAndVep.show(10000, false)
-
-        if (c.sampleFactor > 0d)
-          gtexAndVep.sample(withReplacement = false, c.sampleFactor)
-            .write.format("csv")
-            .option("sep", "\t")
-            .option("header", "true")
-            .save(c.output)
-        else
-          gtexAndVep.write
-            .format("csv")
-            .option("sep", "\t")
-            .option("header", "true")
-            .save(c.output)
+        Dataset.saveToFile(vep, c.output)
 
         // persist the created table
         // gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
