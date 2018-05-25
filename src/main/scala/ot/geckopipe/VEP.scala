@@ -3,7 +3,7 @@ package ot.geckopipe
 import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{DataFrame, Encoders, Row, SparkSession}
+import org.apache.spark.sql.{DataFrame, Encoders, SparkSession}
 
 object VEP {
   // build the right data schema

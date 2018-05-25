@@ -7,6 +7,8 @@ import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 
 object Dataset extends LazyLogging  {
+
+  /** build gtex dataset using variant gene map and pivot all tissues */
   def buildGTEx(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
@@ -14,7 +16,6 @@ object Dataset extends LazyLogging  {
     val tissues = GTEx.buildTissue(conf.gtex.tissueMap)
     val tissueList = tissues.collect.map(r => r(2)).toList
 
-    // TODO still unclear if using egenes or vgpairs or allgenes one
     val vgPairs = GTEx.loadVGPairs(conf.gtex.variantGenePairs)
     val vgPairsWithTissues = vgPairs.join(tissues, Seq("filename"), "left_outer")
       .withColumnRenamed("uberon_code", "tissue_code")
@@ -22,29 +23,32 @@ object Dataset extends LazyLogging  {
         "ma_count", "maf", "pval_nominal_threshold", "min_pval_nominal")
       .repartition($"variant_id", $"gene_id").persist
 
+    logger.info("pivot gtex dataframe tissue codes so we can filter them out")
     val vgPivot = vgPairsWithTissues
       .groupBy("gene_id", "variant_id")
       .pivot("tissue_code", tissueList)
       .count()
       .repartition($"variant_id", $"gene_id").persist
 
+    logger.info("join left outer variantgenepairs with pivoted tissues")
     vgPairsWithTissues.join(vgPivot, Seq("gene_id", "variant_id"), "left_outer")
       .drop("tissue_code")
       .na.fill(0.0)
       .repartition($"variant_id", $"gene_id").persist
   }
 
+  /** join gene id per extracted transcript (it should be one per row)
+    *
+    * generate variant_id column
+    * drop not needed ones
+    * rename geneID to gene_id in order to keep names equal
+    * filter out those with no gene_id
+    * repartition based on variant_id and gene_id
+    * and persist if you want to keep the partition through next operations (by ex. joins)
+    */
   def buildVEP(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
-    /* join gene id per extracted transcript (it should be one per row
-    generate variant_id column
-    drop not needed ones
-    rename geneID to gene_id in order to keep names equal
-    filter out those with no gene_id
-    repartition based on variant_id and gene_id
-    and persist if you want to keep the partition through next operations (by ex. joins)
-     */
     val geneTrans = VEP.loadGeneTrans(conf.vep.geneTranscriptPairs)
     val veps = VEP.loadHumanVEP(conf.vep.homoSapiensCons)
     veps.join(geneTrans,Seq("transID"), "left_outer")
@@ -57,6 +61,7 @@ object Dataset extends LazyLogging  {
       .persist
   }
 
+  /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   def joinGTExAndVEP(gtex: DataFrame, vep: DataFrame)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
@@ -70,21 +75,22 @@ object Dataset extends LazyLogging  {
       .persist
   }
 
-  // compute stats with this resulted table but only when info enabled
+  /** compute stats with this resulted table but only when info enabled */
   def computeStats(dataset: DataFrame, tableName: String)(implicit ss: SparkSession): Unit = {
     // persist the created table
     logger.whenInfoEnabled {
       dataset.createOrReplaceTempView(tableName)
       ss.table(tableName).persist(StorageLevel.MEMORY_AND_DISK)
 
-      val qvalCount = ss.sql(s"""
+      ss.sql(s"""
         SELECT count(*)
         FROM gtex
         WHERE (pval_nominal <= 0.05)
-        """).show(false)
+        """).show(truncate = false)
     }
   }
 
+  /** save the dataframe as tsv file using filename as a output path */
   def saveToFile(dataset: DataFrame, filename: String)(implicit sampleFactor: Double = 0d): Unit = {
     if (sampleFactor > 0d) {
       dataset

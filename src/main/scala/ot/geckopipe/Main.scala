@@ -1,31 +1,18 @@
 package ot.geckopipe
 
-import java.nio.file.{Path, Paths}
+import java.nio.file.Paths
 
-import ch.qos.logback.classic.Logger
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark
 import org.apache.spark.SparkConf
-import org.apache.spark.SparkContext
-import org.apache.spark.SparkContext._
-import org.apache.spark.rdd.RDD
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.storage.StorageLevel
-import org.apache.spark.sql.Row
-import org.apache.spark.sql.catalyst.plans.JoinType
-import org.apache.spark.sql.expressions.Window
-import org.apache.spark.sql.types._
-import org.apache.spark.sql.functions._
 import scopt.OptionParser
-
-import scala.util.{Failure, Success}
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val progVersion = "0.3"
-  val progName = "gecko-pipe"
-  val entryText =
+  val progVersion: String = "0.4"
+  val progName: String = "gecko-pipe"
+  val entryText: String =
     """
       |
       |NOTE:
@@ -39,7 +26,7 @@ object Main extends LazyLogging {
     """.stripMargin
 
   def run(config: CommandLineArgs): Unit = {
-    println(s"running ${progName} version ${progVersion}")
+    println(s"running $progName version $progVersion")
     val conf = if (config.file.nonEmpty) {
         logger.info(s"loading configuration from commandline as ${config.file}")
         pureconfig.loadConfig[Configuration](Paths.get(config.file))
@@ -50,7 +37,7 @@ object Main extends LazyLogging {
 
     conf match {
       case Right(c) =>
-        logger.debug(s"running with cli args $config and with default configuracion ${c}")
+        logger.debug(s"running with cli args $config and with default configuracion $c")
         val logLevel = c.logLevel
 
         val conf: SparkConf =
@@ -71,33 +58,23 @@ object Main extends LazyLogging {
         ss.sparkContext.setLogLevel(logLevel)
 
         // needed for save dataset function
-        implicit val sampleFactor = c.sampleFactor
+        implicit val sampleFactor: Double = c.sampleFactor
 
         val gtex = Dataset.buildGTEx(c)
         logger.whenDebugEnabled {
-          gtex.show(100, false)
+          gtex.show(numRows = 100, truncate = false)
         }
         Dataset.saveToFile(gtex, c.output.stripSuffix("/").concat("/gtex/"))
 
         val vep = Dataset.buildVEP(c)
         logger.whenDebugEnabled {
-          vep.show(100, false)
+          vep.show(numRows = 100, truncate = false)
         }
 
         val gtexAndVep = Dataset.joinGTExAndVEP(gtex, vep)
         Dataset.saveToFile(gtexAndVep, c.output)
 
-        Dataset.computeStats(gtexAndVep)
-
-        // persist the created table
-        // gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
-        // ss.table("gtex").persist(StorageLevel.MEMORY_AND_DISK)
-
-//        val qvalCount = ss.sql(s"""
-//          SELECT count(*)
-//          FROM gtex
-//          WHERE (pval_nominal <= 0.05)
-//          """).show()
+        // Dataset.computeStats(gtexAndVep)
 
         ss.stop
 
@@ -106,7 +83,7 @@ object Main extends LazyLogging {
     println("closing app... done.")
   }
 
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     // parser.parse returns Option[C]
     parser.parse(args, CommandLineArgs()) match {
       case Some(config) =>
