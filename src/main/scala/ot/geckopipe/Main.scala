@@ -72,7 +72,7 @@ object Main extends LazyLogging {
         }
 
         val gtexAndVep = Dataset.joinGTExAndVEP(gtex, vep)
-        Dataset.saveToFile(gtexAndVep, c.output)
+        Dataset.saveToFile(gtexAndVep, c.output.stripSuffix("/").concat("/merged/"))
 
         // Dataset.computeStats(gtexAndVep)
 

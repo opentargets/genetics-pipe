@@ -67,10 +67,10 @@ object Dataset extends LazyLogging  {
 
     vep.join(gtex, Seq("variant_id", "gene_id"), "full_outer")
       .withColumn("_tmp", split($"variant_id", "_"))
-      .withColumn("chr", $"_tmp".getItem(1))
-      .withColumn("pos", $"_tmp".getItem(2).cast(LongType))
-      .withColumn("ref_allele", $"_tmp".getItem(3))
-      .withColumn("alt_allele", $"_tmp".getItem(4))
+      .withColumn("chr", $"_tmp".getItem(0))
+      .withColumn("pos", $"_tmp".getItem(1).cast(LongType))
+      .withColumn("ref_allele", $"_tmp".getItem(2))
+      .withColumn("alt_allele", $"_tmp".getItem(3))
       .drop("_tmp")
       .persist
   }
