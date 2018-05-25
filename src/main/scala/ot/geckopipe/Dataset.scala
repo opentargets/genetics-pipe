@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.storage.StorageLevel
 
 object Dataset extends LazyLogging  {
 
@@ -80,22 +79,14 @@ object Dataset extends LazyLogging  {
 
   /** compute stats with this resulted table but only when info enabled */
   def computeStats(dataset: DataFrame, tableName: String)(implicit ss: SparkSession): Unit = {
+    import ss.implicits._
     // persist the created table
     logger.whenInfoEnabled {
-      dataset.createOrReplaceTempView(tableName)
-      ss.table(tableName).persist(StorageLevel.MEMORY_AND_DISK)
+      val totalRows = dataset.count()
+      val rsidNullsCount = dataset.where($"rsid".isNull).count()
+      val inChrCount = dataset.where($"chr".isin(Chromosomes.chrList:_*)).count()
 
-      ss.sql(s"""
-          |SELECT count(*)
-          |FROM $tableName
-          |WHERE (rsid IS NULL)
-        """.stripMargin).show(truncate = false)
-
-      ss.sql(s"""
-           |SELECT count(*)
-           |FROM $tableName
-           |WHERE (chr NOT IN ${Chromosomes.chrString})
-         """.stripMargin).show(truncate = false)
+      logger.info(s"count number of null rsids $rsidNullsCount and rows in chr range $inChrCount of a total $totalRows")
     }
   }
 
