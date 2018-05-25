@@ -21,20 +21,23 @@ object Dataset extends LazyLogging  {
       .withColumnRenamed("uberon_code", "tissue_code")
       .drop("filename", "gtex_tissue", "ma_samples",
         "ma_count", "maf", "pval_nominal_threshold", "min_pval_nominal")
-      .repartition($"variant_id", $"gene_id").persist
+      .repartition($"variant_id", $"gene_id")
+      //.persist
 
     logger.info("pivot gtex dataframe tissue codes so we can filter them out")
     val vgPivot = vgPairsWithTissues
       .groupBy("gene_id", "variant_id")
       .pivot("tissue_code", tissueList)
       .count()
-      .repartition($"variant_id", $"gene_id").persist
+      .repartition($"variant_id", $"gene_id")
+      //.persist
 
     logger.info("join left outer variantgenepairs with pivoted tissues")
-    vgPairsWithTissues.join(vgPivot, Seq("gene_id", "variant_id"), "left_outer")
+    vgPairsWithTissues.join(vgPivot, Seq("variant_id", "gene_id"), "left_outer")
       .drop("tissue_code")
       .na.fill(0.0)
-      .repartition($"variant_id", $"gene_id").persist
+      .repartition($"variant_id", $"gene_id")
+      .persist
   }
 
   /** join gene id per extracted transcript (it should be one per row)
@@ -72,7 +75,7 @@ object Dataset extends LazyLogging  {
       .withColumn("ref_allele", $"_tmp".getItem(2))
       .withColumn("alt_allele", $"_tmp".getItem(3))
       .drop("_tmp")
-      .persist
+      .persist // persist to use with the tempview
   }
 
   /** compute stats with this resulted table but only when info enabled */
@@ -83,10 +86,16 @@ object Dataset extends LazyLogging  {
       ss.table(tableName).persist(StorageLevel.MEMORY_AND_DISK)
 
       ss.sql(s"""
-        SELECT count(*)
-        FROM gtex
-        WHERE (pval_nominal <= 0.05)
-        """).show(truncate = false)
+          |SELECT count(*)
+          |FROM $tableName
+          |WHERE (rsid IS NULL)
+        """.stripMargin).show(truncate = false)
+
+      ss.sql(s"""
+           |SELECT count(*)
+           |FROM $tableName
+           |WHERE (chr NOT IN ${Chromosomes.chrString})
+         """.stripMargin).show(truncate = false)
     }
   }
 
