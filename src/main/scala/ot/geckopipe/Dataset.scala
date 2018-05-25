@@ -36,16 +36,23 @@ object Dataset extends LazyLogging  {
 
   def buildVEP(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
+
+    /* join gene id per extracted transcript (it should be one per row
+    generate variant_id column
+    drop not needed ones
+    rename geneID to gene_id in order to keep names equal
+    filter out those with no gene_id
+    repartition based on variant_id and gene_id
+    and persist if you want to keep the partition through next operations (by ex. joins)
+     */
     val geneTrans = VEP.loadGeneTrans(conf.vep.geneTranscriptPairs)
     val veps = VEP.loadHumanVEP(conf.vep.homoSapiensCons)
-    val vepsGenes= veps.join(geneTrans,Seq("transID"), "left_outer")
-        .withColumn("variant_id",
-          concat_ws("_", $"chr", $"pos", $"refAllele", $"altAllele"))
-        .drop("transID")
-        .drop("csq")
-        .withColumnRenamed("geneID", "gene_id")
-
-    vepsGenes
+    veps.join(geneTrans,Seq("transID"), "left_outer")
+      .withColumn("variant_id",
+        concat_ws("_", $"chr", $"pos", $"refAllele", $"altAllele"))
+      .drop("transID", "csq", "chr", "pos", "refAllele", "altAllele")
+      .withColumnRenamed("geneID", "gene_id")
+      .where($"gene_id".isNotNull)
       .repartition($"variant_id", $"gene_id")
       .persist
   }
@@ -57,7 +64,7 @@ object Dataset extends LazyLogging  {
   def saveToFile(dataset: DataFrame, filename: String)(implicit sampleFactor: Double = 0d): Unit = {
     if (sampleFactor > 0d) {
       dataset
-        .sample(withReplacement = false, c.sampleFactor)
+        .sample(withReplacement = false, sampleFactor)
         .write.format("csv")
         .option("sep", "\t")
         .option("header", "true")
