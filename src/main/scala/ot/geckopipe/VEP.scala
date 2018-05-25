@@ -1,18 +1,14 @@
 package ot.geckopipe
 
-import org.apache.spark.rdd.RDD
-import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, Encoders, SparkSession}
 
 object VEP {
-  // build the right data schema
-  // CHROM POS ID REF ALT QUAL FILTER INFO
-  case class VEPRecord(chr: String, pos: Long, rsid: String,
-                       refAllele: String, altAllele: String,
-                       qual: String, filter: String, csq: List[String], tsa: String)
-
-  val schema: StructType = Encoders.product[VEPRecord].schema
+//  case class VEPRecord(chr: String, pos: Long, rsid: String,
+//                       refAllele: String, altAllele: String,
+//                       qual: String, filter: String, csq: List[String], tsa: String)
+//
+//  val schema: StructType = Encoders.product[VEPRecord].schema
 
   def loadGeneTrans(from: String)(implicit ss: SparkSession): DataFrame = {
     val transcripts = ss.read
@@ -29,22 +25,21 @@ object VEP {
   def loadHumanVEP(from: String)(implicit ss: SparkSession): DataFrame = {
     // split info string and extract CSQ substring
     // it returns a list of consequences
-    def extractCons(from: String): Array[Array[String]] = {
-      val csql = from.split(";")
+    val udfCSQ = udf( (info: String) => {
+      val csql = info.split(";")
         .filter(_.startsWith("CSQ="))
-        .map(_.stripPrefix("CSQ="))
-        .map(_.split(","))
+        .flatMap(_.stripPrefix("CSQ=").split(","))
 
       csql
-    }
+    })
 
-    def extractTSA(from: String): String = {
-      val tsa = from.split(";")
+    val udfTSA = udf( (info: String) => {
+      val tsa = info.split(";")
         .filter(_.startsWith("TSA="))
         .map(_.stripPrefix("TSA="))
 
       tsa(0)
-    }
+    })
 
     val filterCSQByAltAllele = udf( (refAllele: String, altAllele: String, tsa: String, csqs: Seq[String]) => {
       tsa match {
@@ -60,28 +55,19 @@ object VEP {
 
     import ss.implicits._
 
-    val vepsRDD: RDD[VEPRecord] = ss.sparkContext.textFile(from)
-      .filter(_.nonEmpty)
-      .filter(!_.startsWith("#"))
-      .map(_.split("\\s+"))
-      .filter(_.length >= 8)
-      .flatMap( row => {
-        val veps = extractCons(row(7))
-        val tsa = extractTSA(row(7))
-
-        for {
-          vep <- veps
-        } yield VEPRecord(row(0), row(1).toLong,
-          row(2), row(3),
-          row(4), row(5),
-          row(6), vep.toList,
-          tsa)
-
-      })
-
-    val vepsDF = vepsRDD.toDF
-
-    vepsDF.select("chr", "pos", "rsid", "refAllele", "altAllele", "csq", "tsa")
+    val vepss = ss.read
+      .format("csv")
+      .option("header", "false")
+      .option("inferSchema", "true")
+      .option("delimiter","\t")
+      .option("comment", "\u0023")
+      .option("ignoreLeadingWhiteSpace", "true")
+      .option("ignoreTrailingWhiteSpace", "true")
+      .option("mode", "DROPMALFORMED")
+      .load(from)
+      .toDF("chr", "pos", "rsid", "refAllele", "altAllele", "qual", "filter", "info")
+      .withColumn("tsa", udfTSA($"info"))
+      .withColumn("csq", udfCSQ($"info"))
       .withColumn("altAllele",split($"altAllele", ","))
       .withColumn("altAllele",explode($"altAllele"))
       .withColumn("csq", filterCSQByAltAllele($"refAllele", $"altAllele", $"tsa", $"csq"))
@@ -89,5 +75,9 @@ object VEP {
       .withColumn("csq", split($"csq", "\\|"))
       .withColumn("consequence", $"csq".getItem(1))
       .withColumn("transID", $"csq".getItem(3))
+      .drop("qual", "filter", "info", "tsa", "rsid")
+      // .select("chr", "pos", "rsid", "refAllele", "altAllele", "csq")
+
+    vepss
   }
 }

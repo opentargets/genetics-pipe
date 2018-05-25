@@ -3,6 +3,7 @@ package ot.geckopipe
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.expressions._
 import org.apache.spark.sql.types._
 
 object Dataset extends LazyLogging  {
@@ -59,6 +60,8 @@ object Dataset extends LazyLogging  {
       .drop("transID", "csq", "chr", "pos", "refAllele", "altAllele")
       .withColumnRenamed("geneID", "gene_id")
       .where($"gene_id".isNotNull)
+      .groupBy("variant_id", "gene_id")
+      .agg(collect_set("consequence"))
       .repartition($"variant_id", $"gene_id")
       .persist
   }
@@ -83,10 +86,10 @@ object Dataset extends LazyLogging  {
     // persist the created table
     logger.whenInfoEnabled {
       val totalRows = dataset.count()
-      val rsidNullsCount = dataset.where($"rsid".isNull).count()
+      // val rsidNullsCount = dataset.where($"rsid".isNull).count()
       val inChrCount = dataset.where($"chr".isin(Chromosomes.chrList:_*)).count()
 
-      logger.info(s"count number of null rsids $rsidNullsCount and rows in chr range $inChrCount of a total $totalRows")
+      logger.info(s"count number of rows in chr range $inChrCount of a total $totalRows")
     }
   }
 
