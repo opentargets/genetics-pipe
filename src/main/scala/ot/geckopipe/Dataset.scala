@@ -3,8 +3,8 @@ package ot.geckopipe
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-
 import org.apache.spark.sql.types._
+import org.apache.spark.storage.StorageLevel
 
 object Dataset extends LazyLogging  {
   def buildGTEx(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
@@ -57,8 +57,32 @@ object Dataset extends LazyLogging  {
       .persist
   }
 
-  def joinGTExAndVEP(gtex: DataFrame, vep: DataFrame): DataFrame = {
+  def joinGTExAndVEP(gtex: DataFrame, vep: DataFrame)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
     vep.join(gtex, Seq("variant_id", "gene_id"), "full_outer")
+      .withColumn("_tmp", split($"variant_id", "_"))
+      .withColumn("chr", $"_tmp".getItem(1))
+      .withColumn("pos", $"_tmp".getItem(2).cast(LongType))
+      .withColumn("ref_allele", $"_tmp".getItem(3))
+      .withColumn("alt_allele", $"_tmp".getItem(4))
+      .drop("_tmp")
+      .persist
+  }
+
+  // compute stats with this resulted table but only when info enabled
+  def computeStats(dataset: DataFrame, tableName: String)(implicit ss: SparkSession): Unit = {
+    // persist the created table
+    logger.whenInfoEnabled {
+      dataset.createOrReplaceTempView(tableName)
+      ss.table(tableName).persist(StorageLevel.MEMORY_AND_DISK)
+
+      val qvalCount = ss.sql(s"""
+        SELECT count(*)
+        FROM gtex
+        WHERE (pval_nominal <= 0.05)
+        """).show(false)
+    }
   }
 
   def saveToFile(dataset: DataFrame, filename: String)(implicit sampleFactor: Double = 0d): Unit = {

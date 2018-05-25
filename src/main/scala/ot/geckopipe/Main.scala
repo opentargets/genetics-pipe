@@ -85,7 +85,9 @@ object Main extends LazyLogging {
         }
 
         val gtexAndVep = Dataset.joinGTExAndVEP(gtex, vep)
-        Dataset.saveToFile(vep, c.output)
+        Dataset.saveToFile(gtexAndVep, c.output)
+
+        Dataset.computeStats(gtexAndVep)
 
         // persist the created table
         // gtexEGenesDF.createOrReplaceTempView("gtex_egenes")
