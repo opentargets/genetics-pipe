@@ -40,7 +40,7 @@ object GTEx {
     loaded
   }
 
-  // build a map: TissueLUT from a filename with default ("","")
+  /** load tissue file */
   def buildTissue(from: String)(implicit ss: SparkSession): DataFrame = {
     val tissueCodes = ss.read
       .format("csv")

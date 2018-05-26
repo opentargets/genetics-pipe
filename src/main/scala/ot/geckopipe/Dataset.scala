@@ -14,28 +14,12 @@ object Dataset extends LazyLogging  {
 
     logger.info(s"build gtex dataframe using map ${conf.gtex.tissueMap}")
     val tissues = GTEx.buildTissue(conf.gtex.tissueMap)
-    val tissueList = tissues.collect.map(r => r(2)).toList
-
     val vgPairs = GTEx.loadVGPairs(conf.gtex.variantGenePairs)
-    val vgPairsWithTissues = vgPairs.join(tissues, Seq("filename"), "left_outer")
+
+    vgPairs.join(tissues, Seq("filename"), "left_outer")
       .withColumnRenamed("uberon_code", "tissue_code")
       .drop("filename", "gtex_tissue", "ma_samples",
         "ma_count", "maf", "pval_nominal_threshold", "min_pval_nominal")
-      .repartition($"variant_id", $"gene_id")
-      //.persist
-
-    logger.info("pivot gtex dataframe tissue codes so we can filter them out")
-    val vgPivot = vgPairsWithTissues
-      .groupBy("gene_id", "variant_id")
-      .pivot("tissue_code", tissueList)
-      .count()
-      .repartition($"variant_id", $"gene_id")
-      //.persist
-
-    logger.info("join left outer variantgenepairs with pivoted tissues")
-    vgPairsWithTissues.join(vgPivot, Seq("variant_id", "gene_id"), "left_outer")
-      .drop("tissue_code")
-      .na.fill(0.0)
       .repartition($"variant_id", $"gene_id")
       .persist
   }

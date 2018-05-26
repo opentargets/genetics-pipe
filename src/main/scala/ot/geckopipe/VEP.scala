@@ -76,7 +76,7 @@ object VEP {
       .withColumn("consequence", $"csq".getItem(1))
       .withColumn("transID", $"csq".getItem(3))
       .drop("qual", "filter", "info", "tsa", "rsid")
-      // .select("chr", "pos", "rsid", "refAllele", "altAllele", "csq")
+      // .select("chr", "pos", "refAllele", "altAllele", "csq", "consequence", "transID")
 
     vepss
   }
