@@ -53,5 +53,5 @@ object GTEx {
     tissueCodes
   }
 
-  private def extractFilename(from: String): String = from.split('/').last
+  private[geckopipe] def extractFilename(from: String): String = from.split('/').last
 }
