@@ -1,0 +1,19 @@
+language: scala
+scala:
+  - 2.11.12
+jdk:
+  - oraclejdk8
+branches:
+  only:
+    - master
+script:
+  - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes assembly
+  - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes test
+# deploy:
+#   provider: releases
+#   api_key: "GITHUB OAUTH TOKEN"
+#   file:
+#     - target/scala-2.11/ot-geckopipe-assembly-*
+#   skip_cleanup: true
+#   on:
+#     tags: true
