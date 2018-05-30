@@ -10,7 +10,7 @@ import scopt.OptionParser
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val progVersion: String = "0.4"
+  val progVersion: String = "0.5"
   val progName: String = "gecko-pipe"
   val entryText: String =
     """
@@ -61,23 +61,23 @@ object Main extends LazyLogging {
         implicit val sampleFactor: Double = c.sampleFactor
 
         val gtex = Dataset.buildGTEx(c)
-        logger.whenDebugEnabled {
-          gtex.show(numRows = 100, truncate = false)
+        logger.whenInfoEnabled {
+          gtex.show(numRows = 10, truncate = false)
         }
         //Dataset.saveToFile(gtex, c.output.stripSuffix("/").concat("/gtex/"))
 
         val vep = Dataset.buildVEP(c)
-        logger.whenDebugEnabled {
-          vep.show(numRows = 100, truncate = false)
+        logger.whenInfoEnabled {
+          vep.show(numRows = 10, truncate = false)
         }
 
-        val gtexAndVep = Dataset.buildV2G(gtex, vep)
-
-        val stats = Dataset.computeStats(gtexAndVep, "dataset")
-
-        Dataset.saveToFile(gtexAndVep, c.output.stripSuffix("/").concat("/merged/"))
-
-        println(s"few numbers from stats in chr count ${stats(0)} and total rows ${stats(1)}")
+//        val gtexAndVep = Dataset.buildV2G(gtex, vep)
+//
+//        val stats = Dataset.computeStats(gtexAndVep, "dataset")
+//
+//        Dataset.saveToFile(gtexAndVep, c.output.stripSuffix("/").concat("/merged/"))
+//
+//        println(s"few numbers from stats in chr count ${stats(0)} and total rows ${stats(1)}")
         ss.stop
 
       case Left(failures) => println(s"configuration contains errors like ${failures.toString}")
