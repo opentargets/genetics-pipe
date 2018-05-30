@@ -1,7 +1,7 @@
 package ot.geckopipe
 
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{DataFrame, Encoders, SparkSession}
+import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object VEP {
 //  case class VEPRecord(chr: String, pos: Long, rsid: String,
@@ -9,18 +9,6 @@ object VEP {
 //                       qual: String, filter: String, csq: List[String], tsa: String)
 //
 //  val schema: StructType = Encoders.product[VEPRecord].schema
-
-  def loadGeneTrans(from: String)(implicit ss: SparkSession): DataFrame = {
-    val transcripts = ss.read
-      .format("csv")
-      .option("header", "true")
-      .option("inferSchema", "true")
-      .option("delimiter","\t")
-      .option("mode", "DROPMALFORMED")
-      .load(from).toDF("geneID", "transID")
-
-    transcripts
-  }
 
   def loadHumanVEP(from: String)(implicit ss: SparkSession): DataFrame = {
     // split info string and extract CSQ substring
@@ -65,17 +53,22 @@ object VEP {
       .option("ignoreTrailingWhiteSpace", "true")
       .option("mode", "DROPMALFORMED")
       .load(from)
-      .toDF("chr", "pos", "rsid", "refAllele", "altAllele", "qual", "filter", "info")
+      .withColumnRenamed("refAllele", "ref_allele")
+      .withColumnRenamed("altAllele", "alt_allele")
+      .withColumnRenamed("chr", "chr_name")
+      .withColumnRenamed("rsid", "rs_id")
+      .withColumnRenamed("pos", "variant_pos")
+      .toDF("chr_name", "variant_pos", "rs_id", "ref_allele", "alt_allele", "qual", "filter", "info")
       .withColumn("tsa", udfTSA($"info"))
       .withColumn("csq", udfCSQ($"info"))
-      .withColumn("altAllele",split($"altAllele", ","))
-      .withColumn("altAllele",explode($"altAllele"))
-      .withColumn("csq", filterCSQByAltAllele($"refAllele", $"altAllele", $"tsa", $"csq"))
+      .withColumn("alt_allele",split($"alt_allele", ","))
+      .withColumn("alt_allele",explode($"alt_allele"))
+      .withColumn("csq", filterCSQByAltAllele($"ref_allele", $"alt_allele", $"tsa", $"csq"))
       .withColumn("csq", explode($"csq"))
       .withColumn("csq", split($"csq", "\\|"))
       .withColumn("consequence", $"csq".getItem(1))
-      .withColumn("transID", $"csq".getItem(3))
-      .drop("qual", "filter", "info", "tsa", "rsid")
+      .withColumn("trans_id", $"csq".getItem(3))
+      .drop("qual", "filter", "info", "tsa")
       // .select("chr", "pos", "refAllele", "altAllele", "csq", "consequence", "transID")
 
     vepss

@@ -3,7 +3,6 @@ package ot.geckopipe
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.expressions._
 import org.apache.spark.sql.types._
 
 object Dataset extends LazyLogging  {
@@ -32,32 +31,48 @@ object Dataset extends LazyLogging  {
     * filter out those with no gene_id
     * repartition based on variant_id and gene_id
     * and persist if you want to keep the partition through next operations (by ex. joins)
+    * generate pivot per consecuence and set to count or fill with 0
     */
   def buildVEP(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
-    val geneTrans = VEP.loadGeneTrans(conf.vep.geneTranscriptPairs)
+    val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
     val veps = VEP.loadHumanVEP(conf.vep.homoSapiensCons)
-    veps.join(geneTrans,Seq("transID"), "left_outer")
+
+    val vepsDF = veps.join(geneTrans, Seq("trans_id"))
       .withColumn("variant_id",
-        concat_ws("_", $"chr", $"pos", $"refAllele", $"altAllele"))
-      .drop("transID", "csq", "chr", "pos", "refAllele", "altAllele")
-      .withColumnRenamed("geneID", "gene_id")
+        concat_ws("_", $"chr_name", $"variant_pos", $"ref_allele", $"alt_allele"))
+      .drop("trans_id", "csq", "chr_name", "variant_pos", "ref_allele", "alt_allele", "trans_start",
+        "trans_end", "tss", "trans_size", "gene_chr")
       .where($"gene_id".isNotNull)
-      .groupBy("variant_id", "gene_id")
-      .agg(collect_set("consequence"))
-      .repartition($"variant_id", $"gene_id")
-      .persist
+
+    val vepsDFF = vepsDF
+      .groupBy("gene_id", "variant_id")
+      .agg(collect_set($"consequence").as("consequence_set"),
+        first($"rs_id").as("rs_id"),
+        first($"gene_start").as("gene_start"),
+        first($"gene_end").as("gene_end"),
+        first($"gene_type").as("gene_type"))
+
+    val vepsPivot = vepsDF
+      .select("variant_id", "gene_id", "consequence")
+      .groupBy("gene_id", "variant_id")
+      .pivot("consequence")
+      .count()
+      .drop("consequence")
+      .na.fill(0L)
+
+    vepsDFF.join(vepsPivot, Seq("variant_id", "gene_id"))
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
-  def joinGTExAndVEP(gtex: DataFrame, vep: DataFrame)(implicit ss: SparkSession): DataFrame = {
+  def buildV2G(gtex: DataFrame, vep: DataFrame)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
     vep.join(gtex, Seq("variant_id", "gene_id"), "full_outer")
       .withColumn("_tmp", split($"variant_id", "_"))
-      .withColumn("chr", $"_tmp".getItem(0))
-      .withColumn("pos", $"_tmp".getItem(1).cast(LongType))
+      .withColumn("chr_name", $"_tmp".getItem(0))
+      .withColumn("variant_pos", $"_tmp".getItem(1).cast(LongType))
       .withColumn("ref_allele", $"_tmp".getItem(2))
       .withColumn("alt_allele", $"_tmp".getItem(3))
       .drop("_tmp")
@@ -65,16 +80,14 @@ object Dataset extends LazyLogging  {
   }
 
   /** compute stats with this resulted table but only when info enabled */
-  def computeStats(dataset: DataFrame, tableName: String)(implicit ss: SparkSession): Unit = {
+  def computeStats(dataset: DataFrame, tableName: String)(implicit ss: SparkSession): Seq[Long] = {
     import ss.implicits._
-    // persist the created table
-    logger.whenInfoEnabled {
-      val totalRows = dataset.count()
-      // val rsidNullsCount = dataset.where($"rsid".isNull).count()
-      val inChrCount = dataset.where($"chr".isin(Chromosomes.chrList:_*)).count()
+    val totalRows = dataset.count()
+    // val rsidNullsCount = dataset.where($"rsid".isNull).count()
+    val inChrCount = dataset.where($"chr_name".isin(Chromosomes.chrList:_*)).count()
 
-      logger.info(s"count number of rows in chr range $inChrCount of a total $totalRows")
-    }
+    logger.info(s"count number of rows in chr range $inChrCount of a total $totalRows")
+    Seq(inChrCount, totalRows)
   }
 
   /** save the dataframe as tsv file using filename as a output path */
@@ -82,15 +95,15 @@ object Dataset extends LazyLogging  {
     if (sampleFactor > 0d) {
       dataset
         .sample(withReplacement = false, sampleFactor)
-        .write.format("csv")
-        .option("sep", "\t")
-        .option("header", "true")
+        .write.format("json")
+        // .option("sep", "\t")
+        // .option("header", "true")
         .save(filename)
     } else {
       dataset
-        .write.format("csv")
-        .option("sep", "\t")
-        .option("header", "true")
+        .write.format("json")
+        // .option("sep", "\t")
+        // .option("header", "true")
         .save(filename)
     }
   }

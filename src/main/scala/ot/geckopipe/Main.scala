@@ -64,19 +64,20 @@ object Main extends LazyLogging {
         logger.whenDebugEnabled {
           gtex.show(numRows = 100, truncate = false)
         }
-        Dataset.saveToFile(gtex, c.output.stripSuffix("/").concat("/gtex/"))
+        //Dataset.saveToFile(gtex, c.output.stripSuffix("/").concat("/gtex/"))
 
         val vep = Dataset.buildVEP(c)
         logger.whenDebugEnabled {
           vep.show(numRows = 100, truncate = false)
         }
 
-        val gtexAndVep = Dataset.joinGTExAndVEP(gtex, vep)
+        val gtexAndVep = Dataset.buildV2G(gtex, vep)
 
-        Dataset.computeStats(gtexAndVep, "dataset")
+        val stats = Dataset.computeStats(gtexAndVep, "dataset")
 
         Dataset.saveToFile(gtexAndVep, c.output.stripSuffix("/").concat("/merged/"))
 
+        println(s"few numbers from stats in chr count ${stats(0)} and total rows ${stats(1)}")
         ss.stop
 
       case Left(failures) => println(s"configuration contains errors like ${failures.toString}")

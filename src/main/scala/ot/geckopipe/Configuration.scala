@@ -8,7 +8,9 @@ package ot.geckopipe
   */
 case class GTExSection(tissueMap: String, variantGenePairs: String)
 
-case class VEPSection(geneTranscriptPairs: String, homoSapiensCons: String)
+case class EnsemblSection(geneTranscriptPairs: String)
+
+case class VEPSection(homoSapiensCons: String)
 /**
   * Main configuration case class
   *
@@ -20,6 +22,7 @@ case class Configuration(output: String,
                          sampleFactor: Double,
                          sparkUri: String,
                          logLevel: String,
+                         ensembl: EnsemblSection,
                          gtex: GTExSection,
                          vep: VEPSection)
 
