@@ -37,22 +37,19 @@ object Dataset extends LazyLogging  {
     import ss.implicits._
 
     val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
+      .select("gene_id", "trans_id")
     val veps = VEP.loadHumanVEP(conf.vep.homoSapiensCons)
 
     val vepsDF = veps.join(geneTrans, Seq("trans_id"))
       .withColumn("variant_id",
         concat_ws("_", $"chr_name", $"variant_pos", $"ref_allele", $"alt_allele"))
-      .drop("trans_id", "csq", "chr_name", "variant_pos", "ref_allele", "alt_allele", "trans_start",
-        "trans_end", "tss", "trans_size", "gene_chr")
+      .drop("trans_id", "csq", "chr_name", "variant_pos", "ref_allele", "alt_allele")
       .where($"gene_id".isNotNull)
 
     val vepsDFF = vepsDF
       .groupBy("gene_id", "variant_id")
       .agg(collect_set($"consequence").as("consequence_set"),
-        first($"rs_id").as("rs_id"),
-        first($"gene_start").as("gene_start"),
-        first($"gene_end").as("gene_end"),
-        first($"gene_type").as("gene_type"))
+        first($"rs_id").as("rs_id"))
 
     val vepsPivot = vepsDF
       .select("variant_id", "gene_id", "consequence")
@@ -66,17 +63,24 @@ object Dataset extends LazyLogging  {
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
-  def buildV2G(gtex: DataFrame, vep: DataFrame)(implicit ss: SparkSession): DataFrame = {
+  def buildV2G(gtex: DataFrame, vep: DataFrame, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
-    vep.join(gtex, Seq("variant_id", "gene_id"), "full_outer")
+    val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
+      .select("gene_id", "gene_start", "gene_end", "gene_chr", "gene_name", "gene_type")
+
+    val v2g = vep.join(gtex, Seq("variant_id", "gene_id"), "full_outer")
       .withColumn("_tmp", split($"variant_id", "_"))
-      .withColumn("chr_name", $"_tmp".getItem(0))
+      // .withColumn("chr_name", $"_tmp".getItem(0))
       .withColumn("variant_pos", $"_tmp".getItem(1).cast(LongType))
       .withColumn("ref_allele", $"_tmp".getItem(2))
       .withColumn("alt_allele", $"_tmp".getItem(3))
       .drop("_tmp")
+
+    val v2gEnriched = v2g.join(geneTrans, Seq("gene_id"))
       .persist // persist to use with the tempview
+
+    v2gEnriched
   }
 
   /** compute stats with this resulted table but only when info enabled */

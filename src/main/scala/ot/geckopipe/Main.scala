@@ -61,17 +61,18 @@ object Main extends LazyLogging {
         implicit val sampleFactor: Double = c.sampleFactor
 
         val gtex = Dataset.buildGTEx(c)
-        logger.whenInfoEnabled {
+        logger.whenDebugEnabled {
           gtex.show(numRows = 10, truncate = false)
         }
         //Dataset.saveToFile(gtex, c.output.stripSuffix("/").concat("/gtex/"))
 
         val vep = Dataset.buildVEP(c)
-        logger.whenInfoEnabled {
+        logger.whenDebugEnabled {
           vep.show(numRows = 10, truncate = false)
         }
 
-//        val gtexAndVep = Dataset.buildV2G(gtex, vep)
+        val gtexAndVep = Dataset.buildV2G(gtex, vep, c)
+        gtexAndVep.show(truncate = false)
 //
 //        val stats = Dataset.computeStats(gtexAndVep, "dataset")
 //
