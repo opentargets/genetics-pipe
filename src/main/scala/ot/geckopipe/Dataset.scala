@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.storage.StorageLevel
 
 object Dataset extends LazyLogging  {
 
@@ -20,7 +21,7 @@ object Dataset extends LazyLogging  {
       .drop("filename", "gtex_tissue", "ma_samples",
         "ma_count", "maf", "pval_nominal_threshold", "min_pval_nominal")
       .repartition($"variant_id", $"gene_id")
-      .persist
+      .persist(StorageLevel.MEMORY_AND_DISK)
   }
 
   /** join gene id per extracted transcript (it should be one per row)
@@ -43,7 +44,7 @@ object Dataset extends LazyLogging  {
       .select("so_term")
       .collect.toList.map(row => row(0).toString).sorted
 
-    val veps = VEP.loadHumanVEP(conf.vep.homoSapiensCons)
+    val veps = VEP.loadHumanVEP(conf.vep.homoSapiensCons).persist
 
     val vepsDF = veps.join(geneTrans, Seq("trans_id"))
       .withColumn("variant_id",
@@ -64,7 +65,7 @@ object Dataset extends LazyLogging  {
       .drop("consequence")
       .na.fill(0L)
 
-    vepsDFF.join(vepsPivot, Seq("variant_id", "gene_id"))
+    vepsDFF.join(vepsPivot, Seq("variant_id", "gene_id")).persist(StorageLevel.MEMORY_AND_DISK)
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
@@ -83,9 +84,8 @@ object Dataset extends LazyLogging  {
       .drop("_tmp")
 
     val v2gEnriched = v2g.join(geneTrans, Seq("gene_id"))
-      .persist // persist to use with the tempview
 
-    v2gEnriched
+    v2gEnriched.persist(StorageLevel.MEMORY_AND_DISK)
   }
 
   /** compute stats with this resulted table but only when info enabled */
