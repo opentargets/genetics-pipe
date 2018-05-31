@@ -70,9 +70,13 @@ object Main extends LazyLogging {
         logger.whenDebugEnabled {
           vep.show(numRows = 10, truncate = false)
         }
+        vep.show(100, truncate = false)
 
         val gtexAndVep = Dataset.buildV2G(gtex, vep, c)
-        gtexAndVep.show(truncate = false)
+        // gtexAndVep.show(truncate = false)
+
+        import ss.implicits._
+        gtexAndVep.filter($"rs_id".isNull).show(100, truncate = false)
 //
 //        val stats = Dataset.computeStats(gtexAndVep, "dataset")
 //

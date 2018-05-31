@@ -38,6 +38,11 @@ object Dataset extends LazyLogging  {
 
     val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
       .select("gene_id", "trans_id")
+
+    val vepCsqs = VEP.loadConsequenceTable(conf.vep.csq)
+      .select("so_term")
+      .collect.toList.map(row => row(0).toString).sorted
+
     val veps = VEP.loadHumanVEP(conf.vep.homoSapiensCons)
 
     val vepsDF = veps.join(geneTrans, Seq("trans_id"))
@@ -47,15 +52,15 @@ object Dataset extends LazyLogging  {
       .where($"gene_id".isNotNull)
 
     val vepsDFF = vepsDF
-      .groupBy("gene_id", "variant_id")
+      .groupBy("variant_id", "gene_id")
       .agg(collect_set($"consequence").as("consequence_set"),
         first($"rs_id").as("rs_id"))
 
     val vepsPivot = vepsDF
       .select("variant_id", "gene_id", "consequence")
-      .groupBy("gene_id", "variant_id")
-      .pivot("consequence")
-      .count()
+      .groupBy("variant_id", "gene_id")
+      .pivot("consequence", vepCsqs)
+      .count
       .drop("consequence")
       .na.fill(0L)
 

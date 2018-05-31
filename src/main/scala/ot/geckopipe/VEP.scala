@@ -10,6 +10,40 @@ object VEP {
 //
 //  val schema: StructType = Encoders.product[VEPRecord].schema
 
+  /** load consequence table from file extracted from ensembl website
+    *
+    * https://www.ensembl.org/info/genome/variation/predicted_data.html#consequences
+    * and table header
+    * SO term
+    * SO description
+    * SO accession
+    * Display term
+    * IMPACT
+    *
+    * @param from file to load the lookup table
+    * @param ss the implicit sparksession
+    * @return a dataframe with all normalised columns
+    */
+  def loadConsequenceTable(from: String)(implicit ss: SparkSession): DataFrame = {
+    val csqs = ss.read
+      .format("csv")
+      .option("header", "true")
+      .option("inferSchema", "true")
+      .option("delimiter","\t")
+      .option("ignoreLeadingWhiteSpace", "true")
+      .option("ignoreTrailingWhiteSpace", "true")
+      .option("mode", "DROPMALFORMED")
+      .load(from)
+      .withColumnRenamed("SO term", "so_term")
+      .withColumnRenamed("SO description", "so_description")
+      .withColumnRenamed("SO accession", "so_accession")
+      .withColumnRenamed("Display term", "display_term")
+      .withColumnRenamed("IMPACT", "impact")
+      .toDF
+
+    csqs
+  }
+
   def loadHumanVEP(from: String)(implicit ss: SparkSession): DataFrame = {
     // split info string and extract CSQ substring
     // it returns a list of consequences

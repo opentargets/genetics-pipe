@@ -10,7 +10,7 @@ case class GTExSection(tissueMap: String, variantGenePairs: String)
 
 case class EnsemblSection(geneTranscriptPairs: String)
 
-case class VEPSection(homoSapiensCons: String)
+case class VEPSection(csq: String, homoSapiensCons: String)
 /**
   * Main configuration case class
   *
