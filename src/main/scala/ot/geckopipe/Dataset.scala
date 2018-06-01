@@ -13,14 +13,17 @@ object Dataset extends LazyLogging  {
     import ss.implicits._
 
     if (datasets.nonEmpty) {
+      logger.info("build variant to gene dataset union the list of datasets")
       val dts = datasets.foldLeft(datasets.head.select(columnNames.head, columnNames.tail:_*))((aggDt, dt) => {
         aggDt.union(dt.select(columnNames.head, columnNames.tail:_*))
       })
 
+      logger.info("load ensembl gene to transcript table and cache to enrich results")
       val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
         .select("gene_id", "gene_start", "gene_end", "gene_chr", "gene_name", "gene_type")
         .cache
 
+      logger.info("split variant_id info into pos ref allele and alt allele")
       val dtsEnriched = dts
         .withColumn("_tmp", split($"variant_id", "_"))
         // .withColumn("chr_name", $"_tmp".getItem(0))
@@ -29,6 +32,7 @@ object Dataset extends LazyLogging  {
         .withColumn("alt_allele", $"_tmp".getItem(3))
         .drop("_tmp")
 
+      logger.info("enrich union datasets with gene info")
       val v2gEnriched = dtsEnriched.join(geneTrans, Seq("gene_id"))
 
       Some(v2gEnriched)
@@ -51,6 +55,7 @@ object Dataset extends LazyLogging  {
 
   /** save the dataframe as tsv file using filename as a output path */
   def saveToFile(dataset: DataFrame, filename: String)(implicit sampleFactor: Double = 0d): Unit = {
+    logger.info("write datasets to json lines")
     if (sampleFactor > 0d) {
       dataset
         .sample(withReplacement = false, sampleFactor)
