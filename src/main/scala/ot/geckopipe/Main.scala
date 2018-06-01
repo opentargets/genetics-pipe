@@ -10,7 +10,7 @@ import scopt.OptionParser
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val progVersion: String = "0.5"
+  val progVersion: String = "0.7"
   val progName: String = "gecko-pipe"
   val entryText: String =
     """
@@ -60,32 +60,39 @@ object Main extends LazyLogging {
         // needed for save dataset function
         implicit val sampleFactor: Double = c.sampleFactor
 
-        val gtex = Dataset.buildGTEx(c)
+        val gtex = GTEx(c)
         logger.whenDebugEnabled {
           gtex.show(numRows = 10, truncate = false)
         }
+        // gtex.show(numRows = 25, truncate = false)
+
         //Dataset.saveToFile(gtex, c.output.stripSuffix("/").concat("/gtex/"))
 
-        val vep = Dataset.buildVEP(c)
+        val vep = VEP(c)
         logger.whenDebugEnabled {
           vep.show(numRows = 10, truncate = false)
         }
-        vep.show(100, truncate = false)
+        // vep.show(25, truncate = false)
 
-        val gtexAndVep = Dataset.buildV2G(gtex, vep, c)
-        // gtexAndVep.show(truncate = false)
+        val dts = Dataset.buildV2G(Seq(gtex, vep), c)
 
-        import ss.implicits._
-        gtexAndVep.filter($"rs_id".isNull).show(100, truncate = false)
-//
-//        val stats = Dataset.computeStats(gtexAndVep, "dataset")
-//
-//        Dataset.saveToFile(gtexAndVep, c.output.stripSuffix("/").concat("/merged/"))
-//
-//        println(s"few numbers from stats in chr count ${stats(0)} and total rows ${stats(1)}")
+        dts match {
+          case Some(r) =>
+            import ss.implicits._
+          //  r.show(100, truncate = false)
+          //
+          //        val stats = Dataset.computeStats(gtexAndVep, "dataset")
+          //
+            Dataset.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
+          //
+          //        println(s"few numbers from stats in chr count ${stats(0)} and total rows ${stats(1)}")
+          case None => logger.error("failed to generate any build variant to gene dataset." +
+            "This should not be happening")
+        }
+
         ss.stop
 
-      case Left(failures) => println(s"configuration contains errors like ${failures.toString}")
+      case Left(failures) => logger.error(s"configuration contains errors like ${failures.toString}")
     }
     println("closing app... done.")
   }

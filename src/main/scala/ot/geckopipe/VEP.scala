@@ -1,9 +1,10 @@
 package ot.geckopipe
 
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-object VEP {
+object VEP extends LazyLogging {
 //  case class VEPRecord(chr: String, pos: Long, rsid: String,
 //                       refAllele: String, altAllele: String,
 //                       qual: String, filter: String, csq: List[String], tsa: String)
@@ -106,5 +107,49 @@ object VEP {
       // .select("chr", "pos", "refAllele", "altAllele", "csq", "consequence", "transID")
 
     vepss
+  }
+
+
+  /** join gene id per extracted transcript (it should be one per row)
+    *
+    * generate variant_id column
+    * drop not needed ones
+    * rename geneID to gene_id in order to keep names equal
+    * filter out those with no gene_id
+    * repartition based on variant_id and gene_id
+    * and persist if you want to keep the partition through next operations (by ex. joins)
+    * generate pivot per consecuence and set to count or fill with 0
+    */
+  def apply(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
+    logger.info("load and cache ensembl gene to transcript LUT getting only gene_id and trans_id")
+    val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
+      .select("gene_id", "trans_id", "tss")
+      .cache
+
+    logger.info("load VEP csq consequences table and convert to a ")
+    val vepCsqs = loadConsequenceTable(conf.vep.csq)
+      .select("so_term")
+      .collect.toList.map(row => row(0).toString).sorted
+
+    logger.info("load VEP table for homo sapiens")
+    val veps = loadHumanVEP(conf.vep.homoSapiensCons)
+
+    logger.info("inner join vep consequences transcripts to genes")
+    val vepsDF = veps.join(geneTrans, Seq("trans_id"))
+      .withColumnRenamed("consequence", "feature")
+      .withColumn("variant_id",
+        concat_ws("_", $"chr_name", $"variant_pos", $"ref_allele", $"alt_allele"))
+      .drop("trans_id", "csq", "chr_name", "variant_pos", "ref_allele", "alt_allele", "tss", "rs_id",
+        "tss_distance")
+      .where($"gene_id".isNotNull)
+      .groupBy("variant_id", "gene_id", "feature")
+      .agg(count("feature").as("value"))
+      .withColumn("value", array($"value"))
+      .withColumn("source_id", lit("vep"))
+      .withColumn("tissue_id", lit("unknown"))
+
+    vepsDF
   }
 }
