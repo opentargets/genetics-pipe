@@ -10,7 +10,7 @@ import scopt.OptionParser
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val progVersion: String = "0.7"
+  val progVersion: String = "0.8"
   val progName: String = "gecko-pipe"
   val entryText: String =
     """
@@ -73,6 +73,7 @@ object Main extends LazyLogging {
           vep.show(numRows = 10, truncate = false)
         }
         // vep.show(25, truncate = false)
+        // vep.explain(true)
 
         val dts = Dataset.buildV2G(Seq(gtex, vep), c)
 

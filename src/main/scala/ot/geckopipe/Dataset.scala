@@ -33,7 +33,7 @@ object Dataset extends LazyLogging  {
         .drop("_tmp")
 
       logger.info("enrich union datasets with gene info")
-      val v2gEnriched = dtsEnriched.join(geneTrans, Seq("gene_id"))
+      val v2gEnriched = dtsEnriched.join(geneTrans, Seq("gene_id"), "left_outer")
 
       Some(v2gEnriched)
 
