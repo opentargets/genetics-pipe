@@ -7,6 +7,18 @@ import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 
 object Dataset extends LazyLogging  {
+  /** union all intervals and interpolate variants from intervals */
+  def buildIntervals(vep: DataFrame, intervals: Seq[DataFrame], conf: Configuration)
+                    (implicit ss: SparkSession): DataFrame = {
+    val in2Variants = intervals
+      .foldLeft(intervals.head.select(intervalColumnNames.head, intervalColumnNames.tail:_*))( (aggIn, interval)  => {
+        aggIn.union(interval.select(intervalColumnNames.head, intervalColumnNames.tail:_*))
+      })
+
+    // interpolate variants and convert to v2gColumnNames
+    in2Variants
+  }
+
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   // def buildV2G(gtex: DataFrame, vep: DataFrame, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
   def buildV2G(datasets: Seq[DataFrame], conf: Configuration)(implicit ss: SparkSession): Option[DataFrame] = {
@@ -14,8 +26,8 @@ object Dataset extends LazyLogging  {
 
     if (datasets.nonEmpty) {
       logger.info("build variant to gene dataset union the list of datasets")
-      val dts = datasets.foldLeft(datasets.head.select(columnNames.head, columnNames.tail:_*))((aggDt, dt) => {
-        aggDt.union(dt.select(columnNames.head, columnNames.tail:_*))
+      val dts = datasets.foldLeft(datasets.head.select(v2gColumnNames.head, v2gColumnNames.tail:_*))((aggDt, dt) => {
+        aggDt.union(dt.select(v2gColumnNames.head, v2gColumnNames.tail:_*))
       })
 
       logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")

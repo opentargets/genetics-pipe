@@ -75,8 +75,14 @@ object Main extends LazyLogging {
           pchic.show(numRows = 10, truncate = false)
         }
 
-        // TODO shape pchic to dataset
-        val dtSeq = Seq(gtex, vep, pchic)
+        // list of intervals to interpolate with variants
+        // it returns the union of interpolated intervals
+        val intervals = Seq(pchic)
+        val intervalDts = Dataset.buildIntervals(vep, intervals, c)
+
+        // list of processed datasets
+        // build the variant 2 gene and enrich each line with gene information
+        val dtSeq = Seq(gtex, vep, intervalDts)
         val dts = Dataset.buildV2G(dtSeq, c)
 
         dts match {
