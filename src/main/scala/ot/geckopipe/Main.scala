@@ -60,40 +60,40 @@ object Main extends LazyLogging {
         // needed for save dataset function
         implicit val sampleFactor: Double = c.sampleFactor
 
-        val gtex = GTEx(c)
-        logger.whenDebugEnabled {
-          gtex.show(numRows = 10, truncate = false)
-        }
-        // gtex.show(numRows = 25, truncate = false)
+//        val gtex = GTEx(c)
+//        logger.whenDebugEnabled {
+//          gtex.show(numRows = 10, truncate = false)
+//        }
+//
+//        val vep = VEP(c)
+//        logger.whenDebugEnabled {
+//          vep.show(numRows = 10, truncate = false)
+//        }
 
-        //Dataset.saveToFile(gtex, c.output.stripSuffix("/").concat("/gtex/"))
+        val pchic = PCHIC(c)
+        val pchicCount = pchic.count
 
-        val vep = VEP(c)
-        logger.whenDebugEnabled {
-          vep.show(numRows = 10, truncate = false)
-        }
-        // vep.show(25, truncate = false)
-        // vep.explain(true)
+        logger.info(s"num pchic rows $pchicCount")
 
-        val dts = Dataset.buildV2G(Seq(gtex, vep), c)
-
-        dts match {
-          case Some(r) =>
-            import ss.implicits._
-          //  r.show(100, truncate = false)
-          //
-          //        val stats = Dataset.computeStats(gtexAndVep, "dataset")
-          //
-            Dataset.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
-          //
-          //        println(s"few numbers from stats in chr count ${stats(0)} and total rows ${stats(1)}")
-          case None => logger.error("failed to generate any build variant to gene dataset." +
-            "This should not be happening")
-        }
+//        val dts = Dataset.buildV2G(Seq(gtex, vep), c)
+//
+//        dts match {
+//          case Some(r) =>
+//            import ss.implicits._
+//          //  r.show(100, truncate = false)
+//          //
+//          //        val stats = Dataset.computeStats(gtexAndVep, "dataset")
+//          //
+//            Dataset.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
+//          //
+//          //        println(s"few numbers from stats in chr count ${stats(0)} and total rows ${stats(1)}")
+//          case None => logger.error("failed to generate any build variant to gene dataset." +
+//            "This should not be happening")
+//        }
 
         ss.stop
 
-      case Left(failures) => logger.error(s"configuration contains errors like ${failures.toString}")
+      case Left(failures) => println(s"configuration contains errors like ${failures.toString}")
     }
     println("closing app... done.")
   }
