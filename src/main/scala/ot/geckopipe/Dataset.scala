@@ -18,9 +18,15 @@ object Dataset extends LazyLogging  {
         aggDt.union(dt.select(columnNames.head, columnNames.tail:_*))
       })
 
-      logger.info("load ensembl gene to transcript table and cache to enrich results")
+      logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
       val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
         .select("gene_id", "gene_start", "gene_end", "gene_chr", "gene_name", "gene_type")
+        .groupBy("gene_id")
+        .agg(first($"gene_start").as("gene_start"),
+          first($"gene_end").as("gene_end"),
+          first($"gene_chr").as("gene_chr"),
+          first($"gene_name").as("gene_name"),
+          first($"gene_type").as("gene_type"))
         .cache
 
       logger.info("split variant_id info into pos ref allele and alt allele")
