@@ -6,17 +6,47 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
 
+import scala.util.{Failure, Success}
+
 object Dataset extends LazyLogging  {
-  /** union all intervals and interpolate variants from intervals */
-  def buildIntervals(vep: DataFrame, intervals: Seq[DataFrame], conf: Configuration)
-                    (implicit ss: SparkSession): DataFrame = {
-    val in2Variants = intervals
-      .foldLeft(intervals.head.select(intervalColumnNames.head, intervalColumnNames.tail:_*))( (aggIn, interval)  => {
-        aggIn.union(interval.select(intervalColumnNames.head, intervalColumnNames.tail:_*))
+
+  def concatDatasets(datasets: Seq[DataFrame], columns: List[String]): Option[DataFrame] = datasets match {
+    case Nil => None
+    case _ =>
+      logger.info("build variant to gene dataset union the list of datasets")
+      val dts = datasets.foldLeft(datasets.head.select(columns.head, columns.tail: _*))((aggDt, dt) => {
+        aggDt.union(dt.select(columns.head, columns.tail: _*))
       })
 
-    // interpolate variants and convert to v2gColumnNames
-    in2Variants
+      Some(dts)
+  }
+
+  /** union all intervals and interpolate variants from intervals */
+  def buildIntervals(vep: DataFrame, intervals: Seq[DataFrame], conf: Configuration)
+                    (implicit ss: SparkSession): Option[DataFrame] = {
+
+    import ss.implicits._
+    concatDatasets(intervals, intervalColumnNames) match {
+      case None => None
+      case Some(in2) =>
+        // interpolate variants and convert to v2gColumnNames
+        Functions.splitVariantID(vep).map(df => {
+          val f2VariantColNames = "variant_id" :: variantColumnNames.take(2)
+          val svep = df.select(f2VariantColNames.head, f2VariantColNames.tail:_*)
+
+          in2.join(svep,
+            in2("chr_id") === svep("chr_id") and
+              svep("position") >= in2("position_start") and
+              svep("position") <= in2("position_end"),
+            "inner")
+            .drop("chr_id", "position_start", "position_end", "position")
+        }) match {
+          case Success(builtIntervals) => Some(builtIntervals)
+          case Failure(e) =>
+            logger.error(e.toString)
+            None
+        }
+    }
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
@@ -24,39 +54,30 @@ object Dataset extends LazyLogging  {
   def buildV2G(datasets: Seq[DataFrame], conf: Configuration)(implicit ss: SparkSession): Option[DataFrame] = {
     import ss.implicits._
 
-    if (datasets.nonEmpty) {
-      logger.info("build variant to gene dataset union the list of datasets")
-      val dts = datasets.foldLeft(datasets.head.select(v2gColumnNames.head, v2gColumnNames.tail:_*))((aggDt, dt) => {
-        aggDt.union(dt.select(v2gColumnNames.head, v2gColumnNames.tail:_*))
-      })
+    concatDatasets(datasets, v2gColumnNames) match {
+      case None => None
+      case Some(dts) =>
+        logger.info("build variant to gene dataset union the list of datasets")
+        logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
+        val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
+          .select("gene_id", "gene_start", "gene_end", "gene_name")
+          .groupBy("gene_id")
+          .agg(first($"gene_start").as("gene_start"),
+            first($"gene_end").as("gene_end"),
+            first($"gene_name").as("gene_name"))
+          .cache
 
-      logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
-      val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
-        .select("gene_id", "gene_start", "gene_end", "gene_chr", "gene_name", "gene_type")
-        .groupBy("gene_id")
-        .agg(first($"gene_start").as("gene_start"),
-          first($"gene_end").as("gene_end"),
-          first($"gene_chr").as("gene_chr"),
-          first($"gene_name").as("gene_name"),
-          first($"gene_type").as("gene_type"))
-        .cache
+        logger.info("split variant_id info into pos ref allele and alt allele")
+        logger.info("enrich union datasets with gene info")
+        val dtsEnriched = Functions.splitVariantID(dts)
+          .map(_.join(geneTrans, Seq("gene_id"), "left_outer"))
 
-      logger.info("split variant_id info into pos ref allele and alt allele")
-      val dtsEnriched = dts
-        .withColumn("_tmp", split($"variant_id", "_"))
-        // .withColumn("chr_name", $"_tmp".getItem(0))
-        .withColumn("variant_pos", $"_tmp".getItem(1).cast(LongType))
-        .withColumn("ref_allele", $"_tmp".getItem(2))
-        .withColumn("alt_allele", $"_tmp".getItem(3))
-        .drop("_tmp")
-
-      logger.info("enrich union datasets with gene info")
-      val v2gEnriched = dtsEnriched.join(geneTrans, Seq("gene_id"), "left_outer")
-
-      Some(v2gEnriched)
-
-    } else {
-      None
+        dtsEnriched match {
+          case Success(df) => Some(df)
+          case Failure(e) =>
+            logger.error(e.toString)
+            None
+        }
     }
   }
 
@@ -65,7 +86,7 @@ object Dataset extends LazyLogging  {
     import ss.implicits._
     val totalRows = dataset.count()
     // val rsidNullsCount = dataset.where($"rsid".isNull).count()
-    val inChrCount = dataset.where($"chr_name".isin(Chromosomes.chrList:_*)).count()
+    val inChrCount = dataset.where($"chr_id".isin(Chromosomes.chrList:_*)).count()
 
     logger.info(s"count number of rows in chr range $inChrCount of a total $totalRows")
     Seq(inChrCount, totalRows)

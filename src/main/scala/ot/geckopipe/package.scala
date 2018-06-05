@@ -11,8 +11,14 @@ package object geckopipe {
 
   /** interval columns
     *
-    * 1 23456 123 [score1, score2, ...] ENSG0000002 pchic unknown
+    * 1 23456 123 ENSG0000002 pchic unknown promoter [score1, score2, ...]
     */
-  val intervalColumnNames: List[String] = List("chr", "position", "interval_size",
+  val intervalColumnNames: List[String] = List("chr_id", "position_start", "position_end",
     "gene_id", "source_id", "tissue_id", "feature", "value")
+
+  /** variant_id is represented as 1_123_T_C but splitted into columns
+    *
+    * 1 23456 T C
+    */
+  val variantColumnNames: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
 }

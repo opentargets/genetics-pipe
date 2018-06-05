@@ -5,12 +5,13 @@ import java.nio.file.Paths
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.storage.StorageLevel
 import scopt.OptionParser
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val progVersion: String = "0.9"
+  val progVersion: String = "0.10"
   val progName: String = "gecko-pipe"
   val entryText: String =
     """
@@ -70,6 +71,8 @@ object Main extends LazyLogging {
           vep.show(numRows = 10, truncate = false)
         }
 
+        val positionalDatasets = Seq(gtex, vep)
+
         val pchic = PCHIC(c)
         logger.whenDebugEnabled {
           pchic.show(numRows = 10, truncate = false)
@@ -80,16 +83,16 @@ object Main extends LazyLogging {
         val intervals = Seq(pchic)
         val intervalDts = Dataset.buildIntervals(vep, intervals, c)
 
-        // list of processed datasets
-        // build the variant 2 gene and enrich each line with gene information
-        val dtSeq = Seq(gtex, vep, intervalDts)
+        val dtSeq = intervalDts.foldLeft(positionalDatasets)( (agg, ds) => agg :+ ds)
         val dts = Dataset.buildV2G(dtSeq, c)
 
         dts match {
           case Some(r) =>
             import ss.implicits._
+            r.persist(StorageLevel.DISK_ONLY)
+
             Dataset.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
-          //  r.show(100, truncate = false)
+            // r.show(500, truncate = false)
           //
           //        val stats = Dataset.computeStats(gtexAndVep, "dataset")
           //

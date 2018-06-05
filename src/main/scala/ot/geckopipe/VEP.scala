@@ -90,10 +90,10 @@ object VEP extends LazyLogging {
       .load(from)
       .withColumnRenamed("refAllele", "ref_allele")
       .withColumnRenamed("altAllele", "alt_allele")
-      .withColumnRenamed("chr", "chr_name")
+      .withColumnRenamed("chr", "chr_id")
       .withColumnRenamed("rsid", "rs_id")
       .withColumnRenamed("pos", "variant_pos")
-      .toDF("chr_name", "variant_pos", "rs_id", "ref_allele", "alt_allele", "qual", "filter", "info")
+      .toDF("chr_id", "variant_pos", "rs_id", "ref_allele", "alt_allele", "qual", "filter", "info")
       .withColumn("tsa", udfTSA($"info"))
       .withColumn("csq", udfCSQ($"info"))
       .withColumn("alt_allele",split($"alt_allele", ","))
@@ -140,8 +140,8 @@ object VEP extends LazyLogging {
     val vepsDF = veps.join(geneTrans, Seq("trans_id"), "left_outer")
       .withColumnRenamed("consequence", "feature")
       .withColumn("variant_id",
-        concat_ws("_", $"chr_name", $"variant_pos", $"ref_allele", $"alt_allele"))
-      .drop("trans_id", "csq", "chr_name", "variant_pos", "ref_allele", "alt_allele", "rs_id",
+        concat_ws("_", $"chr_id", $"variant_pos", $"ref_allele", $"alt_allele"))
+      .drop("trans_id", "csq", "chr_id", "variant_pos", "ref_allele", "alt_allele", "rs_id",
         "tss_distance")
       .where($"gene_id".isNotNull)
       .groupBy("variant_id", "gene_id", "feature")
