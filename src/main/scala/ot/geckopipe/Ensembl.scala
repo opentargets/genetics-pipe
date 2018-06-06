@@ -1,8 +1,22 @@
 package ot.geckopipe
 
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object Ensembl {
+  val schema = StructType(
+    StructField("Gene stable ID", StringType) ::
+      StructField("Transcript stable ID", StringType) ::
+      StructField("Gene start (bp)", LongType) ::
+      StructField("Gene end (bp)", LongType) ::
+      StructField("Transcript start (bp)", LongType) ::
+      StructField("Transcript end (bp)", LongType) ::
+      StructField("Transcription start site (TSS)", LongType) ::
+      StructField("Transcript length (including UTRs and CDS)", LongType) ::
+      StructField("Gene name", StringType) ::
+      StructField("Chromosome/scaffold name", StringType) ::
+      StructField("Gene type", StringType) :: Nil)
+
   /** load and transform lut gene transcript gene name from ensembl mart website
     *
     * columns from the tsv file from ensembl
@@ -23,12 +37,15 @@ object Ensembl {
     * @return the processed dataframe
     */
   def loadEnsemblG2T(from: String)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
     val transcripts = ss.read
       .format("csv")
       .option("header", "true")
-      .option("inferSchema", "true")
+      .option("inferSchema", "false")
       .option("delimiter","\t")
       .option("mode", "DROPMALFORMED")
+      .schema(schema)
       .load(from)
       .withColumnRenamed("Gene stable ID", "gene_id")
       .withColumnRenamed("Transcript stable ID", "trans_id")

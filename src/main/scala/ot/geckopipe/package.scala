@@ -1,5 +1,8 @@
 package ot
 
+import org.apache.avro.generic.GenericData.StringType
+import org.apache.spark.sql.types.{DataType, LongType}
+
 package object geckopipe {
   /** all data sources to incorporate needs to meet this format at the end
     *
@@ -21,4 +24,5 @@ package object geckopipe {
     * 1 23456 T C
     */
   val variantColumnNames: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
+  val variantColumnTypes: List[String] = List("String", "long", "string", "string")
 }

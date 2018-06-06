@@ -2,9 +2,21 @@ package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object VEP extends LazyLogging {
+  // .toDF("chr_id", "variant_pos", "rs_id", "ref_allele", "alt_allele", "qual", "filter", "info")
+  val schema = StructType(
+    StructField("chr_id", StringType) ::
+      StructField("variant_pos", LongType) ::
+      StructField("rs_id", StringType) ::
+      StructField("ref_allele", StringType) ::
+      StructField("alt_allele", StringType) ::
+      StructField("qual", StringType) ::
+      StructField("filter", StringType) ::
+      StructField("info", StringType) :: Nil)
+
 //  case class VEPRecord(chr: String, pos: Long, rsid: String,
 //                       refAllele: String, altAllele: String,
 //                       qual: String, filter: String, csq: List[String], tsa: String)
@@ -81,19 +93,15 @@ object VEP extends LazyLogging {
     val vepss = ss.read
       .format("csv")
       .option("header", "false")
-      .option("inferSchema", "true")
+      .option("inferSchema", "false")
       .option("delimiter","\t")
       .option("comment", "\u0023")
       .option("ignoreLeadingWhiteSpace", "true")
       .option("ignoreTrailingWhiteSpace", "true")
       .option("mode", "DROPMALFORMED")
+      .schema(schema)
       .load(from)
-      .withColumnRenamed("refAllele", "ref_allele")
-      .withColumnRenamed("altAllele", "alt_allele")
-      .withColumnRenamed("chr", "chr_id")
-      .withColumnRenamed("rsid", "rs_id")
-      .withColumnRenamed("pos", "variant_pos")
-      .toDF("chr_id", "variant_pos", "rs_id", "ref_allele", "alt_allele", "qual", "filter", "info")
+      .toDF
       .withColumn("tsa", udfTSA($"info"))
       .withColumn("csq", udfCSQ($"info"))
       .withColumn("alt_allele",split($"alt_allele", ","))
@@ -104,7 +112,6 @@ object VEP extends LazyLogging {
       .withColumn("consequence", $"csq".getItem(1))
       .withColumn("trans_id", $"csq".getItem(3))
       .drop("qual", "filter", "info", "tsa")
-      // .select("chr", "pos", "refAllele", "altAllele", "csq", "consequence", "transID")
 
     vepss
   }

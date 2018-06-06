@@ -3,8 +3,36 @@ package ot.geckopipe
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
 
 object GTEx extends LazyLogging {
+  //  |-- variant_id: string (nullable = true)
+  // |-- gene_id: string (nullable = true)
+  // |-- tss_distance: integer (nullable = true)
+  // |-- ma_samples: integer (nullable = true)
+  // |-- ma_count: integer (nullable = true)
+  // |-- maf: double (nullable = true)
+  // |-- pval_nominal: double (nullable = true)
+  // |-- slope: double (nullable = true)
+  // |-- slope_se: double (nullable = true)
+  // |-- pval_nominal_threshold: double (nullable = true)
+  // |-- min_pval_nominal: double (nullable = true)
+  // |-- pval_beta: double (nullable = true)
+
+  val schema = StructType(
+    StructField("variant_id", StringType) ::
+      StructField("gene_id", StringType) ::
+      StructField("tss_distance", LongType) ::
+      StructField("ma_samples", LongType) ::
+      StructField("ma_count", LongType) ::
+      StructField("maf", DoubleType) ::
+      StructField("pval_nominal", DoubleType) ::
+      StructField("slope", DoubleType) ::
+      StructField("slope_se", DoubleType) ::
+      StructField("pval_nominal_threshold", DoubleType) ::
+      StructField("min_pval_nominal", DoubleType) ::
+      StructField("pval_beta", DoubleType) :: Nil)
+
   def loadVGPairs(from: String)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
 
@@ -24,18 +52,18 @@ object GTEx extends LazyLogging {
     val loaded = ss.read
       .format("csv")
       .option("header", "true")
-      .option("inferSchema", "true")
+      .option("inferSchema", "false")
       .option("delimiter","\t")
       .option("mode", "DROPMALFORMED")
-      //.schema(schema)
+      .schema(schema)
       .load(from)
       .withColumn("filename", input_file_name)
       .withColumn("filename",
         when($"filename".isNotNull, f2t($"filename"))
           .otherwise(""))
       .withColumn("gene_id",
-        when($"gene_id".contains("."),cleanGeneID($"gene_id"))
-      )
+        when($"gene_id".contains("."),
+          cleanGeneID($"gene_id")))
       .withColumn("variant_id", removeBuild($"variant_id"))
 
     loaded

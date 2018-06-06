@@ -9,7 +9,8 @@ import scala.util.{Failure, Success, Try}
 
 object Functions extends LazyLogging {
   def splitVariantID(df: DataFrame, variantColName: String = "variant_id",
-                     intoColNames: List[String] = variantColumnNames): Try[DataFrame] = {
+                     intoColNames: List[String] = variantColumnNames,
+                     withColTypes: List[String] = variantColumnTypes): Try[DataFrame] = {
     val variantID = col(variantColName)
     val tmpCol = col("_tmp")
 
@@ -18,7 +19,7 @@ object Functions extends LazyLogging {
       val tmpDF = df.withColumn(tmpCol.toString, split(variantID, "_"))
 
       val modDF = intoColNames.zipWithIndex.foldLeft(tmpDF)( (df, pair) => {
-        df.withColumn(pair._1, tmpCol.getItem(pair._2))
+        df.withColumn(pair._1, tmpCol.getItem(pair._2).cast(withColTypes(pair._2)))
       }).drop(tmpCol)
 
       Success(modDF)

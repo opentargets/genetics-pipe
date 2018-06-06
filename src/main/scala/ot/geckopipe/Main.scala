@@ -11,7 +11,7 @@ import scopt.OptionParser
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val progVersion: String = "0.10"
+  val progVersion: String = "0.11"
   val progName: String = "gecko-pipe"
   val entryText: String =
     """
@@ -62,25 +62,12 @@ object Main extends LazyLogging {
         implicit val sampleFactor: Double = c.sampleFactor
 
         val gtex = GTEx(c)
-        logger.whenDebugEnabled {
-          gtex.show(numRows = 10, truncate = false)
-        }
-
         val vep = VEP(c)
-        logger.whenDebugEnabled {
-          vep.show(numRows = 10, truncate = false)
-        }
-
         val positionalDatasets = Seq(gtex, vep)
 
         val pchic = PCHIC(c)
-        logger.whenDebugEnabled {
-          pchic.show(numRows = 10, truncate = false)
-        }
-
-        // list of intervals to interpolate with variants
-        // it returns the union of interpolated intervals
         val intervals = Seq(pchic)
+
         val intervalDts = Dataset.buildIntervals(vep, intervals, c)
 
         val dtSeq = intervalDts.foldLeft(positionalDatasets)( (agg, ds) => agg :+ ds)
@@ -89,7 +76,6 @@ object Main extends LazyLogging {
         dts match {
           case Some(r) =>
             import ss.implicits._
-            r.persist(StorageLevel.DISK_ONLY)
 
             Dataset.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
             // r.show(500, truncate = false)
