@@ -6,7 +6,6 @@ import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
 object VEP extends LazyLogging {
-  // .toDF("chr_id", "variant_pos", "rs_id", "ref_allele", "alt_allele", "qual", "filter", "info")
   val schema = StructType(
     StructField("chr_id", StringType) ::
       StructField("variant_pos", LongType) ::

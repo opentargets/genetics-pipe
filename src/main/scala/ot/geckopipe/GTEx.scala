@@ -6,19 +6,6 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 
 object GTEx extends LazyLogging {
-  //  |-- variant_id: string (nullable = true)
-  // |-- gene_id: string (nullable = true)
-  // |-- tss_distance: integer (nullable = true)
-  // |-- ma_samples: integer (nullable = true)
-  // |-- ma_count: integer (nullable = true)
-  // |-- maf: double (nullable = true)
-  // |-- pval_nominal: double (nullable = true)
-  // |-- slope: double (nullable = true)
-  // |-- slope_se: double (nullable = true)
-  // |-- pval_nominal_threshold: double (nullable = true)
-  // |-- min_pval_nominal: double (nullable = true)
-  // |-- pval_beta: double (nullable = true)
-
   val schema = StructType(
     StructField("variant_id", StringType) ::
       StructField("gene_id", StringType) ::
