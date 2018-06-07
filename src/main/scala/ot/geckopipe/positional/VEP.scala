@@ -101,7 +101,6 @@ object VEP extends LazyLogging {
       .option("mode", "DROPMALFORMED")
       .schema(schema)
       .load(from)
-      .toDF
       .withColumn("tsa", udfTSA($"info"))
       .withColumn("csq", udfCSQ($"info"))
       .withColumn("alt_allele",split($"alt_allele", ","))

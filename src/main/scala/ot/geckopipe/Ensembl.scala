@@ -48,8 +48,6 @@ object Ensembl {
     * @return the processed dataframe
     */
   def apply(from: String)(implicit ss: SparkSession): Ensembl = {
-    import ss.implicits._
-
     val transcripts = ss.read
       .format("csv")
       .option("header", "true")
@@ -69,7 +67,6 @@ object Ensembl {
       .withColumnRenamed("Gene name", "gene_name")
       .withColumnRenamed("Chromosome/scaffold name", "gene_chr")
       .withColumnRenamed("Gene type", "gene_type")
-      .toDF
 
     new Ensembl(transcripts)
   }

@@ -24,7 +24,6 @@ object Fantom5 extends LazyLogging {
       .option("mode", "DROPMALFORMED")
       .schema(schema)
       .load(from)
-      .toDF
   }
 
   def apply(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
