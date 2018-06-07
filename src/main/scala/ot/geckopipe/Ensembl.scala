@@ -1,7 +1,18 @@
 package ot.geckopipe
 
+import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
+
+class Ensembl private(df: DataFrame) {
+  def table: DataFrame = df
+  def aggByGene: DataFrame = df
+    .select("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name")
+    .groupBy("gene_chr", "gene_id")
+      .agg(first(col("gene_start")).as("gene_start"),
+        first(col("gene_end")).as("gene_end"),
+        first(col("gene_name")).as("gene_name"))
+}
 
 object Ensembl {
   val schema = StructType(
@@ -36,7 +47,7 @@ object Ensembl {
     * @param ss implicit sparksession
     * @return the processed dataframe
     */
-  def loadEnsemblG2T(from: String)(implicit ss: SparkSession): DataFrame = {
+  def apply(from: String)(implicit ss: SparkSession): Ensembl = {
     import ss.implicits._
 
     val transcripts = ss.read
@@ -60,6 +71,6 @@ object Ensembl {
       .withColumnRenamed("Gene type", "gene_type")
       .toDF
 
-    transcripts
+    new Ensembl(transcripts)
   }
 }

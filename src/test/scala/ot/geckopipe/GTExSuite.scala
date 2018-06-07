@@ -1,6 +1,7 @@
 package ot.geckopipe
 
 import minitest._
+import ot.geckopipe.positional.GTEx
 
 object GTExSuite extends SimpleTestSuite{
   test("extract filename from fullpath") {

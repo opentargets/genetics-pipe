@@ -1,9 +1,10 @@
-package ot.geckopipe
+package ot.geckopipe.positional
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import ot.geckopipe.Configuration
 
 object GTEx extends LazyLogging {
   val schema = StructType(

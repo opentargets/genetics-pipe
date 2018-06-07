@@ -1,7 +1,7 @@
 package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, Row, RowFactory, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.LongType
 
@@ -26,5 +26,11 @@ object Functions extends LazyLogging {
 
     } else
       Failure(new IllegalArgumentException("You need >= 2 columns in order to split a variant_id -> chr, pos"))
+  }
+
+  def unwrapInterval(df: DataFrame): DataFrame = {
+    val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
+    df.withColumn("position", fromRangeToArray(col("position_start"), col("position_end")))
+        .withColumn("position", explode(col("position")))
   }
 }

@@ -1,9 +1,10 @@
-package ot.geckopipe
+package ot.geckopipe.positional
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import ot.geckopipe.{Configuration, Ensembl}
 
 object VEP extends LazyLogging {
   val schema = StructType(
@@ -130,7 +131,7 @@ object VEP extends LazyLogging {
     import ss.implicits._
 
     logger.info("load and cache ensembl gene to transcript LUT getting only gene_id and trans_id")
-    val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
+    val geneTrans = Ensembl(conf.ensembl.geneTranscriptPairs).table
       .select("gene_id", "trans_id")
       .cache
 
@@ -157,5 +158,8 @@ object VEP extends LazyLogging {
       .withColumn("tissue_id", lit("unknown"))
 
     vepsDF
+//      .sort($"chr_id".asc, $"variant_pos".asc)
+//      .repartitionByRange(256, $"chr_id", $"variant_pos")
+//      .persist(StorageLevel.MEMORY_AND_DISK)
   }
 }

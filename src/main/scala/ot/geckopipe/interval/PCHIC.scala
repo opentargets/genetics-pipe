@@ -1,9 +1,10 @@
-package ot.geckopipe
+package ot.geckopipe.interval
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.{DataFrame, SparkSession}
+import ot.geckopipe.Configuration
 
 object PCHIC extends LazyLogging {
   val schema = StructType(
@@ -13,8 +14,7 @@ object PCHIC extends LazyLogging {
       StructField("score", DoubleType) ::
       StructField("gene_id", StringType) :: Nil)
 
-  def loadPCHIC(from: String)(implicit ss: SparkSession): DataFrame = {
-    import ss.implicits._
+  def load(from: String)(implicit ss: SparkSession): DataFrame = {
 
     ss.read
       .format("csv")
@@ -28,10 +28,9 @@ object PCHIC extends LazyLogging {
   }
 
   def apply(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
-    import ss.implicits._
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
-    val pchic = loadPCHIC(conf.interval.pchic)
+    val pchic = load(conf.interval.pchic)
     val aggPchic = pchic
       .groupBy("chr_id", "position_start", "position_end", "gene_id")
       .agg(collect_list("score").as("value"))

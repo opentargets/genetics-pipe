@@ -6,6 +6,8 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.storage.StorageLevel
+import ot.geckopipe.interval.{Fantom5, PCHIC}
+import ot.geckopipe.positional.{GTEx, VEP}
 import scopt.OptionParser
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
@@ -66,7 +68,8 @@ object Main extends LazyLogging {
         val positionalDatasets = Seq(gtex, vep)
 
         val pchic = PCHIC(c)
-        val intervals = Seq(pchic)
+        val dhs = Fantom5(c)
+        val intervals = Seq(pchic, dhs)
 
         val intervalDts = Dataset.buildIntervals(vep, intervals, c)
 

@@ -34,12 +34,13 @@ object Dataset extends LazyLogging  {
           val f2VariantColNames = "variant_id" :: variantColumnNames.take(2)
           val svep = df.select(f2VariantColNames.head, f2VariantColNames.tail:_*)
 
-          in2.join(svep,
-            in2("chr_id") === svep("chr_id") and
-              svep("position") >= in2("position_start") and
-              svep("position") <= in2("position_end"),
-            "inner")
+          val in2Ranged = Functions.unwrapInterval(in2)
+
+          val in2Joint = in2Ranged.join(svep,Seq("chr_id", "position"))
             .drop("chr_id", "position_start", "position_end", "position")
+
+          in2Joint
+
         }) match {
           case Success(builtIntervals) => Some(builtIntervals)
           case Failure(e) =>
@@ -59,12 +60,8 @@ object Dataset extends LazyLogging  {
       case Some(dts) =>
         logger.info("build variant to gene dataset union the list of datasets")
         logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
-        val geneTrans = Ensembl.loadEnsemblG2T(conf.ensembl.geneTranscriptPairs)
-          .select("gene_id", "gene_start", "gene_end", "gene_name")
-          .groupBy("gene_id")
-          .agg(first($"gene_start").as("gene_start"),
-            first($"gene_end").as("gene_end"),
-            first($"gene_name").as("gene_name"))
+        val geneTrans = Ensembl(conf.ensembl.geneTranscriptPairs)
+          .aggByGene
           .cache
 
         logger.info("split variant_id info into pos ref allele and alt allele")
