@@ -62,12 +62,13 @@ object Dataset extends LazyLogging  {
         logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
         val geneTrans = Ensembl(conf.ensembl.geneTranscriptPairs)
           .aggByGene
+          .select()
           .cache
 
         logger.info("split variant_id info into pos ref allele and alt allele")
-        logger.info("enrich union datasets with gene info")
+        logger.warn("NOT enrich union datasets with gene info")
         val dtsEnriched = Functions.splitVariantID(dts)
-          .map(_.join(geneTrans, Seq("gene_id"), "left_outer"))
+          // .map(_.join(geneTrans, Seq("gene_id"), "left_outer"))
 
         dtsEnriched match {
           case Success(df) => Some(df)
