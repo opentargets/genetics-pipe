@@ -8,7 +8,7 @@ import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.index.VariantIndex
-import ot.geckopipe.interval.{Fantom5, PCHIC}
+import ot.geckopipe.interval.{DHS, Fantom5, PCHIC}
 import ot.geckopipe.positional.{GTEx, VEP}
 import scopt.OptionParser
 
@@ -67,19 +67,14 @@ object Main extends LazyLogging {
 
         val vIdx = VariantIndex.builder(c).loadOrBuild
 
-        // vIdx.table.show(50, false)
-        val numV = vIdx.table.count
-        val numVwRS = vIdx.table.where(col("rs_id").isNotNull).count
-
-        logger.info(s"number of variants $numV and with rsID $numVwRS")
-
         val gtex = GTEx(c)
         val vep = VEP(c)
         val positionalSeq = Seq(gtex, vep)
 
         val pchic = PCHIC(c)
-        val dhs = Fantom5(c)
-        val intervalSeq = Seq(pchic, dhs)
+        val dhs = DHS(c)
+        val fantom5 = Fantom5(c)
+        val intervalSeq = Seq(pchic, dhs, fantom5)
 
         val intervalDts = Variant2Gene.buildIntervals(vIdx, intervalSeq, c)
 
