@@ -4,7 +4,8 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import ot.geckopipe.{Configuration, Ensembl}
+import ot.geckopipe.Configuration
+import ot.geckopipe.index.EnsemblIndex
 
 object Fantom5 extends LazyLogging {
   val schema = StructType(
@@ -28,7 +29,7 @@ object Fantom5 extends LazyLogging {
 
   def apply(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
     def _transGene(df: DataFrame): DataFrame = {
-      val geneT = Ensembl(conf.ensembl.geneTranscriptPairs)
+      val geneT = EnsemblIndex(conf.ensembl.geneTranscriptPairs)
         .aggByGene
         .select("gene_id", "gene_name")
         .cache

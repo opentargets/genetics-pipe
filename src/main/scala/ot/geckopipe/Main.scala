@@ -5,7 +5,9 @@ import java.nio.file.Paths
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
+import ot.geckopipe.index.VariantIndex
 import ot.geckopipe.interval.{Fantom5, PCHIC}
 import ot.geckopipe.positional.{GTEx, VEP}
 import scopt.OptionParser
@@ -63,24 +65,30 @@ object Main extends LazyLogging {
         // needed for save dataset function
         implicit val sampleFactor: Double = c.sampleFactor
 
+        val vIdx = VariantIndex.builder(c).loadOrBuild
+
+        // vIdx.table.show(50, false)
+        val numV = vIdx.table.count
+        val numVwRS = vIdx.table.where(col("rs_id").isNotNull).count
+
+        logger.info(s"number of variants $numV and with rsID $numVwRS")
+
         val gtex = GTEx(c)
         val vep = VEP(c)
-        val positionalDatasets = Seq(gtex, vep)
+        val positionalSeq = Seq(gtex, vep)
 
         val pchic = PCHIC(c)
         val dhs = Fantom5(c)
-        val intervals = Seq(pchic, dhs)
+        val intervalSeq = Seq(pchic, dhs)
 
-        val intervalDts = Dataset.buildIntervals(vep, intervals, c)
+        val intervalDts = Variant2Gene.buildIntervals(vIdx, intervalSeq, c)
 
-        val dtSeq = intervalDts.foldLeft(positionalDatasets)( (agg, ds) => agg :+ ds)
-        val dts = Dataset.buildV2G(dtSeq, c)
+        val dtSeq = intervalDts.foldLeft(positionalSeq)( (agg, ds) => agg :+ ds)
+        val v2g = Variant2Gene(dtSeq, vIdx, c)
 
-        dts match {
+        v2g match {
           case Some(r) =>
-            import ss.implicits._
-
-            Dataset.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
+            Variant2Gene.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
             // r.show(500, truncate = false)
           //
           //        val stats = Dataset.computeStats(gtexAndVep, "dataset")

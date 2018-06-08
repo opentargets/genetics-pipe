@@ -5,10 +5,20 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
+import ot.geckopipe.index.{EnsemblIndex, VariantIndex}
+import ot.geckopipe.positional._
+import ot.geckopipe.interval._
 
 import scala.util.{Failure, Success}
 
-object Dataset extends LazyLogging  {
+object Variant2Gene extends LazyLogging  {
+  /** all data sources to incorporate needs to meet this format at the end
+    *
+    * One example of the shape of the data could be
+    * "1_123_T_C ENSG0000001 gtex uberon_0001 1
+    */
+  val v2gColumnNames: List[String] = List("variant_id", "gene_id", "source_id", "tissue_id",
+    "feature", "value")
 
   def concatDatasets(datasets: Seq[DataFrame], columns: List[String]): Option[DataFrame] = datasets match {
     case Nil => None
@@ -22,37 +32,26 @@ object Dataset extends LazyLogging  {
   }
 
   /** union all intervals and interpolate variants from intervals */
-  def buildIntervals(vep: DataFrame, intervals: Seq[DataFrame], conf: Configuration)
+  def buildIntervals(vIdx: VariantIndex, intervals: Seq[DataFrame], conf: Configuration)
                     (implicit ss: SparkSession): Option[DataFrame] = {
 
-    import ss.implicits._
     concatDatasets(intervals, intervalColumnNames) match {
       case None => None
       case Some(in2) =>
-        // interpolate variants and convert to v2gColumnNames
-        Functions.splitVariantID(vep).map(df => {
-          val f2VariantColNames = "variant_id" :: variantColumnNames.take(2)
-          val svep = df.select(f2VariantColNames.head, f2VariantColNames.tail:_*)
+        val fVIdx = vIdx.table.select("chr_id", "position", "variant_id")
+        val in2Joint = Functions.unwrapInterval(in2)
 
-          val in2Ranged = Functions.unwrapInterval(in2)
+        val integratedData = fVIdx
+          .join(in2Joint, Seq("chr_id", "position"), "inner")
+          .drop("chr_id", "position_start", "position_end", "position")
 
-          val in2Joint = in2Ranged.join(svep,Seq("chr_id", "position"))
-            .drop("chr_id", "position_start", "position_end", "position")
-
-          in2Joint
-
-        }) match {
-          case Success(builtIntervals) => Some(builtIntervals)
-          case Failure(e) =>
-            logger.error(e.toString)
-            None
-        }
+        Some(integratedData)
     }
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   // def buildV2G(gtex: DataFrame, vep: DataFrame, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
-  def buildV2G(datasets: Seq[DataFrame], conf: Configuration)(implicit ss: SparkSession): Option[DataFrame] = {
+  def apply(datasets: Seq[DataFrame], vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Option[DataFrame] = {
     import ss.implicits._
 
     concatDatasets(datasets, v2gColumnNames) match {
@@ -60,15 +59,18 @@ object Dataset extends LazyLogging  {
       case Some(dts) =>
         logger.info("build variant to gene dataset union the list of datasets")
         logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
-        val geneTrans = Ensembl(conf.ensembl.geneTranscriptPairs)
+        val geneTrans = EnsemblIndex(conf.ensembl.geneTranscriptPairs)
           .aggByGene
-          .select()
           .cache
 
         logger.info("split variant_id info into pos ref allele and alt allele")
         logger.warn("NOT enrich union datasets with gene info")
-        val dtsEnriched = Functions.splitVariantID(dts)
-          // .map(_.join(geneTrans, Seq("gene_id"), "left_outer"))
+        // List("chr_id", "position", "ref_allele", "alt_allele")
+        val varid = vIdx.table.select("variant_id", "rs_id")
+        val dtsEnriched = Functions.splitVariantID(dts).map(
+          _.join(geneTrans, Seq("gene_id"), "left_outer")
+            .join(varid, Seq("variant_id"), "left_outer")
+        )
 
         dtsEnriched match {
           case Success(df) => Some(df)

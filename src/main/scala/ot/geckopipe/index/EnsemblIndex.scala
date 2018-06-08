@@ -1,11 +1,14 @@
-package ot.geckopipe
+package ot.geckopipe.index
 
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-class Ensembl private(df: DataFrame) {
+/** This class represents a full table of gene with its transcripts grch37 */
+class EnsemblIndex private(val df: DataFrame) {
+  /** get the raw DataFrame */
   def table: DataFrame = df
+  /** get a DataFrame aggregated by gene_chr and gene_id */
   def aggByGene: DataFrame = df
     .select("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name")
     .groupBy("gene_chr", "gene_id")
@@ -14,7 +17,8 @@ class Ensembl private(df: DataFrame) {
         first(col("gene_name")).as("gene_name"))
 }
 
-object Ensembl {
+/** Companion object to build the EnsemblIndex class */
+object EnsemblIndex {
   val schema = StructType(
     StructField("Gene stable ID", StringType) ::
       StructField("Transcript stable ID", StringType) ::
@@ -47,7 +51,7 @@ object Ensembl {
     * @param ss implicit sparksession
     * @return the processed dataframe
     */
-  def apply(from: String)(implicit ss: SparkSession): Ensembl = {
+  def apply(from: String)(implicit ss: SparkSession): EnsemblIndex = {
     val transcripts = ss.read
       .format("csv")
       .option("header", "true")
@@ -68,6 +72,6 @@ object Ensembl {
       .withColumnRenamed("Chromosome/scaffold name", "gene_chr")
       .withColumnRenamed("Gene type", "gene_type")
 
-    new Ensembl(transcripts)
+    new EnsemblIndex(transcripts)
   }
 }

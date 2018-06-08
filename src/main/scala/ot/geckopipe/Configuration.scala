@@ -13,6 +13,8 @@ case class EnsemblSection(geneTranscriptPairs: String)
 case class VEPSection(csq: String, homoSapiensCons: String)
 
 case class IntervalSection(pchic: String, dhs: String, fantom5: String)
+
+case class VariantSection(build: Boolean, path: String)
 /**
   * Main configuration case class
   *
@@ -27,7 +29,8 @@ case class Configuration(output: String,
                          ensembl: EnsemblSection,
                          gtex: GTExSection,
                          vep: VEPSection,
-                         interval: IntervalSection)
+                         interval: IntervalSection,
+                         variantIndex: VariantSection)
 
 object Configuration {
   // companion object but nothing at the moment

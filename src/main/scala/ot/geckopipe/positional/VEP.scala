@@ -4,7 +4,8 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import ot.geckopipe.{Configuration, Ensembl}
+import ot.geckopipe.Configuration
+import ot.geckopipe.index.EnsemblIndex
 
 object VEP extends LazyLogging {
   val schema = StructType(
@@ -58,6 +59,51 @@ object VEP extends LazyLogging {
   }
 
   def loadHumanVEP(from: String)(implicit ss: SparkSession): DataFrame = {
+    val vepss = ss.read
+      .format("csv")
+      .option("header", "false")
+      .option("inferSchema", "false")
+      .option("delimiter","\t")
+      .option("comment", "\u0023")
+      .option("ignoreLeadingWhiteSpace", "true")
+      .option("ignoreTrailingWhiteSpace", "true")
+      .option("mode", "DROPMALFORMED")
+      .schema(schema)
+      .load(from)
+      .withColumn("alt_allele",split(col("alt_allele"), ","))
+      .withColumn("alt_allele",explode(col("alt_allele")))
+      .withColumn("variant_id",
+        concat_ws("_", col("chr_id"), col("variant_pos"),
+          col("ref_allele"), col("alt_allele")))
+        .withColumnRenamed("variant_pos", "position")
+
+    vepss
+  }
+
+
+  /** join gene id per extracted transcript (it should be one per row)
+    *
+    * generate variant_id column
+    * drop not needed ones
+    * rename geneID to gene_id in order to keep names equal
+    * filter out those with no gene_id
+    * repartition based on variant_id and gene_id
+    * and persist if you want to keep the partition through next operations (by ex. joins)
+    * generate pivot per consecuence and set to count or fill with 0
+    */
+  def apply(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
+    logger.info("load and cache ensembl gene to transcript LUT getting only gene_id and trans_id")
+    val geneTrans = EnsemblIndex(conf.ensembl.geneTranscriptPairs).table
+      .select("gene_id", "trans_id")
+      .cache
+
+    logger.info("load VEP csq consequences table and convert to a ")
+    val vepCsqs = loadConsequenceTable(conf.vep.csq)
+      .select("so_term")
+      .collect.toList.map(row => row(0).toString).sorted
+
     // split info string and extract CSQ substring
     // it returns a list of consequences
     val udfCSQ = udf( (info: String) => {
@@ -88,23 +134,10 @@ object VEP extends LazyLogging {
       }
     })
 
-    import ss.implicits._
-
-    val vepss = ss.read
-      .format("csv")
-      .option("header", "false")
-      .option("inferSchema", "false")
-      .option("delimiter","\t")
-      .option("comment", "\u0023")
-      .option("ignoreLeadingWhiteSpace", "true")
-      .option("ignoreTrailingWhiteSpace", "true")
-      .option("mode", "DROPMALFORMED")
-      .schema(schema)
-      .load(from)
+    logger.info("load VEP table for homo sapiens")
+    val veps = loadHumanVEP(conf.vep.homoSapiensCons)
       .withColumn("tsa", udfTSA($"info"))
       .withColumn("csq", udfCSQ($"info"))
-      .withColumn("alt_allele",split($"alt_allele", ","))
-      .withColumn("alt_allele",explode($"alt_allele"))
       .withColumn("csq", filterCSQByAltAllele($"ref_allele", $"alt_allele", $"tsa", $"csq"))
       .withColumn("csq", explode($"csq"))
       .withColumn("csq", split($"csq", "\\|"))
@@ -112,42 +145,10 @@ object VEP extends LazyLogging {
       .withColumn("trans_id", $"csq".getItem(3))
       .drop("qual", "filter", "info", "tsa")
 
-    vepss
-  }
-
-
-  /** join gene id per extracted transcript (it should be one per row)
-    *
-    * generate variant_id column
-    * drop not needed ones
-    * rename geneID to gene_id in order to keep names equal
-    * filter out those with no gene_id
-    * repartition based on variant_id and gene_id
-    * and persist if you want to keep the partition through next operations (by ex. joins)
-    * generate pivot per consecuence and set to count or fill with 0
-    */
-  def apply(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
-    import ss.implicits._
-
-    logger.info("load and cache ensembl gene to transcript LUT getting only gene_id and trans_id")
-    val geneTrans = Ensembl(conf.ensembl.geneTranscriptPairs).table
-      .select("gene_id", "trans_id")
-      .cache
-
-    logger.info("load VEP csq consequences table and convert to a ")
-    val vepCsqs = loadConsequenceTable(conf.vep.csq)
-      .select("so_term")
-      .collect.toList.map(row => row(0).toString).sorted
-
-    logger.info("load VEP table for homo sapiens")
-    val veps = loadHumanVEP(conf.vep.homoSapiensCons)
-
     logger.info("inner join vep consequences transcripts to genes")
     val vepsDF = veps.join(geneTrans, Seq("trans_id"), "left_outer")
       .withColumnRenamed("consequence", "feature")
-      .withColumn("variant_id",
-        concat_ws("_", $"chr_id", $"variant_pos", $"ref_allele", $"alt_allele"))
-      .drop("trans_id", "csq", "chr_id", "variant_pos", "ref_allele", "alt_allele", "rs_id",
+      .drop("trans_id", "csq", "chr_id", "position", "ref_allele", "alt_allele", "rs_id",
         "tss_distance")
       .where($"gene_id".isNotNull)
       .groupBy("variant_id", "gene_id", "feature")
@@ -157,8 +158,5 @@ object VEP extends LazyLogging {
       .withColumn("tissue_id", lit("unknown"))
 
     vepsDF
-//      .sort($"chr_id".asc, $"variant_pos".asc)
-//      .repartitionByRange(256, $"chr_id", $"variant_pos")
-//      .persist(StorageLevel.MEMORY_AND_DISK)
   }
 }

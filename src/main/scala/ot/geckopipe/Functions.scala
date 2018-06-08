@@ -5,6 +5,8 @@ import org.apache.spark.sql.{DataFrame, Row, RowFactory, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.LongType
 
+import ot.geckopipe.positional._
+
 import scala.util.{Failure, Success, Try}
 
 object Functions extends LazyLogging {
