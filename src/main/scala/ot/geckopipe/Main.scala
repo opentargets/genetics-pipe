@@ -1,15 +1,10 @@
 package ot.geckopipe
 
 import java.nio.file.Paths
-
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import org.apache.spark.sql.functions._
-import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.index.VariantIndex
-import ot.geckopipe.interval.{DHS, Fantom5, PCHIC}
-import ot.geckopipe.positional.{GTEx, VEP}
 import scopt.OptionParser
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
@@ -67,28 +62,16 @@ object Main extends LazyLogging {
 
         val vIdx = VariantIndex.builder(c).loadOrBuild
 
-        val gtex = GTEx(c)
-        val vep = VEP(c)
-        val positionalSeq = Seq(gtex, vep)
+        val positionalDts = Variant2Gene.buildPositionals(vIdx, c)
+        val intervalDts = Variant2Gene.buildIntervals(vIdx, c)
 
-        val pchic = PCHIC(c)
-        val dhs = DHS(c)
-        val fantom5 = Fantom5(c)
-        val intervalSeq = Seq(pchic, dhs, fantom5)
-
-        val intervalDts = Variant2Gene.buildIntervals(vIdx, intervalSeq, c)
-
-        val dtSeq = intervalDts.foldLeft(positionalSeq)( (agg, ds) => agg :+ ds)
+        val dtSeq = positionalDts ++ intervalDts
         val v2g = Variant2Gene(dtSeq, vIdx, c)
 
         v2g match {
           case Some(r) =>
             Variant2Gene.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
-            // r.show(500, truncate = false)
-          //
-          //        val stats = Dataset.computeStats(gtexAndVep, "dataset")
-          //
-          //        println(s"few numbers from stats in chr count ${stats(0)} and total rows ${stats(1)}")
+
           case None => logger.error("failed to generate any build variant to gene dataset." +
             "This should not be happening")
         }
