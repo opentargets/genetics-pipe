@@ -37,7 +37,8 @@ object Interval {
       case Some(dts) =>
         val in2Joint = buildPosSegment(buildPosSegment(dts, "position_start", "segment_start"),
           "position_end", "segment_end")
-          .sort(col("chr_id").asc, col("position_start").asc)
+          .repartitionByRange(col("chr_id").asc, col("position_start").asc)
+          // .sort(col("chr_id").asc, col("position_start").asc)
 
         val jointDts = fVIdx
           .join(in2Joint, fVIdx("position") <= in2Joint("position_end") and fVIdx("position") >= in2Joint("position_start"), "left")
