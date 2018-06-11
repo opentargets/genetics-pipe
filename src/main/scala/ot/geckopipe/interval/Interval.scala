@@ -2,6 +2,7 @@ package ot.geckopipe.interval
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{col, explode, udf}
+import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.Configuration
 import ot.geckopipe.functions._
 import ot.geckopipe.index.VariantIndex
@@ -38,6 +39,7 @@ object Interval {
         val in2Joint = buildPosSegment(buildPosSegment(dts, "position_start", "segment_start"),
           "position_end", "segment_end")
           .repartitionByRange(col("chr_id").asc, col("position_start").asc)
+          .persist(StorageLevel.MEMORY_AND_DISK)
           // .sort(col("chr_id").asc, col("position_start").asc)
 
         val jointDts = fVIdx
