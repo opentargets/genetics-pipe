@@ -1,10 +1,13 @@
 package ot.geckopipe
 
 import java.nio.file.Paths
+
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import ot.geckopipe.index.VariantIndex
+import ot.geckopipe.index.{V2GIndex, VariantIndex}
+import ot.geckopipe.interval.Interval
+import ot.geckopipe.positional.Positional
 import scopt.OptionParser
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
@@ -62,15 +65,18 @@ object Main extends LazyLogging {
 
         val vIdx = VariantIndex.builder(c).loadOrBuild
 
-        val positionalDts = Variant2Gene.buildPositionals(vIdx, c)
-        val intervalDts = Variant2Gene.buildIntervals(vIdx, c)
+        val positionalDts = Positional.buildPositionals(vIdx, c)
+        val intervalDts = Interval.buildIntervals(vIdx, c)
 
         val dtSeq = positionalDts ++ intervalDts
-        val v2g = Variant2Gene(dtSeq, vIdx, c)
+
+        // dtSeq.foreach(_.show(false))
+        val v2g = V2GIndex(dtSeq.toSeq, vIdx, c)
 
         v2g match {
           case Some(r) =>
-            Variant2Gene.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
+            // r.show(100, false)
+            V2GIndex.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
 
           case None => logger.error("failed to generate any build variant to gene dataset." +
             "This should not be happening")

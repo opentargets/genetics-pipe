@@ -43,9 +43,7 @@ object DHS extends LazyLogging {
     val aggDHS= dhs
       .groupBy("chr_id", "position_start", "position_end", "gene_name")
       .agg(collect_list("score").as("value"))
-      .withColumn("source_id", lit("dhs"))
-      .withColumn("tissue_id", lit("unknown"))
-      .withColumn("feature", lit("cre"))
+      .withColumn("feature", lit("dhs"))
 
     _transGene(aggDHS)
   }

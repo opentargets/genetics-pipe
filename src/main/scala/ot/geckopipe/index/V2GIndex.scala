@@ -1,65 +1,21 @@
-package ot.geckopipe
+package ot.geckopipe.index
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import ot.geckopipe.index.{EnsemblIndex, VariantIndex}
-import ot.geckopipe.positional._
-import ot.geckopipe.interval._
+import org.apache.spark.sql.functions._
+import ot.geckopipe.functions._
+import ot.geckopipe.{Chromosomes, Configuration, functions}
 
-object Variant2Gene extends LazyLogging  {
+object V2GIndex extends LazyLogging  {
   /** all data sources to incorporate needs to meet this format at the end
     *
     * One example of the shape of the data could be
     * "1_123_T_C ENSG0000001 gtex uberon_0001 1
     */
-  val v2gColumnNames: List[String] = List("variant_id", "gene_id", "source_id", "tissue_id",
-    "feature", "value")
-
-  def concatDatasets(datasets: Seq[DataFrame], columns: List[String]): Option[DataFrame] = datasets match {
-    case Nil => None
-    case _ =>
-      logger.info("build variant to gene dataset union the list of datasets")
-      val dts = datasets.foldLeft(datasets.head.select(columns.head, columns.tail: _*))((aggDt, dt) => {
-        aggDt.union(dt.select(columns.head, columns.tail: _*))
-      })
-
-      Some(dts)
-  }
-
-  /** union all intervals and interpolate variants from intervals */
-  def buildPositionals(vIdx: VariantIndex, conf: Configuration)
-                    (implicit ss: SparkSession): Seq[DataFrame] = {
-
-    val gtex = GTEx(conf)
-    val vep = VEP(conf)
-    Seq(gtex, vep)
-  }
-
-
-  /** union all intervals and interpolate variants from intervals */
-  def buildIntervals(vIdx: VariantIndex, conf: Configuration)
-                    (implicit ss: SparkSession): Seq[DataFrame] = {
-
-    val pchic = PCHIC(conf)
-    val dhs = DHS(conf)
-    val fantom5 = Fantom5(conf)
-    val intervalSeq = Seq(pchic, dhs, fantom5)
-
-    val fVIdx = vIdx.table.select("chr_id", "position", "variant_id")
-
-    intervalSeq.map(df => {
-      val in2Joint = Functions.unwrapInterval(df)
-
-      fVIdx
-        .join(in2Joint, Seq("chr_id", "position"), "inner")
-        .drop("chr_id", "position_start", "position_end", "position", "variant_id")
-    })
-  }
+  val v2gColumnNames: List[String] = List("variant_id", "gene_id", "feature", "value")
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
-  // def buildV2G(gtex: DataFrame, vep: DataFrame, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
   def apply(datasets: Seq[DataFrame], vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Option[DataFrame] = {
-
     concatDatasets(datasets, v2gColumnNames) match {
       case None => None
       case Some(dts) =>
@@ -70,6 +26,9 @@ object Variant2Gene extends LazyLogging  {
           .cache
 
         val dtsEnriched = dts
+          .groupBy("variant_id", "gene_id", "feature")
+          .pivot("feature")
+          .agg(first(col("value")))
           .join(geneTrans, Seq("gene_id"), "left_outer")
           .join(vIdx.table, Seq("variant_id"), "left_outer")
 

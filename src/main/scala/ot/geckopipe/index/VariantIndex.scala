@@ -6,11 +6,12 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.Configuration
 import ot.geckopipe.positional.VEP
+import ot.geckopipe.functions._
 
 /** represents a cached table of variants with all variant columns
   *
   * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
-  * this table is persisted and sorted by (chr_id, position) by default
+  * this table is persisted and sorted by (chr_id, segment, position) by default
   * @param df the DataFrame
   */
 class VariantIndex private(val df: DataFrame) {
@@ -27,10 +28,11 @@ object VariantIndex {
         logger.info("building variant index as specified in the configuration")
         val savePath = conf.variantIndex.path.stripSuffix("*")
 
-        val vep = VEP.loadHumanVEP(conf.vep.homoSapiensCons)(ss)
+        val vep = buildPosSegment(VEP.loadHumanVEP(conf.vep.homoSapiensCons)(ss),
+            "position", "segment")
           .drop("qual", "filter", "info")
-          .select("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
-          .sort(col("chr_id").asc, col("position").asc)
+          .select("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id", "segment")
+          .sort(col("chr_id").asc, col("segment").asc, col("position").asc)
           .persist(StorageLevel.DISK_ONLY)
 
         vep.write.parquet(savePath)

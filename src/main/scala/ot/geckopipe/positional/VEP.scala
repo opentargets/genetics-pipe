@@ -154,8 +154,8 @@ object VEP extends LazyLogging {
       .groupBy("variant_id", "gene_id", "feature")
       .agg(count("feature").as("value"))
       .withColumn("value", array($"value"))
-      .withColumn("source_id", lit("vep"))
-      .withColumn("tissue_id", lit("unknown"))
+      // .withColumn("source_id", lit("vep"))
+      // .withColumn("tissue_id", lit("unknown"))
 
     vepsDF
   }

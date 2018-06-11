@@ -33,9 +33,7 @@ object PCHIC extends LazyLogging {
     val aggPchic = pchic
       .groupBy("chr_id", "position_start", "position_end", "gene_id")
       .agg(collect_list("score").as("value"))
-      .withColumn("source_id", lit("pchic"))
-      .withColumn("tissue_id", lit("unknown"))
-      .withColumn("feature", lit("promoter"))
+      .withColumn("feature", lit("pchic"))
 
     aggPchic
   }

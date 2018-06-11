@@ -83,9 +83,10 @@ object GTEx extends LazyLogging {
 
     logger.info("join variant gene pairs with tissue code from tissue map")
     val r = vgPairs.join(tissues, Seq("filename"), "left_outer")
-      .withColumnRenamed("uberon_code", "tissue_id")
-      .withColumn("source_id", lit("gtex"))
-      .withColumn("feature", lit("tissue"))
+      // .withColumnRenamed("uberon_code", "tissue_id")
+      // .withColumn("source_id", lit("gtex"))
+      // .withColumn("feature", lit("tissue"))
+      .withColumnRenamed("uberon_code", "feature")
       .withColumn("value", array($"pval_nominal", $"slope", $"slope_se", $"pval_beta"))
       .drop("filename", "gtex_tissue", "ma_samples",
         "ma_count", "maf", "pval_nominal_threshold", "min_pval_nominal", "tss_distance",

@@ -43,9 +43,7 @@ object Fantom5 extends LazyLogging {
     val aggDHS= dhs
       .groupBy("chr_id", "position_start", "position_end", "gene_name")
       .agg(collect_list("score").as("value"))
-      .withColumn("source_id", lit("fantom5"))
-      .withColumn("tissue_id", lit("unknown"))
-      .withColumn("feature", lit("cre"))
+      .withColumn("feature", lit("fantom5"))
 
     _transGene(aggDHS)
   }
