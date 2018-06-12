@@ -18,26 +18,23 @@ object V2GIndex extends LazyLogging  {
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   def apply(datasets: Seq[DataFrame], vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Option[DataFrame] = {
-    concatDatasets(datasets, v2gColumnNames) match {
-      case None => None
-      case Some(dts) =>
-        logger.info("build variant to gene dataset union the list of datasets")
-        logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
-        val geneTrans = EnsemblIndex(conf.ensembl.geneTranscriptPairs)
-          .aggByGene
-          .cache
 
-        val features = Interval.features ++ Positional.features(conf)
+    logger.info("build variant to gene dataset union the list of datasets")
+    logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
+    val geneTrans = EnsemblIndex(conf.ensembl.geneTranscriptPairs)
+      .aggByGene
+      .cache
 
-        val dtsEnriched = dts
-          .groupBy("variant_id", "gene_id")
-          .pivot("feature", features)
-          .agg(first(col("value")))
-          .join(geneTrans, Seq("gene_id"), "left_outer")
-          .join(vIdx.table, Seq("variant_id"), "left_outer")
-
-        Some(dtsEnriched)
-    }
+    val features = Positional.features(conf) ++ Interval.features
+    datasets.map(ds => {
+      ds
+        .groupBy("variant_id", "gene_id")
+        .pivot("feature", features)
+        .agg(first(col("value")))
+        .join(geneTrans, Seq("gene_id"), "left_outer")
+        .join(vIdx.table, Seq("variant_id"), "left_outer")
+    })
+    concatDatasets(datasets, v2gColumnNames)
   }
 
   /** compute stats with this resulted table but only when info enabled */
