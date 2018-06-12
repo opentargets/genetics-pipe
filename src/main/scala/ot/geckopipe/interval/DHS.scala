@@ -38,7 +38,7 @@ object DHS extends LazyLogging {
         .drop("gene_name")
     }
 
-    logger.info("generate pchic dataset from file and aggregating by range and gene")
+    logger.info("generate DHS dataset from file and aggregating by range and gene")
     val dhs = load(conf.interval.dhs)
     val aggDHS= dhs
       .groupBy("chr_id", "position_start", "position_end", "gene_name")

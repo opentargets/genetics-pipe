@@ -13,7 +13,7 @@ import scopt.OptionParser
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
 
 object Main extends LazyLogging {
-  val progVersion: String = "0.11"
+  val progVersion: String = "0.12"
   val progName: String = "gecko-pipe"
   val entryText: String =
     """

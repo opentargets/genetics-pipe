@@ -2,12 +2,12 @@ package ot.geckopipe.interval
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{col, explode, udf}
-import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.Configuration
 import ot.geckopipe.functions._
 import ot.geckopipe.index.VariantIndex
 
 object Interval {
+  def features: List[String] = List("pchic", "fantom5", "dhs")
   /** interval columns
     *
     * 1 23456 123 ENSG0000002 promoter [score1, score2, ...]
@@ -23,7 +23,7 @@ object Interval {
 
   /** union all intervals and interpolate variants from intervals */
   def buildIntervals(vIdx: VariantIndex, conf: Configuration)
-                    (implicit ss: SparkSession): Option[DataFrame] = {
+                    (implicit ss: SparkSession): Seq[DataFrame] = {
 
     val pchic = PCHIC(conf)
     val dhs = DHS(conf)
@@ -32,23 +32,19 @@ object Interval {
 
     val fVIdx = vIdx.table.select("chr_id", "position", "variant_id", "segment")
 
+    intervalSeq.map(df => {
+      val in2Joint = buildPosSegment(buildPosSegment(df, "position_start", "segment_start"),
+        "position_end", "segment_end")
+        .repartitionByRange(col("chr_id").asc, col("segment_end").asc)
 
-    concatDatasets(intervalSeq, Interval.intervalColumnNames) match {
-      case None => None
-      case Some(dts) =>
-        val in2Joint = buildPosSegment(buildPosSegment(dts, "position_start", "segment_start"),
-          "position_end", "segment_end")
-          .repartitionByRange(col("chr_id").asc, col("position_start").asc)
-          .persist(StorageLevel.MEMORY_AND_DISK)
-          // .sort(col("chr_id").asc, col("position_start").asc)
+      fVIdx
+        .join(in2Joint)
+        .where(fVIdx("chr_id") === in2Joint("chr_id") and
+          (fVIdx("segment") === in2Joint("segment_start") or fVIdx("segment") === in2Joint("segment_end")) and
+          (fVIdx("position") <= in2Joint("position_end")) and
+          (fVIdx("position") >= in2Joint("position_start")))
+        .drop("chr_id", "position_start", "position_end", "position", "segment")
 
-        val jointDts = fVIdx
-          .join(in2Joint, fVIdx("position") <= in2Joint("position_end") and fVIdx("position") >= in2Joint("position_start"), "left")
-          .where(fVIdx("chr_id") === in2Joint("chr_id") and
-            (fVIdx("segment") === in2Joint("segment_start") or fVIdx("segment") === in2Joint("segment_end")))
-          .drop("chr_id", "position_start", "position_end", "position", "segment")
-
-        Some(jointDts)
-    }
+    })
   }
 }

@@ -38,13 +38,13 @@ object Fantom5 extends LazyLogging {
         .drop("gene_name")
     }
 
-    logger.info("generate pchic dataset from file and aggregating by range and gene")
-    val dhs = load(conf.interval.dhs)
-    val aggDHS= dhs
+    logger.info("generate Fantom5 dataset from file and aggregating by range and gene")
+    val f5 = load(conf.interval.fantom5)
+    val aggF5= f5
       .groupBy("chr_id", "position_start", "position_end", "gene_name")
       .agg(collect_list("score").as("value"))
       .withColumn("feature", lit("fantom5"))
 
-    _transGene(aggDHS)
+    _transGene(aggF5)
   }
 }

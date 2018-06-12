@@ -33,7 +33,8 @@ object VariantIndex {
           .drop("qual", "filter", "info")
           .select("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id", "segment")
           // .sort(col("chr_id").asc, col("segment").asc, col("position").asc)
-          .repartitionByRange(col("chr_id").asc, col("segment").asc, col("position").asc)
+          .repartitionByRange(col("chr_id").asc, col("segment").asc)
+          .sortWithinPartitions(col("chr_id").asc, col("position").asc)
           .persist(StorageLevel.DISK_ONLY)
 
         vep.write.parquet(savePath)

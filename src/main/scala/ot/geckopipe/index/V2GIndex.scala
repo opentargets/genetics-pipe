@@ -4,7 +4,9 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import ot.geckopipe.functions._
-import ot.geckopipe.{Chromosomes, Configuration, functions}
+import ot.geckopipe.{Chromosomes, Configuration}
+import ot.geckopipe.interval.Interval
+import ot.geckopipe.positional.Positional
 
 object V2GIndex extends LazyLogging  {
   /** all data sources to incorporate needs to meet this format at the end
@@ -25,9 +27,11 @@ object V2GIndex extends LazyLogging  {
           .aggByGene
           .cache
 
+        val features = Interval.features ++ Positional.features(conf)
+
         val dtsEnriched = dts
-          .groupBy("variant_id", "gene_id", "feature")
-          .pivot("feature")
+          .groupBy("variant_id", "gene_id")
+          .pivot("feature", features)
           .agg(first(col("value")))
           .join(geneTrans, Seq("gene_id"), "left_outer")
           .join(vIdx.table, Seq("variant_id"), "left_outer")
