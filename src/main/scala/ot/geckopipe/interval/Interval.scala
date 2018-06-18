@@ -3,7 +3,6 @@ package ot.geckopipe.interval
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions.{col, explode, udf}
 import ot.geckopipe.Configuration
-import ot.geckopipe.functions._
 import ot.geckopipe.index.VariantIndex
 
 object Interval {
@@ -30,20 +29,15 @@ object Interval {
     val fantom5 = Fantom5(conf)
     val intervalSeq = Seq(pchic, dhs, fantom5)
 
-    val fVIdx = vIdx.table.select("chr_id", "position", "variant_id", "segment")
+    val fVIdx = vIdx.table.select("chr_id", "position", "variant_id")
 
     intervalSeq.map(df => {
-      val in2Joint = buildPosSegment(buildPosSegment(df, "position_start", "segment_start"),
-        "position_end", "segment_end")
-        .repartitionByRange(col("chr_id").asc, col("segment_end").asc)
+      val in2Joint = unwrapInterval(df)
+        .repartitionByRange(col("chr_id").asc, col("position").asc)
 
-      fVIdx
-        .join(in2Joint)
-        .where(fVIdx("chr_id") === in2Joint("chr_id") and
-          (fVIdx("segment") === in2Joint("segment_start") or fVIdx("segment") === in2Joint("segment_end")) and
-          (fVIdx("position") <= in2Joint("position_end")) and
-          (fVIdx("position") >= in2Joint("position_start")))
-        .drop("chr_id", "position_start", "position_end", "position", "segment")
+      in2Joint
+        .join(fVIdx, Seq("chr_id", "position"))
+        .drop("chr_id", "position_start", "position_end", "position")
 
     })
   }

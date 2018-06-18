@@ -26,14 +26,15 @@ object V2GIndex extends LazyLogging  {
       .cache
 
     val features = Positional.features(conf) ++ Interval.features
-    datasets.map(ds => {
-      ds.groupBy("variant_id", "gene_id")
-        .pivot("feature", features)
-        .agg(first(col("value")))
-        .join(vIdx.table, Seq("variant_id"), "left_outer")
-        .join(geneTrans, Seq("gene_id"), "left_outer")
+    val dsMapped = datasets.map(ds => {
+      // ds.groupBy("variant_id", "gene_id")
+        // .pivot("feature", features)
+        // .agg(first(col("value")))
+      ds.join(geneTrans, Seq("gene_id"))
+        .join(vIdx.table, Seq("variant_id"))
     })
-    concatDatasets(datasets, v2gColumnNames)
+    // concatDatasets(datasets, v2gColumnNames.take(2) ++ features)
+    concatDatasets(dsMapped, v2gColumnNames)
   }
 
   /** compute stats with this resulted table but only when info enabled */

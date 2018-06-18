@@ -14,7 +14,7 @@ case class VEPSection(csq: String, homoSapiensCons: String)
 
 case class IntervalSection(pchic: String, dhs: String, fantom5: String)
 
-case class VariantSection(build: Boolean, path: String)
+case class VariantSection(path: String)
 /**
   * Main configuration case class
   *

@@ -10,7 +10,11 @@ import ot.geckopipe.interval.Interval
 import ot.geckopipe.positional.Positional
 import scopt.OptionParser
 
-case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map())
+sealed trait Command
+case class VICmd() extends Command
+case class V2GCmd() extends Command
+
+case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[Command] = None)
 
 object Main extends LazyLogging {
   val progVersion: String = "0.12"
@@ -63,23 +67,36 @@ object Main extends LazyLogging {
         // needed for save dataset function
         implicit val sampleFactor: Double = c.sampleFactor
 
-        val vIdx = VariantIndex.builder(c).loadOrBuild
+        logger.info("check command specified")
+        config.command match {
+          case Some(cmd: VICmd) =>
+            logger.info("exec variant-index command")
 
-        val positionalDts = Positional.buildPositionals(vIdx, c)
-        val intervalDts = Interval.buildIntervals(vIdx, c)
+            val vIdx = VariantIndex.builder(c).build
 
-        val dtSeq = positionalDts ++ intervalDts
+          case Some(cmd: V2GCmd) =>
+            logger.info("exec variant-gene command")
 
-        // dtSeq.foreach(_.show(false))
-        val v2g = V2GIndex(dtSeq.toSeq, vIdx, c)
+            val vIdx = VariantIndex.builder(c).load
+            val positionalDts = Positional.buildPositionals(vIdx, c)
+            val intervalDts = Interval.buildIntervals(vIdx, c)
 
-        v2g match {
-          case Some(r) =>
-            // r.show(100, false)
-            V2GIndex.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
+            val dtSeq = positionalDts ++ intervalDts
 
-          case None => logger.error("failed to generate any build variant to gene dataset." +
-            "This should not be happening")
+            // dtSeq.foreach(_.show(false))
+            val v2g = V2GIndex(dtSeq.toSeq, vIdx, c)
+
+            v2g match {
+              case Some(r) =>
+                // r.show(100, false)
+                V2GIndex.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
+
+              case None => logger.error("failed to generate any build variant to gene dataset." +
+                "This should not be happening")
+            }
+
+          case None =>
+            logger.error("failed to specify a command to run try --help")
         }
 
         ss.stop
@@ -101,7 +118,8 @@ object Main extends LazyLogging {
   val parser:OptionParser[CommandLineArgs] = new OptionParser[CommandLineArgs](progName) {
     head(progName, progVersion)
 
-    opt[String]('f', "file")
+    opt[String]("file")
+      .abbr("f")
       .valueName("<config-file>")
       .action( (x, c) => c.copy(file = x) )
       .text("file contains the configuration needed to run the pipeline")
@@ -111,6 +129,18 @@ object Main extends LazyLogging {
       .action( (x, c) => c.copy(kwargs = x) )
       .text("other arguments")
 
+    cmd("variant-index")
+      .action( (_, c) => c.copy(command = Some(VICmd())) )
+      .text("generate variant index from VEP file")
+      .abbr("vi")
+
+    cmd("variant-gene").
+      action( (_, c) => c.copy(command = Some(V2GCmd())))
+      .text("generate variant to gene table")
+      .abbr("v2g")
+
     note(entryText)
+
+    override def showUsageOnError = true
   }
 }

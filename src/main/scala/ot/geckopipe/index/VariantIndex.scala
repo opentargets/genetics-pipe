@@ -22,34 +22,30 @@ class VariantIndex private(val df: DataFrame) {
 object VariantIndex {
   /** this class build based on the Configuration it creates a VariantIndex */
   class Builder (val conf: Configuration, val ss: SparkSession) extends LazyLogging {
-    def loadOrBuild: VariantIndex = {
-      logger.info("load or build variant index process")
-      val vIdx = if (conf.variantIndex.build) {
-        logger.info("building variant index as specified in the configuration")
-        val savePath = conf.variantIndex.path.stripSuffix("*")
-
-        val vep = buildPosSegment(VEP.loadHumanVEP(conf.vep.homoSapiensCons)(ss),
-            "position", "segment")
-          .drop("qual", "filter", "info")
-          .select("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id", "segment")
-          // .sort(col("chr_id").asc, col("segment").asc, col("position").asc)
-          .repartitionByRange(col("chr_id").asc, col("segment").asc)
-          .sortWithinPartitions(col("chr_id").asc, col("position").asc)
-          .persist(StorageLevel.DISK_ONLY)
-
-        vep.write.parquet(savePath)
-        vep
-
-      } else {
-        logger.info("loading variant index as specified in the configuration")
-        // load from configuration
-        ss.read
-          .format("parquet")
-          .load(conf.variantIndex.path)
-          .persist(StorageLevel.DISK_ONLY)
-      }
+    def load: VariantIndex = {
+      logger.info("loading variant index as specified in the configuration")
+      // load from configuration
+      val vIdx = ss.read
+        .format("parquet")
+        .load(conf.variantIndex.path)
+        .persist(StorageLevel.DISK_ONLY)
 
       new VariantIndex(vIdx)
+    }
+
+    def build: VariantIndex = {
+      logger.info("building variant index as specified in the configuration")
+      val savePath = conf.variantIndex.path.stripSuffix("*")
+
+      val vep = VEP.loadHumanVEP(conf.vep.homoSapiensCons)(ss)
+        .drop("qual", "filter", "info")
+        .select("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
+        .repartitionByRange(col("chr_id").asc, col("position").asc)
+        .persist(StorageLevel.DISK_ONLY)
+
+      vep.write.parquet(savePath)
+
+      new VariantIndex(vep)
     }
   }
 
