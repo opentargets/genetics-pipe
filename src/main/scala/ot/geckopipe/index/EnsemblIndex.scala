@@ -5,14 +5,14 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /** This class represents a full table of gene with its transcripts grch37 */
 abstract class EnsemblIndex extends Indexable {
-  val columns: Seq[String] = Seq("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name")
-  val indexColumns: Seq[String] = Seq("gene_chr", "gene_id")
-
-  lazy val aggByGene: DataFrame = aggBy(indexColumns, columns)
+  lazy val aggByGene: DataFrame = aggBy(EnsemblIndex.indexColumns, EnsemblIndex.columns)
 }
 
 /** Companion object to build the EnsemblIndex class */
 object EnsemblIndex {
+  val columns: Seq[String] = Seq("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name")
+  val indexColumns: Seq[String] = Seq("gene_chr", "gene_id")
+
   val schema = StructType(
     StructField("Gene stable ID", StringType) ::
       StructField("Transcript stable ID", StringType) ::

@@ -13,14 +13,16 @@ import ot.geckopipe.positional.VEP
   * this table is persisted and sorted by (chr_id, position) by default
   */
 abstract class VariantIndex extends Indexable {
-  val columns: Seq[String] = Seq("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
-  val indexColumns: Seq[String] = Seq("chr_id", "position")
 
-  lazy val aggByVariant: DataFrame = aggBy(indexColumns, columns)
+
+  lazy val aggByVariant: DataFrame = aggBy(VariantIndex.indexColumns, VariantIndex.columns)
 }
 
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
 object VariantIndex {
+  val columns: Seq[String] = Seq("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
+  val indexColumns: Seq[String] = Seq("chr_id", "position")
+
   /** variant_id is represented as 1_123_T_C but splitted into columns 1 23456 T C */
   val variantColumnNames: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
 

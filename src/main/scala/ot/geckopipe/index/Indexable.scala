@@ -19,7 +19,7 @@ trait Indexable {
     * @return a select grouped and aggregated by fromSelect diff cols columns
     */
   def aggBy(cols: Seq[String], fromSelect: Seq[String]): DataFrame = {
-    val aggCols = fromSelect diff cols map(el => col(el).as(el))
+    val aggCols = fromSelect diff cols map(el => first(el).as(el))
 
     selectBy(fromSelect)
       .groupBy(cols.head, cols.tail:_*)

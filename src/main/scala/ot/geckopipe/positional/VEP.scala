@@ -143,11 +143,15 @@ object VEP extends LazyLogging {
     logger.info("inner join vep consequences transcripts to genes")
     val vepsDF = veps.join(geneTrans, Seq("trans_id"), "left_outer")
       .withColumnRenamed("consequence", "feature")
-      .drop("trans_id", "csq", "chr_id", "position", "ref_allele", "alt_allele", "rs_id",
-        "tss_distance")
+      .drop("trans_id", "csq", "tss_distance")
       .where($"gene_id".isNotNull)
       .groupBy("variant_id", "gene_id", "feature")
-      .agg(count("feature").as("value"))
+      .agg(count("feature").as("value"),
+        first("chr_id").as("chr_id"),
+        first("position").as("position"),
+        first("ref_allele").as("ref_allele"),
+        first("alt_allele").as("alt_allele"),
+        first("rs_id").as("rs_id"))
       .withColumn("value", array($"value"))
       // .withColumn("source_id", lit("vep"))
       // .withColumn("tissue_id", lit("unknown"))

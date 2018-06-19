@@ -16,10 +16,8 @@ object Positional {
   def buildPositionals(vIdx: VariantIndex, conf: Configuration)
                       (implicit ss: SparkSession): Seq[DataFrame] = {
 
-    val gtex = GTEx(conf)
+    val gtex = GTEx(conf).join(vIdx.table, Seq("variant_id"))
     val vep = VEP(conf)
-    Seq(gtex, vep).map(df => {
-      df.join(vIdx.table, Seq("chr_id", "position"))
-    })
+    Seq(gtex, vep)
   }
 }
