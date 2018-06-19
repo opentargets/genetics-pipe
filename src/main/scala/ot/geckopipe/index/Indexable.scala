@@ -1,10 +1,14 @@
 package ot.geckopipe.index
 
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{DataFrame, Dataset, Row}
 import org.apache.spark.sql.functions._
 
+/** just a simple wrapper to uniform the access to a few common predefined functions
+  * in different places with diferent indices
+  */
 trait Indexable {
-  def table: DataFrame
+  /** uniform way to get the dataframe */
+  val table: DataFrame
 
   /** simply select table using from seq of column names */
   def selectBy(from: Seq[String]): DataFrame = table.select(from.head, from.tail:_*)

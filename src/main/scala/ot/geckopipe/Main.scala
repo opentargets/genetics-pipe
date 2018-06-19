@@ -13,6 +13,7 @@ import scopt.OptionParser
 sealed trait Command
 case class VICmd() extends Command
 case class V2GCmd() extends Command
+case class C2GStatsCmd() extends Command
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[Command] = None)
 

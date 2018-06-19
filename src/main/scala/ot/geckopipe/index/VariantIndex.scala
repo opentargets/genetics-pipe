@@ -13,9 +13,7 @@ import ot.geckopipe.positional.VEP
   * this table is persisted and sorted by (chr_id, position) by default
   */
 abstract class VariantIndex extends Indexable {
-
-
-  lazy val aggByVariant: DataFrame = aggBy(VariantIndex.indexColumns, VariantIndex.columns)
+  def aggByVariant: DataFrame = aggBy(VariantIndex.indexColumns, VariantIndex.columns)
 }
 
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
@@ -40,7 +38,7 @@ object VariantIndex {
         .persist(StorageLevel.DISK_ONLY)
 
       new VariantIndex {
-        override def table: DataFrame = vIdx
+        override val table: DataFrame = vIdx
       }
     }
 
@@ -57,7 +55,7 @@ object VariantIndex {
       vep.write.parquet(savePath)
 
       new VariantIndex {
-        override def table: DataFrame = vep
+        override val table: DataFrame = vep
       }
     }
   }
