@@ -2,11 +2,8 @@ package ot.geckopipe.index
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions._
 import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
-import ot.geckopipe.interval.Interval
-import ot.geckopipe.positional.Positional
 
 object V2GIndex extends LazyLogging  {
   /** all data sources to incorporate needs to meet this format at the end
@@ -25,7 +22,7 @@ object V2GIndex extends LazyLogging  {
       .aggByGene
       .cache
 
-    val features = Positional.features(conf) ++ Interval.features
+    // val features = Positional.features(conf) ++ Interval.features
     val dsMapped = datasets.map(ds => {
       // ds.groupBy("variant_id", "gene_id")
         // .pivot("feature", features)

@@ -12,17 +12,14 @@ object Positional {
     csqs ++ tissues
   }
 
-  /** variant_id is represented as 1_123_T_C but splitted into columns 1 23456 T C */
-  val variantColumnNames: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
-  /** types of the columns named in variantColumnNames */
-  val variantColumnTypes: List[String] = List("String", "long", "string", "string")
-
   /** union all intervals and interpolate variants from intervals */
   def buildPositionals(vIdx: VariantIndex, conf: Configuration)
                       (implicit ss: SparkSession): Seq[DataFrame] = {
 
     val gtex = GTEx(conf)
     val vep = VEP(conf)
-    Seq(gtex, vep)
+    Seq(gtex, vep).map(df => {
+      df.join(vIdx.table, Seq("chr_id", "position"))
+    })
   }
 }

@@ -1,24 +1,14 @@
 package ot.geckopipe.index
 
-import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 
-import ot.geckopipe.functions._
-
 /** This class represents a full table of gene with its transcripts grch37 */
-class EnsemblIndex private(val df: DataFrame) {
-  /** get the raw DataFrame */
-  def table: DataFrame = df
-  /** get a DataFrame aggregated by gene_chr and gene_id */
-  def aggByGene: DataFrame = df
-    .select("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name", "gene_segment")
-    .groupBy("gene_chr", "gene_id")
-      .agg(first(col("gene_start")).as("gene_start"),
-        first(col("gene_end")).as("gene_end"),
-        first(col("gene_name")).as("gene_name"),
-        first(col("gene_segment")).as("gene_segment")
-      )
+abstract class EnsemblIndex extends Indexable {
+  val columns: Seq[String] = Seq("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name")
+  val indexColumns: Seq[String] = Seq("gene_chr", "gene_id")
+
+  lazy val aggByGene: DataFrame = aggBy(indexColumns, columns)
 }
 
 /** Companion object to build the EnsemblIndex class */
@@ -76,6 +66,8 @@ object EnsemblIndex {
       .withColumnRenamed("Chromosome/scaffold name", "gene_chr")
       .withColumnRenamed("Gene type", "gene_type")
 
-    new EnsemblIndex(buildPosSegment(transcripts,"gene_start", "gene_segment"))
+    new EnsemblIndex {
+      override def table: DataFrame = transcripts
+    }
   }
 }

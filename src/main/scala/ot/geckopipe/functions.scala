@@ -1,11 +1,10 @@
 package ot.geckopipe
 
-import com.google.common.primitives.UnsignedLong
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.LongType
-import ot.geckopipe.positional._
+import ot.geckopipe.index.VariantIndex
 
 import scala.util.{Failure, Success, Try}
 
@@ -16,8 +15,8 @@ object functions extends LazyLogging {
   }
 
   def splitVariantID(df: DataFrame, variantColName: String = "variant_id",
-                     intoColNames: List[String] = Positional.variantColumnNames,
-                     withColTypes: List[String] = Positional.variantColumnTypes): Try[DataFrame] = {
+                     intoColNames: List[String] = VariantIndex.variantColumnNames,
+                     withColTypes: List[String] = VariantIndex.variantColumnTypes): Try[DataFrame] = {
     val variantID = col(variantColName)
     val tmpCol = col("_tmp")
 

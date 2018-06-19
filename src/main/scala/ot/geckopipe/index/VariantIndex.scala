@@ -6,20 +6,27 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.Configuration
 import ot.geckopipe.positional.VEP
-import ot.geckopipe.functions._
 
 /** represents a cached table of variants with all variant columns
   *
   * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
-  * this table is persisted and sorted by (chr_id, segment, position) by default
-  * @param df the DataFrame
+  * this table is persisted and sorted by (chr_id, position) by default
   */
-class VariantIndex private(val df: DataFrame) {
-  def table: DataFrame = df
+abstract class VariantIndex extends Indexable {
+  val columns: Seq[String] = Seq("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
+  val indexColumns: Seq[String] = Seq("chr_id", "position")
+
+  lazy val aggByVariant: DataFrame = aggBy(indexColumns, columns)
 }
 
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
 object VariantIndex {
+  /** variant_id is represented as 1_123_T_C but splitted into columns 1 23456 T C */
+  val variantColumnNames: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
+
+  /** types of the columns named in variantColumnNames */
+  val variantColumnTypes: List[String] = List("String", "long", "string", "string")
+
   /** this class build based on the Configuration it creates a VariantIndex */
   class Builder (val conf: Configuration, val ss: SparkSession) extends LazyLogging {
     def load: VariantIndex = {
@@ -30,7 +37,9 @@ object VariantIndex {
         .load(conf.variantIndex.path)
         .persist(StorageLevel.DISK_ONLY)
 
-      new VariantIndex(vIdx)
+      new VariantIndex {
+        override def table: DataFrame = vIdx
+      }
     }
 
     def build: VariantIndex = {
@@ -45,7 +54,9 @@ object VariantIndex {
 
       vep.write.parquet(savePath)
 
-      new VariantIndex(vep)
+      new VariantIndex {
+        override def table: DataFrame = vep
+      }
     }
   }
 

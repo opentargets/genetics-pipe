@@ -29,16 +29,15 @@ object Interval {
     val fantom5 = Fantom5(conf)
     val intervalSeq = Seq(pchic, dhs, fantom5)
 
-    val fVIdx = vIdx.table.select("chr_id", "position", "variant_id")
+    // val fVIdx = vIdx.selectBy(Seq("chr_id", "position", "variant_id"))
 
     intervalSeq.map(df => {
       val in2Joint = unwrapInterval(df)
         .repartitionByRange(col("chr_id").asc, col("position").asc)
 
       in2Joint
-        .join(fVIdx, Seq("chr_id", "position"))
-        .drop("chr_id", "position_start", "position_end", "position")
-
+        .join(vIdx.table, Seq("chr_id", "position"))
+        .drop("position_start", "position_end")
     })
   }
 }

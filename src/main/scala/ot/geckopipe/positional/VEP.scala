@@ -99,11 +99,6 @@ object VEP extends LazyLogging {
       .select("gene_id", "trans_id")
       .cache
 
-    logger.info("load VEP csq consequences table and convert to a ")
-    val vepCsqs = loadConsequenceTable(conf.vep.csq)
-      .select("so_term")
-      .collect.toList.map(row => row(0).toString).sorted
-
     // split info string and extract CSQ substring
     // it returns a list of consequences
     val udfCSQ = udf( (info: String) => {

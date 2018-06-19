@@ -72,7 +72,7 @@ object Main extends LazyLogging {
           case Some(cmd: VICmd) =>
             logger.info("exec variant-index command")
 
-            val vIdx = VariantIndex.builder(c).build
+            val _ = VariantIndex.builder(c).build
 
           case Some(cmd: V2GCmd) =>
             logger.info("exec variant-gene command")
@@ -82,9 +82,7 @@ object Main extends LazyLogging {
             val intervalDts = Interval.buildIntervals(vIdx, c)
 
             val dtSeq = positionalDts ++ intervalDts
-
-            // dtSeq.foreach(_.show(false))
-            val v2g = V2GIndex(dtSeq.toSeq, vIdx, c)
+            val v2g = V2GIndex(dtSeq, vIdx, c)
 
             v2g match {
               case Some(r) =>
