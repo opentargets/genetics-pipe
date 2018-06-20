@@ -13,7 +13,7 @@ import scopt.OptionParser
 sealed trait Command
 case class VICmd() extends Command
 case class V2GCmd() extends Command
-case class C2GStatsCmd() extends Command
+case class V2GStatsCmd() extends Command
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[Command] = None)
 
@@ -83,16 +83,22 @@ object Main extends LazyLogging {
             val intervalDts = Interval.buildIntervals(vIdx, c)
 
             val dtSeq = positionalDts ++ intervalDts
-            val v2g = V2GIndex(dtSeq, vIdx, c)
+            val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
-            v2g match {
-              case Some(r) =>
-                // r.show(100, false)
-                V2GIndex.saveToFile(r, c.output.stripSuffix("/").concat("/merged/"))
+            v2g.save(c.output.stripSuffix("/").concat("/v2g/"))
 
-              case None => logger.error("failed to generate any build variant to gene dataset." +
-                "This should not be happening")
-            }
+          case Some(cmd: V2GStatsCmd) =>
+            logger.info("exec variant-gene-stats command")
+
+            val vIdx = VariantIndex.builder(c).load
+            val positionalDts = Positional.buildPositionals(vIdx, c)
+            val intervalDts = Interval.buildIntervals(vIdx, c)
+
+            val dtSeq = positionalDts ++ intervalDts
+            val v2g = V2GIndex.load(c)
+
+            val stats = v2g.computeStats
+            logger.info(s"computed stats $stats")
 
           case None =>
             logger.error("failed to specify a command to run try --help")
@@ -131,12 +137,15 @@ object Main extends LazyLogging {
     cmd("variant-index")
       .action( (_, c) => c.copy(command = Some(VICmd())) )
       .text("generate variant index from VEP file")
-      .abbr("vi")
 
     cmd("variant-gene").
       action( (_, c) => c.copy(command = Some(V2GCmd())))
       .text("generate variant to gene table")
-      .abbr("v2g")
+
+
+    cmd("variant-gene-stats").
+      action( (_, c) => c.copy(command = Some(V2GStatsCmd())))
+      .text("generate variant to gene stat results")
 
     note(entryText)
 

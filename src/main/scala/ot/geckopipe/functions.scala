@@ -34,14 +34,12 @@ object functions extends LazyLogging {
       Failure(new IllegalArgumentException("You need >= 2 columns in order to split a variant_id -> chr, pos"))
   }
 
-  def concatDatasets(datasets: Seq[DataFrame], columns: List[String]): Option[DataFrame] = datasets match {
-    case Nil => None
-    case _ =>
-      logger.info("build variant to gene dataset union the list of datasets")
-      val dts = datasets.foldLeft(datasets.head.select(columns.head, columns.tail: _*))((aggDt, dt) => {
-        aggDt.union(dt.select(columns.head, columns.tail: _*))
-      })
+  def concatDatasets(datasets: Seq[DataFrame], columns: Seq[String]): DataFrame = {
+    logger.info("build variant to gene dataset union the list of datasets")
+    val dts = datasets.foldLeft(datasets.head.select(columns.head, columns.tail: _*))((aggDt, dt) => {
+      aggDt.union(dt.select(columns.head, columns.tail: _*))
+    })
 
-      Some(dts)
+    dts
   }
 }
