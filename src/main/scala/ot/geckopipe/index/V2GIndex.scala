@@ -6,6 +6,10 @@ import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
 
+// TODO source_id should be included from filename path extracted
+// TODO tissue_id should be better represented some how
+// TODO constraint gene_id and variant_id same chromosome
+
 /** represents a cached table of variants with all variant columns
   *
   * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
