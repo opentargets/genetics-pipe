@@ -18,7 +18,7 @@ deploy:
   file: target/scala-2.11/ot-geckopipe-assembly-*
   on:
     repo: opentargets/geckopipe
-    tags: true
+    #    tags: true
   skip_cleanup: true
 notifications:
   email:
