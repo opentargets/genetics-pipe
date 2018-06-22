@@ -8,9 +8,9 @@ branches:
   only:
     - master
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes test
-  - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes compile
-  - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes assembly
+  - sbt ++$TRAVIS_SCALA_VERSION test
+  - sbt ++$TRAVIS_SCALA_VERSION compile
+  - sbt ++$TRAVIS_SCALA_VERSION assembly
 # deploy:
 #   provider: releases
 #   api_key: "GITHUB OAUTH TOKEN"
