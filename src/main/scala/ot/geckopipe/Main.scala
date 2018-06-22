@@ -18,8 +18,7 @@ case class V2GStatsCmd() extends Command
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[Command] = None)
 
 object Main extends LazyLogging {
-  val progVersion: String = "0.12"
-  val progName: String = "gecko-pipe"
+  val progName: String = "ot-geckopipe"
   val entryText: String =
     """
       |
@@ -34,7 +33,7 @@ object Main extends LazyLogging {
     """.stripMargin
 
   def run(config: CommandLineArgs): Unit = {
-    println(s"running $progName version $progVersion")
+    println(s"running $progName")
     val conf = if (config.file.nonEmpty) {
         logger.info(s"loading configuration from commandline as ${config.file}")
         pureconfig.loadConfig[Configuration](Paths.get(config.file))
@@ -121,7 +120,7 @@ object Main extends LazyLogging {
   }
 
   val parser:OptionParser[CommandLineArgs] = new OptionParser[CommandLineArgs](progName) {
-    head(progName, progVersion)
+    head(progName)
 
     opt[String]("file")
       .abbr("f")

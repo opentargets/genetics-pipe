@@ -1,3 +1,4 @@
+sudo: false
 language: scala
 scala:
   - 2.11.12
@@ -7,8 +8,9 @@ branches:
   only:
     - master
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes assembly
   - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes test
+  - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes compile
+  - sbt ++$TRAVIS_SCALA_VERSION check-gen-type-classes assembly
 # deploy:
 #   provider: releases
 #   api_key: "GITHUB OAUTH TOKEN"
@@ -17,3 +19,13 @@ script:
 #   skip_cleanup: true
 #   on:
 #     tags: true
+notifications:
+  email:
+    recipients:
+      - mkarmona@gmail.com
+    on_success: never
+    on_failure: always
+#  slack:
+#    rooms:
+#      - secure: "sdfusdhfsdofguhdfgubdsifgudfbgs3453durghssebarfooexample="
+#    on_success: always

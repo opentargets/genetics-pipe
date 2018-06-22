@@ -2,14 +2,11 @@ package ot.geckopipe.index
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.storage.StorageLevel
+import org.apache.spark.sql.functions._
 import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
 
-// TODO source_id should be included from filename path extracted
 // TODO tissue_id should be better represented some how
-// TODO constraint gene_id and variant_id same chromosome
-
 /** represents a cached table of variants with all variant columns
   *
   * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
@@ -69,7 +66,8 @@ object V2GIndex extends LazyLogging  {
       // ds.groupBy("variant_id", "gene_id")
       // .pivot("feature", features)
       // .agg(first(col("value")))
-      ds.join(geneTrans, Seq("gene_id"))
+      ds.where(col("chr_id") equalTo col("gene_chr"))
+        .join(geneTrans, Seq("gene_id"))
     })
     // concatDatasets(datasets, v2gColumnNames.take(2) ++ features)
     val allDts = concatDatasets(dsMapped, columns)

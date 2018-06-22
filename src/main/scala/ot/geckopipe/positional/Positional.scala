@@ -1,8 +1,10 @@
 package ot.geckopipe.positional
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.functions._
 import ot.geckopipe.Configuration
 import ot.geckopipe.index.VariantIndex
+import ot.geckopipe.functions._
 
 object Positional {
   def features(conf: Configuration)(implicit ss: SparkSession): List[String] = {
@@ -16,8 +18,8 @@ object Positional {
   def buildPositionals(vIdx: VariantIndex, conf: Configuration)
                       (implicit ss: SparkSession): Seq[DataFrame] = {
 
-    val gtex = GTEx(conf).join(vIdx.table, Seq("variant_id"))
-    val vep = VEP(conf)
+    val gtex = addSourceID(GTEx(conf), lit("gtex")).join(vIdx.table, Seq("variant_id"))
+    val vep = addSourceID(VEP(conf), lit("vep"))
     Seq(gtex, vep)
   }
 }

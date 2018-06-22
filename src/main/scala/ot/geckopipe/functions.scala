@@ -1,7 +1,7 @@
 package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.DataFrame
+import org.apache.spark.sql.{Column, DataFrame}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.LongType
 import ot.geckopipe.index.VariantIndex
@@ -9,6 +9,8 @@ import ot.geckopipe.index.VariantIndex
 import scala.util.{Failure, Success, Try}
 
 object functions extends LazyLogging {
+  def addSourceID(df: DataFrame, column: Column): DataFrame = df.withColumn("source_id", column)
+
   def buildPosSegment(df: DataFrame, fromColumn: String, toColumn: String): DataFrame = {
     val by = 1000L * 1000L
     df.withColumn(toColumn, col(fromColumn).divide(by).cast(LongType))

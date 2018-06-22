@@ -1,18 +1,14 @@
 package ot.geckopipe.interval
 
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{col, explode, udf}
+import org.apache.spark.sql.functions.{col, explode, udf, lit}
 import ot.geckopipe.Configuration
 import ot.geckopipe.index.VariantIndex
+import ot.geckopipe.functions._
 
 object Interval {
-  def features: List[String] = List("pchic", "fantom5", "dhs")
-  /** interval columns
-    *
-    * 1 23456 123 ENSG0000002 promoter [score1, score2, ...]
-    */
   val intervalColumnNames: List[String] = List("chr_id", "position_start", "position_end",
-    "gene_id", "feature", "value")
+    "gene_id", "feature", "value", "source_id")
 
   def unwrapInterval(df: DataFrame): DataFrame = {
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
@@ -24,9 +20,9 @@ object Interval {
   def buildIntervals(vIdx: VariantIndex, conf: Configuration)
                     (implicit ss: SparkSession): Seq[DataFrame] = {
 
-    val pchic = PCHIC(conf)
-    val dhs = DHS(conf)
-    val fantom5 = Fantom5(conf)
+    val pchic = addSourceID(PCHIC(conf), lit("pchic"))
+    val dhs = addSourceID(DHS(conf), lit("dhs"))
+    val fantom5 = addSourceID(Fantom5(conf), lit("fantom5"))
     val intervalSeq = Seq(pchic, dhs, fantom5)
 
     // val fVIdx = vIdx.selectBy(Seq("chr_id", "position", "variant_id"))
