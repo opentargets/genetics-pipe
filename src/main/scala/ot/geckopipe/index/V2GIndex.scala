@@ -7,6 +7,7 @@ import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
 
 // TODO tissue_id should be better represented some how
+// TODO integrate with new path structure from folders
 /** represents a cached table of variants with all variant columns
   *
   * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
