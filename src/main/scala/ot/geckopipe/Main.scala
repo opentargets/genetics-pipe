@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import ot.geckopipe.index.{V2GIndex, VariantIndex}
+import ot.geckopipe.index.{EnsemblIndex, V2GIndex, VariantIndex}
 import ot.geckopipe.interval.Interval
 import ot.geckopipe.positional.Positional
 import scopt.OptionParser
@@ -13,6 +13,7 @@ import scopt.OptionParser
 sealed trait Command
 case class VICmd() extends Command
 case class V2GCmd() extends Command
+case class V2GLUTCmd() extends Command
 case class V2GStatsCmd() extends Command
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[Command] = None)
@@ -86,6 +87,28 @@ object Main extends LazyLogging {
 
             v2g.save(c.output.stripSuffix("/").concat("/v2g/"))
 
+          case Some(cmd: V2GLUTCmd) =>
+            logger.info("exec variant-gene-luts command")
+
+            val vIdx = VariantIndex.builder(c).load
+
+            logger.info("write rs_id to chr-position")
+            vIdx.selectBy(Seq("rs_id", "chr_id", "position"))
+              .write
+              .option("delimiter","\t")
+              .option("header", "false")
+              .csv(c.output.stripSuffix("/").concat("/v2g-lut-rsid/"))
+
+            logger.info("write gene name to chr position")
+            val geneIdx = EnsemblIndex(c.ensembl.geneTranscriptPairs)
+              .aggByGene
+              .select("gene_name", "gene_chr", "gene_start", "gene_end")
+              .write
+              .option("delimiter","\t")
+              .option("header", "false")
+              .csv(c.output.stripSuffix("/").concat("/v2g-lut-gene/"))
+
+
           case Some(cmd: V2GStatsCmd) =>
             logger.info("exec variant-gene-stats command")
 
@@ -141,6 +164,9 @@ object Main extends LazyLogging {
       action( (_, c) => c.copy(command = Some(V2GCmd())))
       .text("generate variant to gene table")
 
+    cmd("variant-gene-luts").
+      action( (_, c) => c.copy(command = Some(V2GLUTCmd())))
+      .text("generate variant to gene lookup tables for variants, rsids and genes")
 
     cmd("variant-gene-stats").
       action( (_, c) => c.copy(command = Some(V2GStatsCmd())))
