@@ -13,7 +13,7 @@ object Interval extends LazyLogging {
       StructField("position_start", LongType) ::
       StructField("position_end", LongType) ::
       StructField("gene_id", StringType) ::
-      StructField("value", DoubleType) ::
+      StructField("score", DoubleType) ::
       StructField("feature", StringType) :: Nil)
 
   def load(from: String)(implicit ss: SparkSession): DataFrame = {
@@ -41,12 +41,13 @@ object Interval extends LazyLogging {
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val interval = load(conf.interval.path)
+      .withColumn("value", array(col("score")))
       .withColumn("tokens", extractValidTokensFromPath(col("filename")))
       .withColumn("source_id", col("tokens").getItem(0))
       .withColumn("tissue_id", col("tokens").getItem(1))
       .drop("filename", "tokens")
       .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))
-      .drop("position_start", "position_end")
+      .drop("position_start", "position_end", "score")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 
     interval.join(vIdx.table, Seq("chr_id", "position"))
