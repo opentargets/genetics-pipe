@@ -14,17 +14,17 @@ object EnsemblIndex {
   val indexColumns: Seq[String] = Seq("gene_chr", "gene_id")
 
   val schema = StructType(
-    StructField("Gene stable ID", StringType) ::
-      StructField("Transcript stable ID", StringType) ::
-      StructField("Gene start (bp)", LongType) ::
-      StructField("Gene end (bp)", LongType) ::
-      StructField("Transcript start (bp)", LongType) ::
-      StructField("Transcript end (bp)", LongType) ::
-      StructField("Transcription start site (TSS)", LongType) ::
-      StructField("Transcript length (including UTRs and CDS)", LongType) ::
-      StructField("Gene name", StringType) ::
-      StructField("Chromosome/scaffold name", StringType) ::
-      StructField("Gene type", StringType) :: Nil)
+    StructField("gene_id", StringType) ::
+      StructField("trans_id", StringType) ::
+      StructField("gene_start", LongType) ::
+      StructField("gene_end", LongType) ::
+      StructField("trans_start", LongType) ::
+      StructField("trans_end", LongType) ::
+      StructField("tss", LongType) ::
+      StructField("trans_size", LongType) ::
+      StructField("gene_name", StringType) ::
+      StructField("gene_chr", StringType) ::
+      StructField("gene_type", StringType) :: Nil)
 
   /** load and transform lut gene transcript gene name from ensembl mart website
     *
@@ -54,17 +54,6 @@ object EnsemblIndex {
       .option("mode", "DROPMALFORMED")
       .schema(schema)
       .load(from)
-      .withColumnRenamed("Gene stable ID", "gene_id")
-      .withColumnRenamed("Transcript stable ID", "trans_id")
-      .withColumnRenamed("Gene start (bp)", "gene_start")
-      .withColumnRenamed("Gene end (bp)", "gene_end")
-      .withColumnRenamed("Transcript start (bp)", "trans_start")
-      .withColumnRenamed("Transcript end (bp)", "trans_end")
-      .withColumnRenamed("Transcription start site (TSS)", "tss")
-      .withColumnRenamed("Transcript length (including UTRs and CDS)", "trans_size")
-      .withColumnRenamed("Gene name", "gene_name")
-      .withColumnRenamed("Chromosome/scaffold name", "gene_chr")
-      .withColumnRenamed("Gene type", "gene_type")
 
     new EnsemblIndex {
       override val table: DataFrame = transcripts

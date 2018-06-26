@@ -1,4 +1,4 @@
-package ot.geckopipe.positional
+package ot.geckopipe.qtl
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
@@ -153,8 +153,8 @@ object VEP extends LazyLogging {
         first("alt_allele").as("alt_allele"),
         first("rs_id").as("rs_id"))
       .withColumn("value", array($"value"))
-      // .withColumn("source_id", lit("vep"))
-      // .withColumn("tissue_id", lit("unknown"))
+      .withColumn("source_id", lit("vep"))
+      .withColumn("tissue_id", lit("unspecified"))
 
     vepsDF
   }
