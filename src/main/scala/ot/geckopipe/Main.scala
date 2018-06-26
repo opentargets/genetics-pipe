@@ -7,7 +7,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import ot.geckopipe.index.{EnsemblIndex, V2GIndex, VariantIndex}
 import ot.geckopipe.interval.Interval
-import ot.geckopipe.positional.Positional
+import ot.geckopipe.qtl.QTL
 import scopt.OptionParser
 
 sealed trait Command
@@ -70,24 +70,25 @@ object Main extends LazyLogging {
 
         logger.info("check command specified")
         config.command match {
-          case Some(cmd: VICmd) =>
+          case Some(_: VICmd) =>
             logger.info("exec variant-index command")
 
             val _ = VariantIndex.builder(c).build
 
-          case Some(cmd: V2GCmd) =>
+          case Some(_: V2GCmd) =>
             logger.info("exec variant-gene command")
 
             val vIdx = VariantIndex.builder(c).load
-            val positionalDts = Positional.buildPositionals(vIdx, c)
-            val intervalDts = Interval.buildIntervals(vIdx, c)
 
-            val dtSeq = positionalDts ++ intervalDts
+            val positionalDts = QTL(vIdx, c)
+            val intervalDt = Interval(vIdx, c)
+
+            val dtSeq = positionalDts :+ intervalDt
             val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
             v2g.save(c.output.stripSuffix("/").concat("/v2g/"))
 
-          case Some(cmd: V2GLUTCmd) =>
+          case Some(_: V2GLUTCmd) =>
             logger.info("exec variant-gene-luts command")
 
             val vIdx = VariantIndex.builder(c).load
@@ -109,14 +110,14 @@ object Main extends LazyLogging {
               .csv(c.output.stripSuffix("/").concat("/v2g-lut-gene/"))
 
 
-          case Some(cmd: V2GStatsCmd) =>
+          case Some(_: V2GStatsCmd) =>
             logger.info("exec variant-gene-stats command")
 
             val vIdx = VariantIndex.builder(c).load
-            val positionalDts = Positional.buildPositionals(vIdx, c)
-            val intervalDts = Interval.buildIntervals(vIdx, c)
+            val positionalDts = QTL(vIdx, c)
+            val intervalDt = Interval(vIdx, c)
 
-            val dtSeq = positionalDts ++ intervalDts
+            val dtSeq = positionalDts :+ intervalDt
             val v2g = V2GIndex.load(c)
 
             val stats = v2g.computeStats

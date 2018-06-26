@@ -1,6 +1,6 @@
 package ot.geckopipe.index
 
-import org.apache.spark.sql.{DataFrame, Dataset, Row}
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 
 /** just a simple wrapper to uniform the access to a few common predefined functions

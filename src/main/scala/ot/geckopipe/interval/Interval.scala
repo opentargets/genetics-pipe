@@ -1,39 +1,54 @@
 package ot.geckopipe.interval
 
+import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import org.apache.spark.sql.functions.{col, explode, udf, lit}
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
 import ot.geckopipe.Configuration
 import ot.geckopipe.index.VariantIndex
-import ot.geckopipe.functions._
 
-object Interval {
-  val intervalColumnNames: List[String] = List("chr_id", "position_start", "position_end",
-    "gene_id", "feature", "value", "source_id")
+object Interval extends LazyLogging {
+  val schema = StructType(
+    StructField("chr_id", StringType) ::
+      StructField("position_start", LongType) ::
+      StructField("position_end", LongType) ::
+      StructField("gene_id", StringType) ::
+      StructField("score", DoubleType) ::
+      StructField("feature", StringType) :: Nil)
 
-  def unwrapInterval(df: DataFrame): DataFrame = {
-    val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
-    df.withColumn("position", fromRangeToArray(col("position_start"), col("position_end")))
-      .withColumn("position", explode(col("position")))
+  def load(from: String)(implicit ss: SparkSession): DataFrame = {
+    ss.read
+      .format("csv")
+      .option("header", "true")
+      .option("inferSchema", "false")
+      .option("delimiter","\t")
+      .option("mode", "DROPMALFORMED")
+      .schema(schema)
+      .load(from)
+      .withColumn("filename", input_file_name)
+      .withColumn("feature", lower(col("feature")))
   }
 
-  /** union all intervals and interpolate variants from intervals */
-  def buildIntervals(vIdx: VariantIndex, conf: Configuration)
-                    (implicit ss: SparkSession): Seq[DataFrame] = {
+  def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
+    val extractValidTokensFromPath = udf((path: String) => {
+      val validTokens = path.split("interval").last.split("/").filter(_.nonEmpty)
+      val tokenList = Array(validTokens.head.toLowerCase, validTokens.tail.drop(1).head.toLowerCase)
 
-    val pchic = addSourceID(PCHIC(conf), lit("pchic"))
-    val dhs = addSourceID(DHS(conf), lit("dhs"))
-    val fantom5 = addSourceID(Fantom5(conf), lit("fantom5"))
-    val intervalSeq = Seq(pchic, dhs, fantom5)
-
-    // val fVIdx = vIdx.selectBy(Seq("chr_id", "position", "variant_id"))
-
-    intervalSeq.map(df => {
-      val in2Joint = unwrapInterval(df)
-        .repartitionByRange(col("chr_id").asc, col("position").asc)
-
-      in2Joint
-        .join(vIdx.table, Seq("chr_id", "position"))
-        .drop("position_start", "position_end")
+      tokenList
     })
+
+    val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
+
+    logger.info("generate pchic dataset from file and aggregating by range and gene")
+    val interval = load(conf.interval.path)
+      .withColumn("tokens", extractValidTokensFromPath(col("filename")))
+      .withColumn("source_id", col("tokens").getItem(0))
+      .withColumn("tissue_id", col("tokens").getItem(1))
+      .drop("filename", "tokens")
+      .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))
+      .drop("position_start", "position_end")
+      .repartitionByRange(col("chr_id").asc, col("position").asc)
+
+    interval.join(vIdx.table, Seq("chr_id", "position"))
   }
 }
