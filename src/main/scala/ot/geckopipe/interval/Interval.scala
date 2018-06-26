@@ -19,7 +19,7 @@ object Interval extends LazyLogging {
   def load(from: String)(implicit ss: SparkSession): DataFrame = {
     ss.read
       .format("csv")
-      .option("header", "true")
+      .option("header", "false")
       .option("inferSchema", "false")
       .option("delimiter","\t")
       .option("mode", "DROPMALFORMED")
