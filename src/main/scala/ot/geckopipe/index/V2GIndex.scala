@@ -47,7 +47,7 @@ object V2GIndex extends LazyLogging  {
     * One example of the shape of the data could be
     * "1_123_T_C ENSG0000001 gtex uberon_0001 1
     */
-  val v2gColumns: Seq[String] = Seq("feature", "value", "source_id")
+  val v2gColumns: Seq[String] = Seq("feature", "value", "source_id", "tissue_id")
 
   /** columns to index the dataset */
   val indexColumns: Seq[String] = Seq("chr_id", "position")

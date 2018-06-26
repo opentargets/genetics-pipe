@@ -13,7 +13,7 @@ object Interval extends LazyLogging {
       StructField("position_start", LongType) ::
       StructField("position_end", LongType) ::
       StructField("gene_id", StringType) ::
-      StructField("score", DoubleType) ::
+      StructField("value", DoubleType) ::
       StructField("feature", StringType) :: Nil)
 
   def load(from: String)(implicit ss: SparkSession): DataFrame = {
