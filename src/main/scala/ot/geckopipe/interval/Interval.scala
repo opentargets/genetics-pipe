@@ -41,6 +41,7 @@ object Interval extends LazyLogging {
     logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
     val genes = EnsemblIndex(conf.ensembl.geneTranscriptPairs)
       .aggByGene
+      .select("gene_id", "gene_chr")
       .cache
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
@@ -53,7 +54,7 @@ object Interval extends LazyLogging {
       .join(genes, Seq("gene_id"))
       .where(col("chr_id") === col("gene_chr"))
       .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))
-      .drop("position_start", "position_end", "score")
+      .drop("position_start", "position_end", "score", "gene_chr")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 
     interval.join(vIdx.table, Seq("chr_id", "position"))
