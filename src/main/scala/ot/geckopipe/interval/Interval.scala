@@ -46,15 +46,19 @@ object Interval extends LazyLogging {
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val interval = load(conf.interval.path)
-      .withColumn("value", array(col("score")))
       .withColumn("tokens", extractValidTokensFromPath(col("filename")))
-      .withColumn("source_id", col("tokens").getItem(0))
-      .withColumn("tissue_id", col("tokens").getItem(1))
+      .withColumn("source_id", lower(col("tokens").getItem(0)))
+      .withColumn("tissue_id", lower(col("tokens").getItem(1)))
+      .withColumn("feature", lit("tissue"))
       .drop("filename", "tokens")
       .join(genes, Seq("gene_id"))
       .where(col("chr_id") === col("gene_chr"))
+      .drop("gene_chr")
+      .groupBy("chr_id", "position_start", "position_end", "gene_id", "source_id", "tissue_id")
+      .agg(collect_list(col("score")).as("value"),
+        first(col("feature")).as("feature"))
       .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))
-      .drop("position_start", "position_end", "score", "gene_chr")
+      .drop("position_start", "position_end", "score")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 
     interval.join(vIdx.table, Seq("chr_id", "position"))
