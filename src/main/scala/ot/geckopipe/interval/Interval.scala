@@ -5,7 +5,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import ot.geckopipe.Configuration
-import ot.geckopipe.index.VariantIndex
+import ot.geckopipe.index.{EnsemblIndex, VariantIndex}
 
 object Interval extends LazyLogging {
   val schema = StructType(
@@ -38,6 +38,10 @@ object Interval extends LazyLogging {
     })
 
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
+    logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
+    val genes = EnsemblIndex(conf.ensembl.geneTranscriptPairs)
+      .aggByGene
+      .cache
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val interval = load(conf.interval.path)
@@ -46,6 +50,8 @@ object Interval extends LazyLogging {
       .withColumn("source_id", col("tokens").getItem(0))
       .withColumn("tissue_id", col("tokens").getItem(1))
       .drop("filename", "tokens")
+      .join(genes, Seq("gene_id"))
+      .where(col("chr_id") === col("gene_chr"))
       .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))
       .drop("position_start", "position_end", "score")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
