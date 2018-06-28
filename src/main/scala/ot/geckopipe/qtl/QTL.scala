@@ -35,13 +35,14 @@ object QTL extends LazyLogging {
 
   /** union all intervals and interpolate variants from intervals */
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
-    val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "qtl"))
+    val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/qtl/"))
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val qtls = load(conf.qtl.path)
       .withColumn("tokens", extractValidTokensFromPathUDF(col("filename")))
-      .withColumn("source_id", lower(col("tokens").getItem(0)))
-      .withColumn("feature", lower(col("tokens").getItem(1)))
+      .withColumn("type_id", lower(col("tokens").getItem(0)))
+      .withColumn("source_id", lower(col("tokens").getItem(1)))
+      .withColumn("feature", lower(col("tokens").getItem(2)))
       .withColumn("value", array(col("beta"), col("se"), col("pval")))
       .drop("filename", "tokens", "beta", "se", "pval")
       .repartitionByRange(col("chr_id").asc, col("position").asc)

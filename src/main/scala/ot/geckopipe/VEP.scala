@@ -154,6 +154,7 @@ object VEP extends LazyLogging {
         first("alt_allele").as("alt_allele"),
         first("rs_id").as("rs_id"))
       .withColumn("value", array($"value"))
+      .withColumn("type_id", lit("vep"))
       .withColumn("source_id", lit("vep"))
 
     vepsDF

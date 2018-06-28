@@ -45,9 +45,19 @@ object functions extends LazyLogging {
     dts
   }
 
+  /** split by usingToken and grab the right side of the string path. Then split by '/'. It returns
+    * .../type_name/source_name/tissue_name/... (type_name, source_name, tissue_name) all lowercased
+    *
+    * @param path input path to split by usingToken and then by '/'
+    * @param usingToken the token used to partition the input path
+    * @return the triplet of (type_name, source_nmae, tissue_name)
+    */
   def extractValidTokensFromPath(path: String, usingToken: String): Array[String] = {
+    // .../type_name/source_name/tissue_name/...
     val validTokens = path.split(usingToken).last.split("/").filter(_.nonEmpty)
-    val tokenList = Array(validTokens.head.toLowerCase, validTokens.tail.drop(1).head.toLowerCase)
+    val tokenList = Array(validTokens.head.toLowerCase,
+      validTokens.tail.take(1).head.toLowerCase,
+      validTokens.tail.drop(1).head.toLowerCase)
 
     tokenList
   }

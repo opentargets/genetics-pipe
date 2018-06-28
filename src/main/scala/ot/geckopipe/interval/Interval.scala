@@ -31,7 +31,7 @@ object Interval extends LazyLogging {
   }
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
-    val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "interval"))
+    val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/interval/"))
 
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
     logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
@@ -43,13 +43,14 @@ object Interval extends LazyLogging {
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val interval = load(conf.interval.path)
       .withColumn("tokens", extractValidTokensFromPathUDF(col("filename")))
-      .withColumn("source_id", lower(col("tokens").getItem(0)))
-      .withColumn("feature", lower(col("tokens").getItem(1)))
+      .withColumn("type_id", lower(col("tokens").getItem(0)))
+      .withColumn("source_id", lower(col("tokens").getItem(1)))
+      .withColumn("feature", lower(col("tokens").getItem(2)))
       .drop("filename", "tokens")
       .join(genes, Seq("gene_id"))
       .where(col("chr_id") === col("gene_chr"))
       .drop("gene_chr")
-      .groupBy("chr_id", "position_start", "position_end", "gene_id", "source_id", "feature")
+      .groupBy("chr_id", "position_start", "position_end", "gene_id", "type_id", "source_id", "feature")
       .agg(array(max(col("score"))).as("value"))
       .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))
       .drop("position_start", "position_end", "score")
