@@ -47,7 +47,7 @@ object V2GIndex extends LazyLogging  {
     * One example of the shape of the data could be
     * "1_123_T_C ENSG0000001 gtex uberon_0001 1
     */
-  val v2gColumns: Seq[String] = Seq("feature", "value", "source_id", "tissue_id")
+  val v2gColumns: Seq[String] = Seq("feature", "value", "source_id")
 
   /** columns to index the dataset */
   val indexColumns: Seq[String] = Seq("chr_id", "position")
@@ -55,7 +55,8 @@ object V2GIndex extends LazyLogging  {
   val columns: Seq[String] = (VariantIndex.columns ++ EnsemblIndex.columns ++ v2gColumns).distinct
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
-  def build(datasets: Seq[DataFrame], vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2GIndex = {
+  def build(datasets: Seq[DataFrame], vIdx: VariantIndex, conf: Configuration)
+           (implicit ss: SparkSession): V2GIndex = {
 
     logger.info("build variant to gene dataset union the list of datasets")
     logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
@@ -63,15 +64,8 @@ object V2GIndex extends LazyLogging  {
       .aggByGene
       .cache
 
-    val dsMapped = datasets.map(ds => {
-      // ds.groupBy("variant_id", "gene_id")
-      // .pivot("feature", features)
-      // .agg(first(col("value")))
-      ds.join(geneTrans, Seq("gene_id"))
-        .where(col("chr_id") equalTo col("gene_chr"))
-    })
-    // concatDatasets(datasets, v2gColumnNames.take(2) ++ features)
-    val allDts = concatDatasets(dsMapped, columns)
+    val processedDts = datasets.map(_.join(geneTrans, Seq("gene_id")))
+    val allDts = concatDatasets(processedDts, columns)
 
     new V2GIndex {
       /** uniform way to get the dataframe */

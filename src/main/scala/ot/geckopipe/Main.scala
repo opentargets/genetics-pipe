@@ -80,10 +80,11 @@ object Main extends LazyLogging {
 
             val vIdx = VariantIndex.builder(c).load
 
+            val vepDts = VEP(c)
             val positionalDts = QTL(vIdx, c)
             val intervalDt = Interval(vIdx, c)
 
-            val dtSeq = positionalDts :+ intervalDt
+            val dtSeq = Seq(vepDts, positionalDts, intervalDt)
             val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
             v2g.save(c.output.stripSuffix("/").concat("/v2g/"))
@@ -101,7 +102,7 @@ object Main extends LazyLogging {
               .csv(c.output.stripSuffix("/").concat("/v2g-lut-rsid/"))
 
             logger.info("write gene name to chr position")
-            val geneIdx = EnsemblIndex(c.ensembl.geneTranscriptPairs)
+            val _ = EnsemblIndex(c.ensembl.geneTranscriptPairs)
               .aggByGene
               .select("gene_name", "gene_chr", "gene_start", "gene_end")
               .write
@@ -114,10 +115,12 @@ object Main extends LazyLogging {
             logger.info("exec variant-gene-stats command")
 
             val vIdx = VariantIndex.builder(c).load
+
+            val vepDts = VEP(c)
             val positionalDts = QTL(vIdx, c)
             val intervalDt = Interval(vIdx, c)
 
-            val dtSeq = positionalDts :+ intervalDt
+            val dtSeq = Seq(vepDts, positionalDts, intervalDt)
             val v2g = V2GIndex.load(c)
 
             val stats = v2g.computeStats

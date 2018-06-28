@@ -4,8 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.storage.StorageLevel
-import ot.geckopipe.Configuration
-import ot.geckopipe.qtl.VEP
+import ot.geckopipe.{Configuration, VEP}
 
 /** represents a cached table of variants with all variant columns
   *

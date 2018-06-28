@@ -1,10 +1,9 @@
-package ot.geckopipe.qtl
+package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
 import org.apache.spark.sql.{DataFrame, SparkSession}
-import ot.geckopipe.Configuration
 import ot.geckopipe.index.EnsemblIndex
 
 object VEP extends LazyLogging {
@@ -39,21 +38,23 @@ object VEP extends LazyLogging {
     * @return a dataframe with all normalised columns
     */
   def loadConsequenceTable(from: String)(implicit ss: SparkSession): DataFrame = {
+    val csqSchema = StructType(
+      StructField("so_term", StringType) ::
+        StructField("so_description", StringType) ::
+        StructField("so_accession", StringType) ::
+        StructField("display_term", StringType) ::
+        StructField("impact", StringType) :: Nil)
+
     val csqs = ss.read
       .format("csv")
       .option("header", "true")
-      .option("inferSchema", "true")
+      .option("inferSchema", "false")
       .option("delimiter","\t")
       .option("ignoreLeadingWhiteSpace", "true")
       .option("ignoreTrailingWhiteSpace", "true")
       .option("mode", "DROPMALFORMED")
+      .schema(csqSchema)
       .load(from)
-      .withColumnRenamed("SO term", "so_term")
-      .withColumnRenamed("SO description", "so_description")
-      .withColumnRenamed("SO accession", "so_accession")
-      .withColumnRenamed("Display term", "display_term")
-      .withColumnRenamed("IMPACT", "impact")
-      .toDF
 
     csqs
   }
@@ -154,7 +155,6 @@ object VEP extends LazyLogging {
         first("rs_id").as("rs_id"))
       .withColumn("value", array($"value"))
       .withColumn("source_id", lit("vep"))
-      .withColumn("tissue_id", lit("unspecified"))
 
     vepsDF
   }

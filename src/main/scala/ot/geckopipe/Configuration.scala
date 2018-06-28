@@ -14,6 +14,8 @@ case class VEPSection(csqMap: String, homoSapiensCons: String)
 
 case class IntervalSection(path: String)
 
+case class QTLSection(path: String)
+
 case class VariantSection(path: String)
 
 case class VariantGeneSection(path: String)
@@ -33,6 +35,7 @@ case class Configuration(output: String,
                          gtex: GTExSection,
                          vep: VEPSection,
                          interval: IntervalSection,
+                         qtl: QTLSection,
                          variantIndex: VariantSection,
                          variantGene: VariantGeneSection)
 

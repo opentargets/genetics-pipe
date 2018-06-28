@@ -44,4 +44,11 @@ object functions extends LazyLogging {
 
     dts
   }
+
+  def extractValidTokensFromPath(path: String, usingToken: String): Array[String] = {
+    val validTokens = path.split(usingToken).last.split("/").filter(_.nonEmpty)
+    val tokenList = Array(validTokens.head.toLowerCase, validTokens.tail.drop(1).head.toLowerCase)
+
+    tokenList
+  }
 }
