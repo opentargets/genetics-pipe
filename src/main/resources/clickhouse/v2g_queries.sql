@@ -13,6 +13,12 @@ order by num_features desc;
 -- and get pval < 1e-6
 -- TODO finish this example
 
+-- group by feature in a specific region
+select type_id, source_id, feature , uniq(gene_id) as unique_genes, uniq(variant_id) as unique_variants, count() as total_evs
+from ot.v2g
+where chr_id = '7' and position >= 91604921 and position <= 93836594
+group by type_id, source_id, feature
+order by type_id asc, source_id asc, feature asc;
 
 -- few queries you might find useful for v2g table
 -- fixed one gene, give all variants (chr, pos) that are in one tissue but not in others (xor)
