@@ -17,6 +17,8 @@ create table if not exists ot.v2g_log(
   gene_start UInt32,
   gene_end UInt32,
   gene_name String,
+  type_id String,
+  source_id String,
   feature String,
   value Array(Float64))
 engine = Log;
@@ -40,6 +42,8 @@ as select
   gene_start,
   gene_end,
   gene_name,
+  source_id,
+  type_id,
   feature,
   value
 from ot.v2g_log;

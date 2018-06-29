@@ -97,7 +97,7 @@ object VEP extends LazyLogging {
 
     logger.info("load and cache ensembl gene to transcript LUT getting only gene_id and trans_id")
     val geneTrans = EnsemblIndex(conf.ensembl.geneTranscriptPairs).table
-      .select("gene_id", "trans_id")
+      .select("gene_id", "gene_chr", "trans_id")
       .cache
 
     // split info string and extract CSQ substring
@@ -144,8 +144,8 @@ object VEP extends LazyLogging {
     logger.info("inner join vep consequences transcripts to genes")
     val vepsDF = veps.join(geneTrans, Seq("trans_id"), "left_outer")
       .withColumnRenamed("consequence", "feature")
-      .drop("trans_id", "csq", "tss_distance")
-      .where($"gene_id".isNotNull)
+      .where($"gene_id".isNotNull and $"chr_id" === $"gene_chr")
+      .drop("trans_id", "csq", "tss_distance", "gene_chr")
       .groupBy("variant_id", "gene_id", "feature")
       .agg(count("feature").as("value"),
         first("chr_id").as("chr_id"),

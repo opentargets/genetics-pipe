@@ -53,7 +53,6 @@ object functions extends LazyLogging {
     * @return the triplet of (type_name, source_nmae, tissue_name)
     */
   def extractValidTokensFromPath(path: String, usingToken: String): Array[String] = {
-    // .../type_name/source_name/tissue_name/...
     val validTokens = path.split(usingToken).last.split("/").filter(_.nonEmpty)
     val tokenList = Array(validTokens.head.toLowerCase,
       validTokens.tail.take(1).head.toLowerCase,
