@@ -14,7 +14,7 @@ import ot.geckopipe.{Chromosomes, Configuration}
 abstract class V2GIndex extends LazyLogging with Indexable {
   /** save the dataframe as tsv file using filename as a output path */
   def save(to: String)(implicit sampleFactor: Double = 0d): Unit = {
-    logger.info("write datasets to json lines")
+    logger.info("write datasets to output files")
     if (sampleFactor > 0d) {
       table
         .sample(withReplacement = false, sampleFactor)
@@ -78,6 +78,7 @@ object V2GIndex extends LazyLogging  {
       val table = (allFeatures diff el.features).foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
       table.join(geneTrans, Seq("gene_id"))
     })
+
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
 
     new V2GIndex {
@@ -90,7 +91,9 @@ object V2GIndex extends LazyLogging  {
 
     logger.info("load variant to gene dataset from built one")
     val v2g = ss.read
-      .format("json")
+      .format("tsv")
+      .option("delimiter","\t")
+      .option("header", "true")
       .load(conf.variantGene.path)
 
     new V2GIndex {
