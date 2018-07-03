@@ -87,7 +87,7 @@ object V2GIndex extends LazyLogging  {
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
-  def load(conf: Configuration, withFormat: String = "json")(implicit ss: SparkSession): V2GIndex = {
+  def load(conf: Configuration)(implicit ss: SparkSession): V2GIndex = {
 
     logger.info("load variant to gene dataset from built one")
     val v2g = ss.read
