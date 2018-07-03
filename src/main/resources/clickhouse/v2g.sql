@@ -20,11 +20,11 @@ create table if not exists ot.v2g_log(
   feature String,
   type_id String,
   source_id String,
-  csq_counts UInt32,
-  qtl_beta Float64,
-  qtl_se Float64,
-  qtl_pval Float64,
-  interval_score Float64)
+  csq_counts Nullable(UInt32),
+  qtl_beta Nullable(Float64),
+  qtl_se Nullable(Float64),
+  qtl_pval Nullable(Float64),
+  interval_score Nullable(Float64))
 engine = Log;
 
 -- how insert the data from files into the log db

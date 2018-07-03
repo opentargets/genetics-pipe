@@ -18,11 +18,15 @@ abstract class V2GIndex extends LazyLogging with Indexable {
     if (sampleFactor > 0d) {
       table
         .sample(withReplacement = false, sampleFactor)
-        .write.format("json")
+        .write.format("csv")
+        .option("header", "true")
+        .option("delimiter","\t")
         .save(to)
     } else {
       table
-        .write.format("json")
+        .write.format("csv")
+        .option("header", "true")
+        .option("delimiter","\t")
         .save(to)
     }
   }
@@ -87,7 +91,9 @@ object V2GIndex extends LazyLogging  {
 
     logger.info("load variant to gene dataset from built one")
     val v2g = ss.read
-      .format("json")
+      .format("csv")
+      .option("header", "true")
+      .option("delimiter","\t")
       .load(conf.variantGene.path)
 
     new V2GIndex {

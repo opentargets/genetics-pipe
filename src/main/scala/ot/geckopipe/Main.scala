@@ -98,16 +98,16 @@ object Main extends LazyLogging {
             vIdx.selectBy(Seq("rs_id", "chr_id", "position"))
               .write
               .option("delimiter","\t")
-              .option("header", "false")
+              .option("header", "true")
               .csv(c.output.stripSuffix("/").concat("/v2g-lut-rsid/"))
 
             logger.info("write gene name to chr position")
             val _ = EnsemblIndex(c.ensembl.geneTranscriptPairs)
               .aggByGene
-              .select("gene_name", "gene_chr", "gene_start", "gene_end")
+              .select("gene_id", "gene_chr", "gene_start", "gene_end")
               .write
               .option("delimiter","\t")
-              .option("header", "false")
+              .option("header", "true")
               .csv(c.output.stripSuffix("/").concat("/v2g-lut-gene/"))
 
 
