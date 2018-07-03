@@ -6,8 +6,6 @@ import org.apache.spark.sql.functions._
 import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
 
-// TODO tissue_id should be better represented some how
-// TODO integrate with new path structure from folders
 /** represents a cached table of variants with all variant columns
   *
   * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
@@ -15,16 +13,20 @@ import ot.geckopipe.{Chromosomes, Configuration}
   */
 abstract class V2GIndex extends LazyLogging with Indexable {
   /** save the dataframe as tsv file using filename as a output path */
-  def save(to: String, withFormat: String = "json")(implicit sampleFactor: Double = 0d): Unit = {
+  def save(to: String)(implicit sampleFactor: Double = 0d): Unit = {
     logger.info("write datasets to json lines")
     if (sampleFactor > 0d) {
       table
         .sample(withReplacement = false, sampleFactor)
-        .write.format(withFormat)
+        .write.format("csv")
+        .option("delimiter","\t")
+        .option("header", "true")
         .save(to)
     } else {
       table
-        .write.format(withFormat)
+        .write.format("csv")
+        .option("delimiter","\t")
+        .option("header", "true")
         .save(to)
     }
   }
@@ -42,20 +44,26 @@ abstract class V2GIndex extends LazyLogging with Indexable {
 }
 
 object V2GIndex extends LazyLogging  {
+  trait Component {
+    /** unique column name list per component */
+    val features: Seq[String]
+    val table: DataFrame
+  }
+
   /** all data sources to incorporate needs to meet this format at the end
     *
     * One example of the shape of the data could be
     * "1_123_T_C ENSG0000001 gtex uberon_0001 1
     */
-  val v2gColumns: Seq[String] = Seq("feature", "value", "type_id", "source_id")
+  val features: Seq[String] = Seq("feature", "type_id", "source_id")
 
   /** columns to index the dataset */
   val indexColumns: Seq[String] = Seq("chr_id", "position")
   /** the whole list of columns this dataset will be outputing */
-  val columns: Seq[String] = (VariantIndex.columns ++ EnsemblIndex.columns ++ v2gColumns).distinct
+  val columns: Seq[String] = (VariantIndex.columns ++ EnsemblIndex.columns ++ features).distinct
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
-  def build(datasets: Seq[DataFrame], vIdx: VariantIndex, conf: Configuration)
+  def build(datasets: Seq[Component], vIdx: VariantIndex, conf: Configuration)
            (implicit ss: SparkSession): V2GIndex = {
 
     logger.info("build variant to gene dataset union the list of datasets")
@@ -64,11 +72,15 @@ object V2GIndex extends LazyLogging  {
       .aggByGene
       .cache
 
-    val processedDts = datasets.map(_.join(geneTrans, Seq("gene_id")))
-    val allDts = concatDatasets(processedDts, columns)
+    val allFeatures = datasets.foldLeft(datasets.head.features)((agg, el) => agg ++ el.features).distinct
+
+    val processedDts = datasets.map( el => {
+      val table = (allFeatures diff el.features).foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
+      table.join(geneTrans, Seq("gene_id"))
+    })
+    val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
 
     new V2GIndex {
-      /** uniform way to get the dataframe */
       override val table: DataFrame = allDts
     }
   }

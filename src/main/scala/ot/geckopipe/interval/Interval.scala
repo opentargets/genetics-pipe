@@ -6,9 +6,12 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import ot.geckopipe.Configuration
 import ot.geckopipe.functions._
+import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.index.{EnsemblIndex, VariantIndex}
 
 object Interval extends LazyLogging {
+  val features: Seq[String] = Seq("interval_score")
+
   val schema = StructType(
     StructField("chr_id", StringType) ::
       StructField("position_start", LongType) ::
@@ -30,7 +33,7 @@ object Interval extends LazyLogging {
       .withColumn("feature", col("feature"))
   }
 
-  def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
+  def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
     val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/interval/"))
 
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
@@ -51,11 +54,17 @@ object Interval extends LazyLogging {
       .where(col("chr_id") === col("gene_chr"))
       .drop("gene_chr")
       .groupBy("chr_id", "position_start", "position_end", "gene_id", "type_id", "source_id", "feature")
-      .agg(array(max(col("score"))).as("value"))
+      .agg(max(col("score")).as("interval_score"))
       .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))
       .drop("position_start", "position_end", "score")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 
-    interval.join(vIdx.table, Seq("chr_id", "position"))
+    val inTable = interval.join(vIdx.table, Seq("chr_id", "position"))
+
+    new Component {
+      /** unique column name list per component */
+      override val features: Seq[String] = Interval.features
+      override val table: DataFrame = inTable
+    }
   }
 }

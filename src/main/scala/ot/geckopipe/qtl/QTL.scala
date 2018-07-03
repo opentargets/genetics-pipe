@@ -5,10 +5,13 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import ot.geckopipe.Configuration
-import ot.geckopipe.index.VariantIndex
+import ot.geckopipe.index.{V2GIndex, VariantIndex}
 import ot.geckopipe.functions._
+import ot.geckopipe.index.V2GIndex.Component
 
 object QTL extends LazyLogging {
+  val features: Seq[String] = Seq("qtl_beta", "qtl_se", "qtl_pval")
+
   val schema = StructType(
     StructField("chr_id", StringType) ::
       StructField("position", LongType) ::
@@ -34,7 +37,7 @@ object QTL extends LazyLogging {
   }
 
   /** union all intervals and interpolate variants from intervals */
-  def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): DataFrame = {
+  def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
     val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/qtl/"))
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
@@ -43,10 +46,18 @@ object QTL extends LazyLogging {
       .withColumn("type_id", lower(col("tokens").getItem(0)))
       .withColumn("source_id", lower(col("tokens").getItem(1)))
       .withColumn("feature", lower(col("tokens").getItem(2)))
-      .withColumn("value", array(col("beta"), col("se"), col("pval")))
-      .drop("filename", "tokens", "beta", "se", "pval")
+      .withColumnRenamed("beta", "qtl_beta")
+      .withColumnRenamed("se", "qtl_se")
+      .withColumnRenamed("pval", "qtl_pval")
+      .drop("filename", "tokens")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 
-    qtls.join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
+    val qtlTable = qtls.join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
+
+    new Component {
+      /** unique column name list per component */
+      override val features: Seq[String] = QTL.features
+      override val table: DataFrame = qtlTable
+    }
   }
 }

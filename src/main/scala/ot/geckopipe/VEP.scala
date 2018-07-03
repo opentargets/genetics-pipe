@@ -3,10 +3,13 @@ package ot.geckopipe
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{Column, DataFrame, SparkSession}
+import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.index.EnsemblIndex
 
 object VEP extends LazyLogging {
+  val features: Seq[String] = Seq("csq_counts")
+
   val schema = StructType(
     StructField("chr_id", StringType) ::
       StructField("variant_pos", LongType) ::
@@ -16,12 +19,6 @@ object VEP extends LazyLogging {
       StructField("qual", StringType) ::
       StructField("filter", StringType) ::
       StructField("info", StringType) :: Nil)
-
-//  case class VEPRecord(chr: String, pos: Long, rsid: String,
-//                       refAllele: String, altAllele: String,
-//                       qual: String, filter: String, csq: List[String], tsa: String)
-//
-//  val schema: StructType = Encoders.product[VEPRecord].schema
 
   /** load consequence table from file extracted from ensembl website
     *
@@ -92,7 +89,7 @@ object VEP extends LazyLogging {
     * and persist if you want to keep the partition through next operations (by ex. joins)
     * generate pivot per consecuence and set to count or fill with 0
     */
-  def apply(conf: Configuration)(implicit ss: SparkSession): DataFrame = {
+  def apply(conf: Configuration)(implicit ss: SparkSession): Component = {
     import ss.implicits._
 
     logger.info("load and cache ensembl gene to transcript LUT getting only gene_id and trans_id")
@@ -147,16 +144,19 @@ object VEP extends LazyLogging {
       .where($"gene_id".isNotNull and $"chr_id" === $"gene_chr")
       .drop("trans_id", "csq", "tss_distance", "gene_chr")
       .groupBy("variant_id", "gene_id", "feature")
-      .agg(count("feature").as("value"),
+      .agg(count("feature").as(features.head),
         first("chr_id").as("chr_id"),
         first("position").as("position"),
         first("ref_allele").as("ref_allele"),
         first("alt_allele").as("alt_allele"),
         first("rs_id").as("rs_id"))
-      .withColumn("value", array($"value"))
       .withColumn("type_id", lit("vep"))
       .withColumn("source_id", lit("vep"))
 
-    vepsDF
+    new Component {
+      /** unique column name list per component */
+      override val features: Seq[String] = VEP.features
+      override val table: DataFrame = vepsDF
+    }
   }
 }

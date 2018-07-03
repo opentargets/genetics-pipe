@@ -20,19 +20,12 @@ case class VariantSection(path: String)
 
 case class VariantGeneSection(path: String)
 
-/**
-  * Main configuration case class
-  *
-  * @param sampleFactor enabled if > .0 by default .0
-  * @param sparkUri the uri to connect to spark empty by default
-  * @param gtex the GTExSection main section
-  */
+/** Main configuration case class */
 case class Configuration(output: String,
                          sampleFactor: Double,
                          sparkUri: String,
                          logLevel: String,
                          ensembl: EnsemblSection,
-                         gtex: GTExSection,
                          vep: VEPSection,
                          interval: IntervalSection,
                          qtl: QTLSection,
