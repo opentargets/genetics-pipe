@@ -17,10 +17,14 @@ create table if not exists ot.v2g_log(
   gene_start UInt32,
   gene_end UInt32,
   gene_name String,
+  feature String,
   type_id String,
   source_id String,
-  feature String,
-  value Array(Float64))
+  csq_counts UInt32,
+  qtl_beta Float64,
+  qtl_se Float64,
+  qtl_pval Float64,
+  interval_score Float64)
 engine = Log;
 
 -- how insert the data from files into the log db
@@ -42,8 +46,13 @@ as select
   gene_start,
   gene_end,
   gene_name,
-  source_id,
-  type_id,
   feature,
-  value
+  type_id,
+  source_id,
+  csq_counts,
+  qtl_beta,
+  qtl_se,
+  qtl_pval,
+  interval_score
+
 from ot.v2g_log;
