@@ -37,6 +37,7 @@ engine MergeTree partition by (chr_id) order by (chr_id, position)
 as select
   chr_id,
   position,
+  position % 1000000 as segment,
   ref_allele,
   alt_allele,
   variant_id,
