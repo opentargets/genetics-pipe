@@ -9,6 +9,7 @@ import ot.geckopipe.index.{EnsemblIndex, V2GIndex, VariantIndex}
 import ot.geckopipe.interval.Interval
 import ot.geckopipe.qtl.QTL
 import scopt.OptionParser
+import org.apache.spark.sql.functions._
 
 sealed trait Command
 case class VICmd() extends Command
@@ -96,18 +97,20 @@ object Main extends LazyLogging {
 
             logger.info("write rs_id to chr-position")
             vIdx.selectBy(Seq("rs_id", "chr_id", "position"))
+              .orderBy(col("rs_id").asc)
               .write
               .option("delimiter","\t")
-              .option("header", "true")
+              .option("header", "false")
               .csv(c.output.stripSuffix("/").concat("/v2g-lut-rsid/"))
 
             logger.info("write gene name to chr position")
             val _ = EnsemblIndex(c.ensembl.geneTranscriptPairs)
               .aggByGene
               .select("gene_id", "gene_chr", "gene_start", "gene_end")
+              .orderBy(col("gene_id").asc)
               .write
               .option("delimiter","\t")
-              .option("header", "true")
+              .option("header", "false")
               .csv(c.output.stripSuffix("/").concat("/v2g-lut-gene/"))
 
 
