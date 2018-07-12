@@ -98,6 +98,7 @@ object Main extends LazyLogging {
             logger.info("write rs_id to chr-position")
             vIdx.selectBy(Seq("rs_id", "chr_id", "position"))
               .orderBy(col("rs_id").asc)
+              .distinct()
               .write
               .option("delimiter","\t")
               .option("header", "false")
