@@ -5,6 +5,24 @@ where chr_id != gene_chr
 group by feature, chr_id, gene_chr
 order by num_features desc;
 
+-- get info
+select gene_id, type_id, source_id, feature,
+  any(variant_id) as variant_it,
+  max(csq_counts) as max_csq_counts,
+  min(qtl_beta) as max_qtl_beta,
+  min(qtl_se) as max_qtl_se,
+  min(qtl_pval) as max_qtl_pval,
+  max(interval_score) as max_interval_score,
+  uniq(variant_id) as uniq_variants
+from ot.v2g
+where chr_id = '16' and
+  position >= 52767042 and
+  position <= 54767042
+group by gene_id, type_id, source_id, feature
+order by uniq_variants desc
+limit 10 by type_id, source_id, feature
+limit 5000
+
 -- get all variants in a range where they have tissues and
 -- and get pval < 1e-6
 -- for all the variants also want other consequences

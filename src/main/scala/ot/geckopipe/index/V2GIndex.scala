@@ -11,26 +11,7 @@ import ot.geckopipe.{Chromosomes, Configuration}
   * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
   * this table is persisted and sorted by (chr_id, position) by default
   */
-abstract class V2GIndex extends LazyLogging with Indexable {
-  /** save the dataframe as tsv file using filename as a output path */
-  def save(to: String)(implicit sampleFactor: Double = 0d): Unit = {
-    logger.info("write datasets to output files")
-    if (sampleFactor > 0d) {
-      table
-        .sample(withReplacement = false, sampleFactor)
-        .write.format("csv")
-        .option("header", "true")
-        .option("delimiter","\t")
-        .save(to)
-    } else {
-      table
-        .write.format("csv")
-        .option("header", "true")
-        .option("delimiter","\t")
-        .save(to)
-    }
-  }
-
+abstract class V2GIndex extends Indexable {
   /** compute stats with this resulted table but only when info enabled */
   def computeStats(implicit ss: SparkSession): Seq[Long] = {
     import ss.implicits._

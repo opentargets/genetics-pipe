@@ -5,7 +5,7 @@ import java.nio.file.Paths
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import ot.geckopipe.index.{EnsemblIndex, V2GIndex, VariantIndex}
+import ot.geckopipe.index.{EnsemblIndex, V2DIndex, V2GIndex, VariantIndex}
 import ot.geckopipe.interval.Interval
 import ot.geckopipe.qtl.QTL
 import scopt.OptionParser
@@ -14,6 +14,7 @@ import org.apache.spark.sql.functions._
 sealed trait Command
 case class VICmd() extends Command
 case class V2GCmd() extends Command
+case class V2DCmd() extends Command
 case class V2GLUTCmd() extends Command
 case class V2GStatsCmd() extends Command
 
@@ -89,6 +90,22 @@ object Main extends LazyLogging {
             val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
             v2g.save(c.output.stripSuffix("/").concat("/v2g/"))
+
+          case Some(_: V2DCmd) =>
+            logger.info("exec variant-disease command")
+
+            val vIdx = VariantIndex.builder(c).load
+
+            val v2d = V2DIndex.build(vIdx, c)
+
+            v2d.table.groupBy(col("stid"))
+              .agg(countDistinct(col("pmid")).as("n_pmids")).orderBy(col("n_pmids").desc)
+              .show(10, false)
+
+            v2d.table.show(50, false)
+
+
+            // v2d.save(c.output.stripSuffix("/").concat("/v2d/"))
 
           case Some(_: V2GLUTCmd) =>
             logger.info("exec variant-gene-luts command")
@@ -171,6 +188,10 @@ object Main extends LazyLogging {
     cmd("variant-gene").
       action( (_, c) => c.copy(command = Some(V2GCmd())))
       .text("generate variant to gene table")
+
+    cmd("variant-disease").
+      action( (_, c) => c.copy(command = Some(V2DCmd())))
+      .text("generate variant to disease table")
 
     cmd("variant-gene-luts").
       action( (_, c) => c.copy(command = Some(V2GLUTCmd())))
