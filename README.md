@@ -2,7 +2,11 @@
 
 [![Build Status](https://travis-ci.com/opentargets/geckopipe.svg?branch=master)](https://travis-ci.com/opentargets/geckopipe)
 
-ETL pipeline used to integrate and generate the tables: variant to gene and variant to disease.
+**Everything is grch37 based**. ETL pipeline used to integrate and generate the following tables: 
+
+- gene to variant
+- disease to variant, and
+- disease to variant to gene
 
 ## Howto build the pipeline
 
@@ -29,12 +33,25 @@ To use your own configuration you need to pass `-f where/file/application.conf` 
 
 ## Variant index generation
 
+You will need vep consequences file from ensembl ftp
+
+- unzip it
+- split into more or equal to 64 pieces
+
+Example command to run in order to split the vep file
+
+```sh
+split -a 3 --additional-suffix=vcf -d -n l/64 vep_csq_file.vcf vep_
+``` 
+
+## Variant to Gene table
+
 TBD
 
-## Variant to Gene big table
+## Variant to disease table
 
 TBD
 
-## Variant to disease big table
+## Disease to variant to gene table
 
-TBD
+This table is a inner join between _v2g_ and _v2d_
