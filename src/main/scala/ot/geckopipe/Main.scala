@@ -8,6 +8,7 @@ import org.apache.spark.sql.SparkSession
 import ot.geckopipe.index.{EnsemblIndex, V2DIndex, V2GIndex, VariantIndex}
 import ot.geckopipe.interval.Interval
 import ot.geckopipe.qtl.QTL
+import ot.geckopipe.functions._
 import scopt.OptionParser
 import org.apache.spark.sql.functions._
 
@@ -15,6 +16,7 @@ sealed trait Command
 case class VICmd() extends Command
 case class V2GCmd() extends Command
 case class V2DCmd() extends Command
+case class D2V2GCmd() extends Command
 case class V2GLUTCmd() extends Command
 case class V2GStatsCmd() extends Command
 
@@ -95,17 +97,19 @@ object Main extends LazyLogging {
             logger.info("exec variant-disease command")
 
             val vIdx = VariantIndex.builder(c).load
-
             val v2d = V2DIndex.build(vIdx, c)
 
-            v2d.table.groupBy(col("stid"))
-              .agg(countDistinct(col("pmid")).as("n_pmids")).orderBy(col("n_pmids").desc)
-              .show(10, false)
+            v2d.save(c.output.stripSuffix("/").concat("/v2d/"))
 
-            v2d.table.show(50, false)
+          case Some(_: D2V2GCmd) =>
+            logger.info("exec variant-disease command")
 
+            val v2g = V2GIndex.load(c)
+            val v2d = V2DIndex.load(c)
 
-            // v2d.save(c.output.stripSuffix("/").concat("/v2d/"))
+            val merged = v2d.table.join(v2g.table, VariantIndex.columns)
+
+            saveToCSV(merged, c.output.stripSuffix("/").concat("/d2v2g/"))
 
           case Some(_: V2GLUTCmd) =>
             logger.info("exec variant-gene-luts command")
@@ -192,6 +196,10 @@ object Main extends LazyLogging {
     cmd("variant-disease").
       action( (_, c) => c.copy(command = Some(V2DCmd())))
       .text("generate variant to disease table")
+
+    cmd("disease-variant-gene").
+      action( (_, c) => c.copy(command = Some(D2V2GCmd())))
+      .text("generate disease to variant to gene table")
 
     cmd("variant-gene-luts").
       action( (_, c) => c.copy(command = Some(V2GLUTCmd())))

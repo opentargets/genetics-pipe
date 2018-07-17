@@ -10,7 +10,7 @@ abstract class EnsemblIndex extends Indexable {
 
 /** Companion object to build the EnsemblIndex class */
 object EnsemblIndex {
-  val columns: Seq[String] = Seq("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name")
+  val columns: Seq[String] = Seq("gene_chr", "gene_id", "gene_start", "gene_end")
   val indexColumns: Seq[String] = Seq("gene_chr", "gene_id")
 
   val schema = StructType(

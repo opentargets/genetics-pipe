@@ -1,14 +1,42 @@
 package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.{Column, DataFrame}
+import org.apache.spark.sql.{Column, DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.LongType
+import org.apache.spark.sql.types.{LongType, StructType}
+import ot.geckopipe.index.V2DIndex.studiesSchema
 import ot.geckopipe.index.VariantIndex
 
 import scala.util.{Failure, Success, Try}
 
 object functions extends LazyLogging {
+  /** save the dataframe as tsv file using filename as a output path */
+  def saveToCSV(table: DataFrame, to: String)(implicit sampleFactor: Double = 0d): Unit = {
+    logger.info("write datasets to output files")
+    if (sampleFactor > 0d) {
+      table
+        .sample(withReplacement = false, sampleFactor)
+        .write.format("csv")
+        .option("header", "true")
+        .option("delimiter", "\t")
+        .save(to)
+    } else {
+      table
+        .write.format("csv")
+        .option("header", "true")
+        .option("delimiter", "\t")
+        .save(to)
+    }
+  }
+
+  def loadFromCSV(uri: String, withSchema: StructType, andHeader: Boolean = true)
+                 (implicit ss: SparkSession): DataFrame = ss.read
+    .format("csv")
+    .option("header", andHeader.toString)
+    .option("delimiter","\t")
+    .schema(withSchema)
+    .load(uri)
+
   def addSourceID(df: DataFrame, column: Column): DataFrame = df.withColumn("source_id", column)
 
   def buildPosSegment(df: DataFrame, fromColumn: String, toColumn: String): DataFrame = {
@@ -17,6 +45,7 @@ object functions extends LazyLogging {
   }
 
   def splitVariantID(df: DataFrame, variantColName: String = "variant_id",
+                     prefix: String = "",
                      intoColNames: List[String] = VariantIndex.variantColumnNames,
                      withColTypes: List[String] = VariantIndex.variantColumnTypes): Try[DataFrame] = {
     val variantID = col(variantColName)
@@ -27,7 +56,7 @@ object functions extends LazyLogging {
       val tmpDF = df.withColumn(tmpCol.toString, split(variantID, "_"))
 
       val modDF = intoColNames.zipWithIndex.foldLeft(tmpDF)( (df, pair) => {
-        df.withColumn(pair._1, tmpCol.getItem(pair._2).cast(withColTypes(pair._2)))
+        df.withColumn(prefix + pair._1, tmpCol.getItem(pair._2).cast(withColTypes(pair._2)))
       }).drop(tmpCol)
 
       Success(modDF)
