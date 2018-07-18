@@ -37,7 +37,7 @@ insert into ot.v2g_log format TabSeparatedWithNames from '/opt/out/v2g/*.json';
 -- main v2g table with proper mergetree engine
 -- maybe partition by chr_id and source_id
 create table if not exists ot.v2g
-engine MergeTree partition by (chr_id, segment) order by (chr_id, position)
+engine MergeTree partition by (chr_id) order by (chr_id, position)
 as select
   chr_id,
   position,

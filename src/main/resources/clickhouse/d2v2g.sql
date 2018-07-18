@@ -52,7 +52,7 @@ create table if not exists ot.d2v2g_log(
 engine = Log;
 
 create table if not exists ot.d2v2g
-engine MergeTree partition by (chr_id, segment) order by (chr_id, position)
+engine MergeTree partition by (chr_id) order by (chr_id, position)
 as select
   chr_id,
   position ,
