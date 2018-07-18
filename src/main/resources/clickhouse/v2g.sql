@@ -8,6 +8,7 @@ create database if not exists ot;
 create table if not exists ot.v2g_log(
   chr_id String,
   position UInt32,
+  segment UInt32 MATERIALIZED (position % 1000000),
   ref_allele String,
   alt_allele String,
   variant_id String,
@@ -28,16 +29,19 @@ create table if not exists ot.v2g_log(
 engine = Log;
 
 -- how insert the data from files into the log db
-insert into ot.v2g_log format JSONEachRow from '/opt/out/v2g/*.json';
+insert into ot.v2g_log format TabSeparatedWithNames from '/opt/out/v2g/*.json';
+-- for line in $(cat list_files.txt); do
+--  gsutil cat $line | clickhouse-client --query="insert into ot.v2g_log format TabSeparatedWithNames ";
+-- done
 
 -- main v2g table with proper mergetree engine
 -- maybe partition by chr_id and source_id
 create table if not exists ot.v2g
-engine MergeTree partition by (chr_id) order by (chr_id, position)
+engine MergeTree partition by (chr_id, segment) order by (chr_id, position)
 as select
   chr_id,
   position,
-  position % 1000000 as segment,
+  segment,
   ref_allele,
   alt_allele,
   variant_id,
@@ -55,5 +59,4 @@ as select
   qtl_se,
   qtl_pval,
   interval_score
-
 from ot.v2g_log;
