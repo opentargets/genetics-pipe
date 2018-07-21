@@ -1,6 +1,9 @@
--- Manhattan plot is one disease across all variants all diseases
--- Phewas plot is one variant one chromosome all diseases
--- so we must create two main tables from v2d data: v2d_byd v2d_by_chrpos
+-- Manhattan plot is one study across all variants all diseases we use the v2d table as
+--  it is a filtered version
+-- Phewas plot is one variant one chromosome all diseases (studies)
+-- regional plot is one variant one chromosome all diseases but using summary stats
+-- so we must create two main tables from v2d data: v2d_by_d from v2d_sa (from summary stats)
+-- and v2d_by_chrpos from v2d
 
 create database if not exists ot;
 create table if not exists ot.v2d_log(
@@ -81,42 +84,42 @@ as select
   rs_id
 from ot.v2d_log;
 
-create table if not exists ot.v2d_by_dchr
-engine MergeTree partition by (efo_code, chr_id) order by (chr_id, position)
-as select
-  chr_id,
-  position,
-  segment,
-  ref_allele,
-  alt_allele,
-  stid,
-  index_variant_id,
-  r2,
-  afr_1000g_prop,
-  mar_1000g_prop,
-  eas_1000g_prop,
-  eur_1000g_prop,
-  sas_1000g_prop,
-  log10_abf,
-  posterior_prob,
-  pmid,
-  pub_date,
-  pub_journal,
-  pub_title,
-  pub_author,
-  trait_reported,
-  ancestry_initial,
-  ancestry_replication,
-  n_initial,
-  n_replication,
-  efo_code,
-  efo_label,
-  index_rs_id,
-  pval,
-  index_chr_id,
-  index_position,
-  index_ref_allele,
-  index_alt_allele,
-  variant_id,
-  rs_id
-from ot.v2d_log;
+-- create table if not exists ot.v2d_by_stchr
+-- engine MergeTree partition by (stid, chr_id) order by (chr_id, position)
+-- as select
+--   chr_id,
+--   position,
+--   segment,
+--   ref_allele,
+--   alt_allele,
+--   stid,
+--   index_variant_id,
+--   r2,
+--   afr_1000g_prop,
+--   mar_1000g_prop,
+--   eas_1000g_prop,
+--   eur_1000g_prop,
+--   sas_1000g_prop,
+--   log10_abf,
+--   posterior_prob,
+--   pmid,
+--   pub_date,
+--   pub_journal,
+--   pub_title,
+--   pub_author,
+--   trait_reported,
+--   ancestry_initial,
+--   ancestry_replication,
+--   n_initial,
+--   n_replication,
+--   efo_code,
+--   efo_label,
+--   index_rs_id,
+--   pval,
+--   index_chr_id,
+--   index_position,
+--   index_ref_allele,
+--   index_alt_allele,
+--   variant_id,
+--   rs_id
+-- from ot.v2d_log;

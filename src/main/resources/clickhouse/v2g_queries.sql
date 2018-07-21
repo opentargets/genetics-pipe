@@ -23,6 +23,24 @@ order by uniq_variants desc
 limit 10 by type_id, source_id, feature
 limit 5000
 
+SELECT
+    chr_id,
+    gene_id,
+    any(gene_start),
+    any(gene_end),
+    uniq(variant_id),
+    count()
+FROM ot.v2g
+WHERE (chr_id = dictGetString('genes', 'gene_chr', tuple('ENSG00000183117')))
+    AND (gene_id = 'ENSG00000183117')
+    AND (position >= (dictGetUInt32('genes', 'gene_start', tuple('ENSG00000183117')) - 1000000))
+    AND (position <= (dictGetUInt32('genes', 'gene_start', tuple('ENSG00000183117')) + 1000000))
+GROUP BY
+    chr_id,
+    gene_id
+LIMIT 20
+
+
 -- get all variants in a range where they have tissues and
 -- and get pval < 1e-6
 -- for all the variants also want other consequences

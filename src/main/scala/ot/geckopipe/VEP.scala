@@ -2,10 +2,11 @@ package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.{LongType, StringType, StructField, StructType}
+import org.apache.spark.sql.types._
 import org.apache.spark.sql.{Column, DataFrame, SparkSession}
 import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.index.EnsemblIndex
+import ot.geckopipe.functions._
 
 object VEP extends LazyLogging {
   val features: Seq[String] = Seq("csq_counts")

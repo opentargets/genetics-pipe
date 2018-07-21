@@ -10,6 +10,17 @@ import ot.geckopipe.index.VariantIndex
 import scala.util.{Failure, Success, Try}
 
 object functions extends LazyLogging {
+  /** chromosomes is a map with default 0 that returns a Int from 1 to 25
+    * from a chromosome string 1 to 22 and X Y MT consecutively numbered
+    */
+  val chromosomes: Map[String, Int] = {
+    val chrs = (1 to 22).map(_.toString) ++ Seq("X", "Y", "MT")
+    val chrsToIDs = (chrs zip (1 to 25)).toMap withDefaultValue 0
+    chrsToIDs
+  }
+
+  val chromosomesUDF = udf((chr_id: String) => chromosomes(chr_id))
+
   /** save the dataframe as tsv file using filename as a output path */
   def saveToCSV(table: DataFrame, to: String)(implicit sampleFactor: Double = 0d): Unit = {
     logger.info("write datasets to output files")

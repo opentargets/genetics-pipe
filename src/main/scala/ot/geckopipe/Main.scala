@@ -5,22 +5,82 @@ import java.nio.file.Paths
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import ot.geckopipe.index.{EnsemblIndex, V2DIndex, V2GIndex, VariantIndex}
-import ot.geckopipe.interval.Interval
-import ot.geckopipe.qtl.QTL
+import ot.geckopipe.index._
 import ot.geckopipe.functions._
 import scopt.OptionParser
 import org.apache.spark.sql.functions._
 
-sealed trait Command
-case class VICmd() extends Command
-case class V2GCmd() extends Command
-case class V2DCmd() extends Command
-case class D2V2GCmd() extends Command
-case class V2GLUTCmd() extends Command
-case class V2GStatsCmd() extends Command
+class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configuration) extends LazyLogging {
+  implicit val sSesion: SparkSession = ss
+  implicit val sFactor: Double = sampleFactor
 
-case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[Command] = None)
+  def variantIndex(): Unit = {
+    logger.info("exec variant-index command")
+    val _ = VariantIndex.builder(c).build
+  }
+
+  def variantToGene(): Unit = {
+    logger.info("exec variant-gene command")
+
+    val vIdx = VariantIndex.builder(c).load
+
+    val vepDts = VEP(c)
+    val positionalDts = QTL(vIdx, c)
+    val intervalDt = Interval(vIdx, c)
+
+    val dtSeq = Seq(vepDts, positionalDts, intervalDt)
+    val v2g = V2GIndex.build(dtSeq, vIdx, c)
+
+    v2g.save(c.output.stripSuffix("/").concat("/v2g/"))
+  }
+
+  def variantToDisease(): Unit = {
+    logger.info("exec variant-disease command")
+
+    val vIdx = VariantIndex.builder(c).load
+    val v2d = V2DIndex.build(vIdx, c)
+
+    v2d.save(c.output.stripSuffix("/").concat("/v2d/"))
+  }
+
+  def diseaseToVariantToGene(): Unit = {
+    logger.info("exec variant-disease command")
+
+    val v2g = V2GIndex.load(c)
+    val v2d = V2DIndex.load(c)
+
+    val merged = v2d.table.join(v2g.table, VariantIndex.columns)
+
+    saveToCSV(merged, c.output.stripSuffix("/").concat("/d2v2g/"))
+  }
+
+  def dictionaries(): Unit = {
+    logger.info("exec variant-gene-luts command")
+
+    val vIdx = VariantIndex.builder(c).load
+
+    logger.info("write rs_id to chr-position")
+    vIdx.selectBy(Seq("rs_id", "chr_id", "position"))
+      .orderBy(col("rs_id").asc)
+      .distinct()
+      .write
+      .option("delimiter","\t")
+      .option("header", "false")
+      .csv(c.output.stripSuffix("/").concat("/v2g-lut-rsid/"))
+
+    logger.info("write gene name to chr position")
+    val _ = EnsemblIndex(c.ensembl.geneTranscriptPairs)
+      .aggByGene
+      .select("gene_id", "gene_chr", "gene_start", "gene_end")
+      .orderBy(col("gene_id").asc)
+      .write
+      .option("delimiter","\t")
+      .option("header", "false")
+      .csv(c.output.stripSuffix("/").concat("/v2g-lut-gene/"))
+  }
+}
+
+case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[String] = None)
 
 object Main extends LazyLogging {
   val progName: String = "ot-geckopipe"
@@ -72,86 +132,26 @@ object Main extends LazyLogging {
         // needed for save dataset function
         implicit val sampleFactor: Double = c.sampleFactor
 
+        val cmds = new Commands(ss, sampleFactor, c)
+
         logger.info("check command specified")
         config.command match {
-          case Some(_: VICmd) =>
-            logger.info("exec variant-index command")
+          case Some("variant-index") =>
+            cmds.variantIndex()
 
-            val _ = VariantIndex.builder(c).build
+          case Some("variant-gene") =>
+            cmds.variantToGene()
 
-          case Some(_: V2GCmd) =>
-            logger.info("exec variant-gene command")
+          case Some("variant-disease") =>
+            cmds.variantToDisease()
 
-            val vIdx = VariantIndex.builder(c).load
+          case Some("disease-variant-gene") =>
+            cmds.diseaseToVariantToGene()
 
-            val vepDts = VEP(c)
-            val positionalDts = QTL(vIdx, c)
-            val intervalDt = Interval(vIdx, c)
+          case Some("dictionaries") =>
+            cmds.dictionaries()
 
-            val dtSeq = Seq(vepDts, positionalDts, intervalDt)
-            val v2g = V2GIndex.build(dtSeq, vIdx, c)
-
-            v2g.save(c.output.stripSuffix("/").concat("/v2g/"))
-
-          case Some(_: V2DCmd) =>
-            logger.info("exec variant-disease command")
-
-            val vIdx = VariantIndex.builder(c).load
-            val v2d = V2DIndex.build(vIdx, c)
-
-            v2d.save(c.output.stripSuffix("/").concat("/v2d/"))
-
-          case Some(_: D2V2GCmd) =>
-            logger.info("exec variant-disease command")
-
-            val v2g = V2GIndex.load(c)
-            val v2d = V2DIndex.load(c)
-
-            val merged = v2d.table.join(v2g.table, VariantIndex.columns)
-
-            saveToCSV(merged, c.output.stripSuffix("/").concat("/d2v2g/"))
-
-          case Some(_: V2GLUTCmd) =>
-            logger.info("exec variant-gene-luts command")
-
-            val vIdx = VariantIndex.builder(c).load
-
-            logger.info("write rs_id to chr-position")
-            vIdx.selectBy(Seq("rs_id", "chr_id", "position"))
-              .orderBy(col("rs_id").asc)
-              .distinct()
-              .write
-              .option("delimiter","\t")
-              .option("header", "false")
-              .csv(c.output.stripSuffix("/").concat("/v2g-lut-rsid/"))
-
-            logger.info("write gene name to chr position")
-            val _ = EnsemblIndex(c.ensembl.geneTranscriptPairs)
-              .aggByGene
-              .select("gene_id", "gene_chr", "gene_start", "gene_end")
-              .orderBy(col("gene_id").asc)
-              .write
-              .option("delimiter","\t")
-              .option("header", "false")
-              .csv(c.output.stripSuffix("/").concat("/v2g-lut-gene/"))
-
-
-          case Some(_: V2GStatsCmd) =>
-            logger.info("exec variant-gene-stats command")
-
-            val vIdx = VariantIndex.builder(c).load
-
-            val vepDts = VEP(c)
-            val positionalDts = QTL(vIdx, c)
-            val intervalDt = Interval(vIdx, c)
-
-            val dtSeq = Seq(vepDts, positionalDts, intervalDt)
-            val v2g = V2GIndex.load(c)
-
-            val stats = v2g.computeStats
-            logger.info(s"computed stats $stats")
-
-          case None =>
+          case _ =>
             logger.error("failed to specify a command to run try --help")
         }
 
@@ -186,28 +186,24 @@ object Main extends LazyLogging {
       .text("other arguments")
 
     cmd("variant-index")
-      .action( (_, c) => c.copy(command = Some(VICmd())) )
+      .action( (_, c) => c.copy(command = Some("variant-index")) )
       .text("generate variant index from VEP file")
 
     cmd("variant-gene").
-      action( (_, c) => c.copy(command = Some(V2GCmd())))
+      action( (_, c) => c.copy(command = Some("variant-gene")))
       .text("generate variant to gene table")
 
     cmd("variant-disease").
-      action( (_, c) => c.copy(command = Some(V2DCmd())))
+      action( (_, c) => c.copy(command = Some("variant-disease")))
       .text("generate variant to disease table")
 
     cmd("disease-variant-gene").
-      action( (_, c) => c.copy(command = Some(D2V2GCmd())))
+      action( (_, c) => c.copy(command = Some("disease-variant-gene")))
       .text("generate disease to variant to gene table")
 
-    cmd("variant-gene-luts").
-      action( (_, c) => c.copy(command = Some(V2GLUTCmd())))
-      .text("generate variant to gene lookup tables for variants, rsids and genes")
-
-    cmd("variant-gene-stats").
-      action( (_, c) => c.copy(command = Some(V2GStatsCmd())))
-      .text("generate variant to gene stat results")
+    cmd("dictionaries").
+      action( (_, c) => c.copy(command = Some("dictionaries")))
+      .text("generate variant to gene lookup tables")
 
     note(entryText)
 
