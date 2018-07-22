@@ -44,7 +44,7 @@ create table if not exists ot.v2d_log(
   rs_id String)
 engine = Log;
 
-create table if not exists ot.v2d_by_chrpos
+create table if not exists ot.v2d
 engine MergeTree partition by (chr_id) order by (chr_id, position)
 as select
   chr_id,

@@ -1,0 +1,39 @@
+<dictionaries>
+	<dictionary>
+		<name>genes</name>
+		<source>
+			<file>
+				<path>/etc/clickhouse-server/dictionaries/genes.tsv</path>
+				<format>TabSeparated</format>
+			</file>
+		</source>
+		<layout>
+			<complex_key_hashed />
+		</layout>
+		<lifetime>300</lifetime>
+		<structure>
+			<key>
+				<attribute>
+					<name>gene_id</name>
+					<type>String</type>
+				</attribute>
+			</key>
+			<attribute>
+				<name>gene_chr</name>
+				<type>String</type>
+				<null_value>ENSG0</null_value>
+			</attribute>
+			<attribute>
+				<name>gene_start</name>
+				<type>UInt32</type>
+				<null_value>0</null_value>
+			</attribute>
+			<attribute>
+				<name>gene_end</name>
+				<type>UInt32</type>
+				<null_value>0</null_value>
+			</attribute>
+		</structure>
+	</dictionary>
+</dictionaries>
+
