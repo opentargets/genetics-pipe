@@ -57,11 +57,11 @@ object SummaryStatsIndex extends LazyLogging {
       .withColumn("n_cases", when(col("n_cases").equalTo("nan"), lit(null)).cast(IntegerType))
       .withColumn("pval", toMinDouble(col("pval")))
 
-    sa.join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
+    val jointSA = sa.join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
 
     new SummaryStatsIndex {
       /** uniform way to get the dataframe */
-      override val table: DataFrame = sa
+      override val table: DataFrame = jointSA
     }
   }
 }
