@@ -85,7 +85,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
     val sa = SummaryStatsIndex.load(vIdx, c)
 
-    saveToCSV(sa.table, c.output.stripSuffix("/").concat("/d2v_sa/"))
+    saveToCSV(sa.table, c.output.stripSuffix("/").concat("/v2d_sa/"))
   }
 }
 
