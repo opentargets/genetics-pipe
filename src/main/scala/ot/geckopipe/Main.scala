@@ -82,9 +82,10 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
   def summaryStats(): Unit = {
     logger.info("exec summary-stats command")
 
-    val sa = SummaryStats.load(c.summaryStats.studies)
+    val vIdx = VariantIndex.builder(c).load
+    val sa = SummaryStatsIndex.load(vIdx, c)
 
-    sa.show(50, false)
+    saveToCSV(sa.table, c.output.stripSuffix("/").concat("/d2v_sa/"))
   }
 }
 

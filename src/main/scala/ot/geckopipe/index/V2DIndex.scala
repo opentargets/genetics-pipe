@@ -81,7 +81,7 @@ object V2DIndex extends LazyLogging  {
 
     val ldAndFmEnriched = splitVariantID(ldAndFm).get
       .drop("variant_id")
-      .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"), "left_outer")
+      .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
 
     new V2DIndex {
       override val table: DataFrame = ldAndFmEnriched
