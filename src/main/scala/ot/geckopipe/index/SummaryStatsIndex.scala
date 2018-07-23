@@ -56,6 +56,7 @@ object SummaryStatsIndex extends LazyLogging {
       .drop("filename", "variant_id", "rs_id")
       .withColumn("n_cases", when(col("n_cases").equalTo("nan"), lit(null)).cast(IntegerType))
       .withColumn("pval", toMinDouble(col("pval")))
+      .repartitionByRange(col("chr_id").asc, col("position").asc)
 
     val jointSA = sa.join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
 
