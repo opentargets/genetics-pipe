@@ -78,7 +78,7 @@ object functions extends LazyLogging {
 
   def concatDatasets(datasets: Seq[DataFrame], columns: Seq[String]): DataFrame = {
     logger.info("build variant to gene dataset union the list of datasets")
-    val dts = datasets.foldLeft(datasets.head.select(columns.head, columns.tail: _*))((aggDt, dt) => {
+    val dts = datasets.tail.foldLeft(datasets.head.select(columns.head, columns.tail: _*))((aggDt, dt) => {
       aggDt.union(dt.select(columns.head, columns.tail: _*))
     })
 

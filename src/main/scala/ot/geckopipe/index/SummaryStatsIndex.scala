@@ -5,11 +5,12 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import ot.geckopipe.Configuration
+import ot.geckopipe.functions._
 
 abstract class SummaryStatsIndex extends Indexable
 
 object SummaryStatsIndex extends LazyLogging {
-  val columns: Seq[String] = Seq("rd_id", "variant_id", "chr_id", "position", "ref_allele", "alt_allele",
+  val columns: Seq[String] = Seq("rs_id", "variant_id", "chr_id", "position", "ref_allele", "alt_allele",
     "eaf", "beta", "se", "pval", "n", "n_cases", "stid")
 
   val indexColumns: Seq[String] = Seq("chr_id", "position")
@@ -43,7 +44,25 @@ object SummaryStatsIndex extends LazyLogging {
       }
     })
 
-    val sa = ss.read
+    def readDS(filename: String): DataFrame = {
+      ss.read
+        .format("csv")
+        .option("header", "true")
+        .option("inferSchema", "false")
+        .option("delimiter","\t")
+        .option("mode", "DROPMALFORMED")
+        .schema(schema)
+        .load(filename)
+        .withColumn("filename", input_file_name)
+        .withColumn("stid", buildStudyID(col("filename")))
+        .drop("filename", "variant_id", "rs_id")
+        .withColumn("n_cases", when(col("n_cases").equalTo("nan"), lit(null)).cast(IntegerType))
+        .withColumn("pval", toMinDouble(col("pval")))
+        .repartitionByRange(col("chr_id").asc, col("position").asc)
+        .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
+    }
+
+    val saFiles = ss.read
       .format("csv")
       .option("header", "true")
       .option("inferSchema", "false")
@@ -51,18 +70,13 @@ object SummaryStatsIndex extends LazyLogging {
       .option("mode", "DROPMALFORMED")
       .schema(schema)
       .load(conf.summaryStats.studies)
-      .withColumn("filename", input_file_name)
-      .withColumn("stid", buildStudyID(col("filename")))
-      .drop("filename", "variant_id", "rs_id")
-      .withColumn("n_cases", when(col("n_cases").equalTo("nan"), lit(null)).cast(IntegerType))
-      .withColumn("pval", toMinDouble(col("pval")))
-      .repartitionByRange(col("chr_id").asc, col("position").asc)
+      .inputFiles
 
-    val jointSA = sa.join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
+    val dt = concatDatasets(saFiles.map(readDS), columns)
 
     new SummaryStatsIndex {
       /** uniform way to get the dataframe */
-      override val table: DataFrame = jointSA
+      override val table: DataFrame = dt
     }
   }
 }
