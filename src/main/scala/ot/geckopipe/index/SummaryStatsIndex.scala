@@ -44,24 +44,6 @@ object SummaryStatsIndex extends LazyLogging {
       }
     })
 
-    def readDS(filename: String): DataFrame = {
-      ss.read
-        .format("csv")
-        .option("header", "true")
-        .option("inferSchema", "false")
-        .option("delimiter","\t")
-        .option("mode", "DROPMALFORMED")
-        .schema(schema)
-        .load(filename)
-        .withColumn("filename", input_file_name)
-        .withColumn("stid", buildStudyID(col("filename")))
-        .drop("filename", "variant_id", "rs_id")
-        .withColumn("n_cases", when(col("n_cases").equalTo("nan"), lit(null)).cast(IntegerType))
-        .withColumn("pval", toMinDouble(col("pval")))
-        .repartitionByRange(col("chr_id").asc, col("position").asc)
-        .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
-    }
-
     val saFiles = ss.read
       .format("csv")
       .option("header", "true")
@@ -70,13 +52,19 @@ object SummaryStatsIndex extends LazyLogging {
       .option("mode", "DROPMALFORMED")
       .schema(schema)
       .load(conf.summaryStats.studies)
-      .inputFiles
+      .withColumn("filename", input_file_name)
+      .withColumn("stid", buildStudyID(col("filename")))
+      .drop("filename", "variant_id", "rs_id")
+      .withColumn("n_cases", when(col("n_cases").equalTo("nan"), lit(null)).cast(IntegerType))
+      .withColumn("pval", toMinDouble(col("pval")))
+      .repartitionByRange(col("stid"), col("chr_id").asc, col("position").asc)
+      .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
 
-    val dt = concatDatasets(saFiles.map(readDS), columns)
+    // val dt = concatDatasets(saFiles.map(readDS), columns)
 
     new SummaryStatsIndex {
       /** uniform way to get the dataframe */
-      override val table: DataFrame = dt
+      override val table: DataFrame = saFiles
     }
   }
 }

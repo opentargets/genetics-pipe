@@ -1,16 +1,26 @@
 import Dependencies._
 
-lazy val root = (project in file(".")).
-  settings(
+val buildResolvers = Seq(
+    "Local Maven Repository"    at "file://"+Path.userHome.absolutePath+"/.m2/repository",
+    "Maven repository"          at "http://download.java.net/maven/2/",
+    "Typesafe Repo"             at "http://repo.typesafe.com/typesafe/releases/",
+    "Sonatype Snapshots"        at "http://oss.sonatype.org/content/repositories/snapshots",
+    "Sonatype Releases"         at "http://oss.sonatype.org/content/repositories/releases"
+  )
+
+lazy val root = (project in file("."))
+  .settings(
     inThisBuild(List(
       organization := "io.opentargets",
       scalaVersion := "2.11.12",
-      version      := "0.17.3"
+      version      := "0.17.4"
     )),
     name := "ot-geckopipe",
     // libraryDependencies += scalaTest % Test,
 
-    resolvers += Resolver.sonatypeRepo("releases"),
+    // resolvers += Resolver.mavenLocal,
+    // resolvers += Resolver.sonatypeRepo("releases"),
+    resolvers ++= buildResolvers,
 
     // from Dependencies.scala
     libraryDependencies += scalaCheck,
