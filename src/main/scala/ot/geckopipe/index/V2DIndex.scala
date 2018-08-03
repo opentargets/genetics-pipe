@@ -5,7 +5,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import ot.geckopipe.Configuration
-import ot.geckopipe.functions.{loadFromCSV, splitVariantID}
+import ot.geckopipe.functions._
 
 abstract class V2DIndex extends Indexable {
   def leanTable : DataFrame = selectBy(V2DIndex.indexColumns ++ V2DIndex.columns)
@@ -21,17 +21,18 @@ object V2DIndex extends LazyLogging  {
   val studiesSchema = StructType(
     StructField("stid", StringType) ::
       StructField("pmid", StringType) ::
-      StructField("pub_date", StringType) ::
+      StructField("pub_date", DateType) ::
       StructField("pub_journal", StringType) ::
       StructField("pub_title", StringType) ::
       StructField("pub_author", StringType) ::
       StructField("trait_reported", StringType) ::
-      StructField("trait_mapped", StringType) ::
       StructField("trait_efos", StringType) ::
+      StructField("trait_code", StringType) ::
       StructField("ancestry_initial", StringType) ::
       StructField("ancestry_replication", StringType) ::
       StructField("n_initial", LongType) ::
-      StructField("n_replication", LongType) :: Nil)
+      StructField("n_replication", LongType) ::
+      StructField("n_cases", LongType) :: Nil)
 
   val topLociSchema = StructType(
     StructField("stid", StringType) ::
@@ -81,6 +82,7 @@ object V2DIndex extends LazyLogging  {
 
     val ldAndFmEnriched = splitVariantID(ldAndFm).get
       .drop("variant_id")
+      .repartitionByRange(col("chr_id").asc, col("position").asc)
       .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
 
     new V2DIndex {
@@ -89,21 +91,12 @@ object V2DIndex extends LazyLogging  {
   }
 
   def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame = {
-    val processTraits = udf((codes: String, labels: String) => codes.split(";")
-        .zipAll(labels.split(";"),"", "")
-        .filter(_._1 != "")
-        .map(t => Array(t._1,t._2)))
-
     val studies = loadFromCSV(path, studiesSchema)
+    val removeSuffix = udf((col: String) => col.split(".")(0))
 
     val pStudies = studies
-      .withColumn("trait_label", when(col("trait_efos").isNull, col("trait_reported")).otherwise(col("trait_mapped")))
-      .withColumn("trait_code", when(col("trait_mapped").isNull, col("trait_reported")).otherwise(col("trait_efos")))
-      .withColumn("trait_pair",
-        explode(processTraits(col("trait_code"), col("trait_label"))))
-      .withColumn("efo_code", col("trait_pair").getItem(0))
-      .withColumn("efo_label", col("trait_pair").getItem(1))
-      .drop("trait_pair")
+      .withColumn("trait_efos", arrayToString(split(col("trait_efos"),";")))
+      .withColumn("pmid", removeSuffix(col("pmid")))
 
     pStudies
   }
@@ -124,11 +117,12 @@ object V2DIndex extends LazyLogging  {
 
     val fLoci = loci
       .withColumn("pval", toDouble(col("pval_mantissa"), col("pval_exponent")))
-      .withColumn("index_variant_id", explode(split(col("variant_id"), ";")))
+      .withColumn("_splitAndZip", explode(splitAndZip(col("variant_id"), col("rs_id"))))
+      .withColumn("index_variant_id", col("_splitAndZip").getItem(0))
+      .withColumn("index_variant_rsid", col("_splitAndZip").getItem(1))
 
     splitVariantID(fLoci, "index_variant_id", "index_").get
-      .withColumnRenamed("rs_id", "index_rs_id")
-      .drop("pval_mantissa", "pval_exponent", "variant_id")
+      .drop("pval_mantissa", "pval_exponent", "variant_id", "rs_id", "_splitAndZip")
   }
 
   def buildLDIndex(path: String)(implicit ss: SparkSession): DataFrame = {

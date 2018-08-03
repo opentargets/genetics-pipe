@@ -21,6 +21,14 @@ object functions extends LazyLogging {
 
   val chromosomesUDF = udf((chr_id: String) => chromosomes(chr_id))
 
+  /** split two columns by ; each column and then zip and map to an array */
+  val splitAndZip = udf((codes: String, labels: String) => codes.split(";")
+    .zipAll(labels.split(";"),"", "")
+    .filter(_._1 != "")
+    .map(t => Array(t._1,t._2)))
+
+  val arrayToString = udf((xs: Array[String]) => xs.mkString("[",",","]"))
+
   /** save the dataframe as tsv file using filename as a output path */
   def saveToCSV(table: DataFrame, to: String)(implicit sampleFactor: Double = 0d): Unit = {
     logger.info("write datasets to output files")
