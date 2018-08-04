@@ -151,7 +151,7 @@ object VEP extends LazyLogging {
         first("ref_allele").as("ref_allele"),
         first("alt_allele").as("alt_allele"),
         first("rs_id").as("rs_id"))
-      .withColumn("type_id", lit("vep"))
+      .withColumn("type_id", lit("fpred"))
       .withColumn("source_id", lit("vep"))
 
     new Component {
