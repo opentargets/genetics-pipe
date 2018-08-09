@@ -9,7 +9,7 @@ import ot.geckopipe.index.EnsemblIndex
 import ot.geckopipe.functions._
 
 object VEP extends LazyLogging {
-  val features: Seq[String] = Seq("csq_counts")
+  val features: Seq[String] = Seq("fpred_label", "fpred_score")
 
   val schema = StructType(
     StructField("chr_id", StringType) ::
@@ -23,25 +23,27 @@ object VEP extends LazyLogging {
 
   /** load consequence table from file extracted from ensembl website
     *
-    * https://www.ensembl.org/info/genome/variation/predicted_data.html#consequences
-    * and table header
-    * SO term
-    * SO description
-    * SO accession
-    * Display term
-    * IMPACT
+    * https://www.ensembl.org/info/genome/variation/predicted_data.html#consequences and
+    * merged with OT eco scores table. We filter by only v2g_scores and get last token from
+    * the accession terms
     *
     * @param from file to load the lookup table
     * @param ss the implicit sparksession
     * @return a dataframe with all normalised columns
     */
   def loadConsequenceTable(from: String)(implicit ss: SparkSession): DataFrame = {
+    val cleanAccessions = udf((accession: String) => {
+      accession.split("/").lastOption.getOrElse(accession)
+    })
+
     val csqSchema = StructType(
-      StructField("so_term", StringType) ::
-        StructField("so_description", StringType) ::
-        StructField("so_accession", StringType) ::
+      StructField("accession", StringType) ::
+      StructField("term", StringType) ::
+        StructField("description", StringType) ::
         StructField("display_term", StringType) ::
-        StructField("impact", StringType) :: Nil)
+        StructField("impact", StringType) ::
+        StructField("v2g_score", DoubleType) ::
+        StructField("eco_score", DoubleType) :: Nil)
 
     val csqs = ss.read
       .format("csv")
@@ -55,6 +57,8 @@ object VEP extends LazyLogging {
       .load(from)
 
     csqs
+      .withColumn("accession", cleanAccessions(col("accession")))
+      .filter(col("v2g_score").isNotNull)
   }
 
   def loadHumanVEP(from: String)(implicit ss: SparkSession): DataFrame = {
@@ -97,6 +101,21 @@ object VEP extends LazyLogging {
     val geneTrans = EnsemblIndex(conf.ensembl.geneTranscriptPairs).table
       .select("gene_id", "gene_chr", "trans_id")
       .cache
+
+    // from csqs table to a map to broadcast to all workers
+    // broadcast the small Map to be used in each worker as it is loaded into memmory
+    val csqScoresBc = ss.sparkContext.broadcast(
+      loadConsequenceTable(conf.vep.homoSapiensConsScores)
+        .select(col("term"), col("v2g_score"))
+        .map(r => (r.getAs[String](0), r.getAs[Double](1)))
+        .collect
+        .toMap)
+
+    val udfScoreCSQ = udf( (csqs: Set[String]) => {
+      val csqsL = csqs.toList
+      val zipped = csqsL zip csqsL.map(csqScoresBc.value.getOrElse(_, 0.0))
+      zipped.sortBy(_._1).unzip
+    })
 
     // split info string and extract CSQ substring
     // it returns a list of consequences
@@ -141,11 +160,10 @@ object VEP extends LazyLogging {
 
     logger.info("inner join vep consequences transcripts to genes")
     val vepsDF = veps.join(geneTrans, Seq("trans_id"), "left_outer")
-      .withColumnRenamed("consequence", "feature")
       .where($"gene_id".isNotNull and $"chr_id" === $"gene_chr")
       .drop("trans_id", "csq", "tss_distance", "gene_chr")
-      .groupBy("variant_id", "gene_id", "feature")
-      .agg(count("feature").as(features.head),
+      .groupBy("variant_id", "gene_id")
+      .agg(collect_set("consequence").as("consequence_set"),
         first("chr_id").as("chr_id"),
         first("position").as("position"),
         first("ref_allele").as("ref_allele"),
@@ -153,6 +171,11 @@ object VEP extends LazyLogging {
         first("rs_id").as("rs_id"))
       .withColumn("type_id", lit("fpred"))
       .withColumn("source_id", lit("vep"))
+      .withColumn("feature", lit("unspecified"))
+      .withColumn("consequence_set", udfScoreCSQ(col("consequence_set")))
+      .withColumn("fpred_labels", col("consequence_set").getItem(0))
+      .withColumn("fpred_scores", col("consequence_set").getItem(1))
+      .drop("consequence_set")
 
     new Component {
       /** unique column name list per component */
