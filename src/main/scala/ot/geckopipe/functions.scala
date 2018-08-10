@@ -1,12 +1,13 @@
 package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
-import org.apache.spark.sql.{Column, DataFrame, SparkSession}
+import org.apache.spark.sql.{Column, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
 import ot.geckopipe.index.V2DIndex.studiesSchema
 import ot.geckopipe.index.VariantIndex
 
+import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 object functions extends LazyLogging {
@@ -28,6 +29,17 @@ object functions extends LazyLogging {
     .map(t => Array(t._1,t._2)))
 
   val arrayToString = udf((xs: Array[String]) => xs.mkString("[",",","]"))
+
+  /** convert a seq to a stringify array */
+  val stringifyColumnString = udf((ls: Seq[String]) => ls.mkString("['", "','", "']"))
+
+  val stringifyColumnDouble = udf((ld: Seq[Double]) => ld.mkString("[", ",", "]"))
+
+  /** convert a seq to a stringify array */
+  val stringifyDouble = udf((vs: Seq[String]) => vs match {
+    case null => null
+    case _    => s"""[${vs.mkString(",")}]"""
+  })
 
   /** save the dataframe as tsv file using filename as a output path */
   def saveToCSV(table: DataFrame, to: String)(implicit sampleFactor: Double = 0d): Unit = {

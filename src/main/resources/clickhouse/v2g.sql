@@ -75,29 +75,13 @@ create table if not exists ot.v2g_nested
   gene_start UInt32,
   gene_end UInt32,
   gene_name String,
-  interval Nested
-  (
-    type_id String,
-    source_id String,
-    tissue_id String,
-    interval_score Float64
-  ),
-  qtl Nested
-  (
-    type_id String,
-    source_id String,
-    tissue_id String,
-    beta Float64,
-    se Float64,
-    pval Float64
-  ),
+  interval_score Float64,
+  beta Float64,
+  se Float64,
+  pval Float64,
   fpred Nested
   (
-    type_id String,
-    source_id String,
-    tissue_id String,
     label String,
-    impact String,
     score Float64
   )
 )
@@ -108,7 +92,7 @@ insert into ot.v2g_nested VALUES
   ('1', 160650838, 650838, 'T', 'G', '1_160650838_T_G', 'rs1051675500', '1', 'ENSG00000179914' , 160846329, 160854960, 'ITLN1', ['pchic', 'pchic'], ['javierre2016', 'javierre2016'], ['erythroblasts', 'naive_cd8'], [6.0584891714175795, 7.40737934842716], ['eqtl'], ['gtex_v7'], ['vagina'], [3.34234], [0.23452], [0.00001], ['fpred'], ['vep'], ['unspecified'], ['missense'], ['MODIFIER'], [0.2] ),
   ('1', 160650838, 650838, 'T', 'G', '1_160650838_T_G', 'rs1051675500', '1', 'ENSG00000122223' , 160799950, 160832692, 'CD244', ['pchic', 'pchic'], ['javierre2016', 'javierre2016'], ['erythroblasts', 'naive_cd8'], [6.0584891714175795, 7.40737934842716], ['eqtl'], ['gtex_v7'], ['vagina'], [3.34234], [0.23452], [0.00001], ['fpred'], ['vep'], ['unspecified'], ['missense'], ['MODIFIER'], [0.2] )
 
-insert into ot.v2g_nested
+insert into ot.v2g_nested9
 select
   chr_id,
   position,

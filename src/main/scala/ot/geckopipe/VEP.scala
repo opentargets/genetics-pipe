@@ -8,8 +8,10 @@ import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.index.EnsemblIndex
 import ot.geckopipe.functions._
 
+import scala.collection.mutable
+
 object VEP extends LazyLogging {
-  val features: Seq[String] = Seq("fpred_label", "fpred_score")
+  val features: Seq[String] = Seq("fpred_labels", "fpred_scores")
 
   val schema = StructType(
     StructField("chr_id", StringType) ::
@@ -103,18 +105,18 @@ object VEP extends LazyLogging {
       .cache
 
     // from csqs table to a map to broadcast to all workers
+    val csqsMap = loadConsequenceTable(conf.vep.homoSapiensConsScores)
+      .select("term", "v2g_score")
+      .map(r => (r.getAs[String](0), r.getAs[Double](1)))
+      .collect
+      .toMap
     // broadcast the small Map to be used in each worker as it is loaded into memmory
-    val csqScoresBc = ss.sparkContext.broadcast(
-      loadConsequenceTable(conf.vep.homoSapiensConsScores)
-        .select(col("term"), col("v2g_score"))
-        .map(r => (r.getAs[String](0), r.getAs[Double](1)))
-        .collect
-        .toMap)
+    val csqScoresBc = ss.sparkContext.broadcast(csqsMap)
 
-    val udfScoreCSQ = udf( (csqs: Set[String]) => {
-      val csqsL = csqs.toList
-      val zipped = csqsL zip csqsL.map(csqScoresBc.value.getOrElse(_, 0.0))
-      zipped.sortBy(_._1).unzip
+    println(csqsMap.toString)
+
+    val udfCsqScores = udf((csqs: mutable.WrappedArray[String]) => {
+      csqs.map(csqScoresBc.value.getOrElse(_, 0.0))
     })
 
     // split info string and extract CSQ substring
@@ -172,10 +174,10 @@ object VEP extends LazyLogging {
       .withColumn("type_id", lit("fpred"))
       .withColumn("source_id", lit("vep"))
       .withColumn("feature", lit("unspecified"))
-      .withColumn("consequence_set", udfScoreCSQ(col("consequence_set")))
-      .withColumn("fpred_labels", col("consequence_set").getItem(0))
-      .withColumn("fpred_scores", col("consequence_set").getItem(1))
-      .drop("consequence_set")
+      .withColumn("fpred_scores", udfCsqScores(col("consequence_set")))
+      .withColumnRenamed("consequence_set", "fpred_labels")
+      .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
+      .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
 
     new Component {
       /** unique column name list per component */
