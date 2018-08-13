@@ -4,7 +4,11 @@
 *.class
 *.log
 
+/project/.boot
+/project/.ivy
 
+/*.csv
+/*.conf
 #### java ####
 # Compiled class file
 *.class
