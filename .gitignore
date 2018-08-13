@@ -4,6 +4,10 @@
 *.class
 *.log
 
+.terraform/
+*.tfstate
+open-targets-genetics-63ea40a7fb68.json
+
 /project/.boot
 /project/.ivy
 
