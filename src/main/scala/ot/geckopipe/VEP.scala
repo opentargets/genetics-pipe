@@ -110,10 +110,9 @@ object VEP extends LazyLogging {
       .map(r => (r.getAs[String](0), r.getAs[Double](1)))
       .collect
       .toMap
+
     // broadcast the small Map to be used in each worker as it is loaded into memmory
     val csqScoresBc = ss.sparkContext.broadcast(csqsMap)
-
-    println(csqsMap.toString)
 
     val udfCsqScores = udf((csqs: mutable.WrappedArray[String]) => {
       csqs.map(csqScoresBc.value.getOrElse(_, 0.0))
