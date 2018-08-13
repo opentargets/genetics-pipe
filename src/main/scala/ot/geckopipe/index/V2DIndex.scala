@@ -92,7 +92,7 @@ object V2DIndex extends LazyLogging  {
 
   def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val studies = loadFromCSV(path, studiesSchema)
-    val removeSuffix = udf((col: String) => col.split(".")(0))
+    val removeSuffix = udf((col: String) => col.split("\\.").head)
 
     val pStudies = studies
       .withColumn("trait_efos", arrayToString(split(col("trait_efos"),";")))
