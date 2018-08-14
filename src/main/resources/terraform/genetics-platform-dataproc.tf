@@ -19,6 +19,7 @@ resource "google_storage_bucket" "gp-bucket" {
   name = "genetics-portal-cluster-bucket-${var.version-suffix}"
   location = "${var.region}"
   storage_class = "regional"
+  force_destroy = true
 }
 
 resource "google_dataproc_cluster" "gp-cluster" {
