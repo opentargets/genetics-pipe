@@ -17,11 +17,13 @@ create table if not exists ot.v2g_log(
   gene_id String,
   gene_start UInt32,
   gene_end UInt32,
+  gene_type String,
   gene_name String,
   feature String,
   type_id String,
   source_id String,
-  csq_counts Nullable(UInt32),
+  fpred_labels Array(String),
+  fpred_scores Array(Float64),
   qtl_beta Nullable(Float64),
   qtl_se Nullable(Float64),
   qtl_pval Nullable(Float64),
@@ -50,6 +52,7 @@ as select
   assumeNotNull(gene_id) as gene_id,
   assumeNotNull(gene_start) as gene_start,
   assumeNotNull(gene_end) as gene_end,
+  assumeNotNull(gene_type) as gene_type,
   assumeNotNull(gene_name) as gene_name,
   assumeNotNull(feature) as feature,
   assumeNotNull(type_id) as type_id,
@@ -74,16 +77,20 @@ create table if not exists ot.v2g_nested
   gene_id String,
   gene_start UInt32,
   gene_end UInt32,
+  gene_type String,
   gene_name String,
-  interval_score Float64,
-  beta Float64,
-  se Float64,
-  pval Float64,
+  type_id String,
+  source_id String,
+  feature String,
   fpred Nested
   (
     label String,
     score Float64
-  )
+  ),
+  beta Float64,
+  se Float64,
+  pval Float64,
+  interval_score Float64
 )
 engine MergeTree partition by (chr_id) order by (chr_id, position)
 
@@ -92,7 +99,7 @@ insert into ot.v2g_nested VALUES
   ('1', 160650838, 650838, 'T', 'G', '1_160650838_T_G', 'rs1051675500', '1', 'ENSG00000179914' , 160846329, 160854960, 'ITLN1', ['pchic', 'pchic'], ['javierre2016', 'javierre2016'], ['erythroblasts', 'naive_cd8'], [6.0584891714175795, 7.40737934842716], ['eqtl'], ['gtex_v7'], ['vagina'], [3.34234], [0.23452], [0.00001], ['fpred'], ['vep'], ['unspecified'], ['missense'], ['MODIFIER'], [0.2] ),
   ('1', 160650838, 650838, 'T', 'G', '1_160650838_T_G', 'rs1051675500', '1', 'ENSG00000122223' , 160799950, 160832692, 'CD244', ['pchic', 'pchic'], ['javierre2016', 'javierre2016'], ['erythroblasts', 'naive_cd8'], [6.0584891714175795, 7.40737934842716], ['eqtl'], ['gtex_v7'], ['vagina'], [3.34234], [0.23452], [0.00001], ['fpred'], ['vep'], ['unspecified'], ['missense'], ['MODIFIER'], [0.2] )
 
-insert into ot.v2g_nested9
+insert into ot.v2g_nested
 select
   chr_id,
   position,
@@ -105,11 +112,13 @@ select
   gene_id,
   gene_start,
   gene_end,
+  gene_type,
   gene_name,
   type_id,
   source_id,
   feature,
-  csq_counts,
+  fpred_labels,
+  fpred_scores,
   qtl_beta,
   qtl_se,
   qtl_pval,
