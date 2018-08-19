@@ -43,6 +43,27 @@ object V2GIndex extends LazyLogging  {
   /** the whole list of columns this dataset will be outputing */
   val columns: Seq[String] = (VariantIndex.columns ++ EnsemblIndex.columns ++ features).distinct
 
+  /** set few columns to NaN and []
+    *
+    * TODO this needs a bit of refactoring to do it properly
+    */
+  def fillAndCompute(ds: DataFrame): DataFrame = {
+    // fill missing values
+    val filledDS = ds
+      .na.fill(Map(
+      "interval_score" -> Double.NaN,
+      "qtl_beta" -> Double.NaN,
+      "qtl_se" -> Double.NaN,
+      "qtl_pval" -> Double.NaN,
+      "fpred_scores" -> Seq.empty
+    ))
+
+    // stringify array columns
+    filledDS
+      .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
+      .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
+  }
+
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   def build(datasets: Seq[Component], vIdx: VariantIndex, conf: Configuration)
            (implicit ss: SparkSession): V2GIndex = {
@@ -60,10 +81,12 @@ object V2GIndex extends LazyLogging  {
       table.join(geneTrans, Seq("gene_id"))
     })
 
+    // TODO remove all null by default values as NaN and []
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
+    val postDts = fillAndCompute(allDts)
 
     new V2GIndex {
-      override val table: DataFrame = allDts
+      override val table: DataFrame = postDts
     }
   }
 

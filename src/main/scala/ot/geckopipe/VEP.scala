@@ -175,8 +175,8 @@ object VEP extends LazyLogging {
       .withColumn("feature", lit("unspecified"))
       .withColumn("fpred_scores", udfCsqScores(col("consequence_set")))
       .withColumnRenamed("consequence_set", "fpred_labels")
-      .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
-      .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
+      // .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
+      // .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
 
     new Component {
       /** unique column name list per component */
