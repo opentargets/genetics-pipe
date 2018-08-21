@@ -53,29 +53,39 @@ object V2GIndex extends LazyLogging  {
     // get min and max
     ds.createOrReplaceTempView("v2g_table")
 
-    val minMaxBySourceFeature = ss.sqlContext.sql(
+    val computedQtlQs = ss.sqlContext.sql(
       """
         |select
         | source_id,
         | feature,
-        | min(qtl_score) as qtl_score_min, max(qtl_score) as qtl_score_max,
-        | min(interval_score) as interval_score_min, max(interval_score) as interval_score_max,
-        | min(fpred_max_score) as fpred_max_score_min, max(fpred_max_score) as fpred_max_score_max,
-        | percentile_approx(qtl_score, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as qtl_score_q,
+        | percentile_approx(qtl_score, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as qtl_score_q
+        |from v2g_table
+        |where qtl_score is not NULL
+        |group by source_id, feature
+        |order by source_id asc, feature asc
+      """.stripMargin).cache
+
+    val computedIntervalQs = ss.sqlContext.sql(
+      """
+        |select
+        | source_id,
+        | feature,
         | percentile_approx(interval_score, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as interval_score_q
         |from v2g_table
+        |where interval_score is not NULL
         |group by source_id, feature
         |order by source_id asc, feature asc
       """.stripMargin).cache
 
     // show all quantiles
-    // minMaxBySourceFeature.show(500, false)
+    computedQtlQs.show(500, false)
+    computedIntervalQs.show(500, false)
 
     // build and broadcast qtl and interval maps for the
     val qtlQs = ss.sparkContext
-      .broadcast(fromQ2Map(minMaxBySourceFeature.select("source_id", "feature", "qtl_score_q")))
+      .broadcast(fromQ2Map(computedQtlQs))
     val intervalQs = ss.sparkContext
-      .broadcast(fromQ2Map(minMaxBySourceFeature.select("source_id", "feature", "interval_score_q")))
+      .broadcast(fromQ2Map(computedIntervalQs))
 
     logger.info(s"compute quantiles for qtls ${qtlQs.value.toString}")
     logger.info(s"compute quantiles for intervals ${intervalQs.value.toString}")

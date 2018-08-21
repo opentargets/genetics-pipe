@@ -130,14 +130,16 @@ object functions extends LazyLogging {
   def fromQ2Map(df :DataFrame, qs: Seq[Double] = decileList): Map[String, Map[String, Seq[(Double, Double)]]] = {
     var mapQ: Map[String, Map[String, Seq[(Double, Double)]]] = Map.empty
 
-    df.foreach(r => {
+    val rows = df.collect.toList
+    val assocs = for (r <- rows) yield {
       val sourceId = r.getAs[String](0)
       val feature = r.getAs[String](1)
       val qs = r.getAs[Seq[Double]](2)
       val qsm: Seq[(Double, Double)] = qs zip decileList
-      mapQ = mapQ.updated(sourceId, Map(feature -> qsm))
-    })
+      sourceId -> (feature -> qsm)
+    }
 
-    mapQ
+    // bizarre reduction to a proper map of maps of lists
+    assocs.groupBy(_._1).mapValues(_.map(_._2).groupBy(_._1).mapValues(_.flatMap(_._2))).map(identity)
   }
 }
