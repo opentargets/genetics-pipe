@@ -11,7 +11,7 @@ import ot.geckopipe.functions._
 import scala.collection.mutable
 
 object VEP extends LazyLogging {
-  val features: Seq[String] = Seq("fpred_labels", "fpred_scores")
+  val features: Seq[String] = Seq("fpred_labels", "fpred_scores", "fpred_max_label", "fpred_max_score")
 
   val schema = StructType(
     StructField("chr_id", StringType) ::
@@ -148,6 +148,18 @@ object VEP extends LazyLogging {
       }
     })
 
+    // return the max pair with label and score from the two lists of labels with scores
+    val getMaxCsqLabel = udf( (labels: Seq[String], scores: Seq[Double]) =>
+      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._1
+    )
+
+    val getMaxCsqScore = udf( (labels: Seq[String], scores: Seq[Double]) =>
+      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._2
+    )
+
+    val getMaxLabel = udf((p: (String, Double)) => p._1)
+    val getMaxScore = udf((p: (String, Double)) => p._2)
+
     logger.info("load VEP table for homo sapiens")
     val veps = loadHumanVEP(conf.vep.homoSapiensCons)
       .withColumn("tsa", udfTSA($"info"))
@@ -175,6 +187,8 @@ object VEP extends LazyLogging {
       .withColumn("feature", lit("unspecified"))
       .withColumn("fpred_scores", udfCsqScores(col("consequence_set")))
       .withColumnRenamed("consequence_set", "fpred_labels")
+      .withColumn("fpred_max_label", getMaxCsqLabel(col("fpred_labels"), col("fpred_scores")))
+      .withColumn("fpred_max_score", getMaxCsqScore(col("fpred_labels"), col("fpred_scores")))
       // .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
       // .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
 

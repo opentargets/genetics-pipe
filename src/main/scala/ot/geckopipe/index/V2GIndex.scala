@@ -3,6 +3,7 @@ package ot.geckopipe.index
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.DataFrameStatFunctions
 import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
 
@@ -47,7 +48,38 @@ object V2GIndex extends LazyLogging  {
     *
     * TODO this needs a bit of refactoring to do it properly
     */
-  def fillAndCompute(ds: DataFrame): DataFrame = {
+  def fillAndCompute(ds: DataFrame)(implicit ss: SparkSession): DataFrame = {
+    // find quantiles (deciles at the moment)
+    // get min and max
+    ds.createOrReplaceTempView("v2g_table")
+
+    val minMaxBySourceFeature = ss.sqlContext.sql(
+      """
+        |select
+        | source_id,
+        | feature,
+        | min(qtl_score) as qtl_score_min, max(qtl_score) as qtl_score_max,
+        | min(interval_score) as interval_score_min, max(interval_score) as interval_score_max,
+        | min(fpred_max_score) as fpred_max_score_min, max(fpred_max_score) as fpred_max_score_max,
+        | percentile_approx(qtl_score, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as qtl_score_q,
+        | percentile_approx(interval_score, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as interval_score_q
+        |from v2g_table
+        |group by source_id, feature
+        |order by source_id asc, feature asc
+      """.stripMargin).cache
+
+    // show all quantiles
+    // minMaxBySourceFeature.show(500, false)
+
+    // build and broadcast qtl and interval maps for the
+    val qtlQs = ss.sparkContext
+      .broadcast(fromQ2Map(minMaxBySourceFeature.select("source_id", "feature", "qtl_score_q")))
+    val intervalQs = ss.sparkContext
+      .broadcast(fromQ2Map(minMaxBySourceFeature.select("source_id", "feature", "interval_score_q")))
+
+    logger.info(s"compute quantiles for qtls ${qtlQs.value.toString}")
+    logger.info(s"compute quantiles for intervals ${intervalQs.value.toString}")
+
     // fill missing values
     val filledDS = ds
       .na.fill(Map(
@@ -58,8 +90,22 @@ object V2GIndex extends LazyLogging  {
       "fpred_scores" -> Seq.empty
     ))
 
+    val setQtlScoreUDF = udf((source_id: String, feature: String, qtl_score: Double) => {
+      val qns = qtlQs.value.apply(source_id).apply(feature)
+      qns.view.dropWhile(p => p._1 < qtl_score).head._2
+    })
+
+    val setIntervalScoreUDF = udf((source_id: String, feature: String, interval_score: Double) => {
+      val qns = intervalQs.value.apply(source_id).apply(feature)
+      qns.view.dropWhile(p => p._1 < interval_score).head._2
+    })
+
     // stringify array columns
     filledDS
+      .withColumn("qtl_score_q", when(col("qtl_score").isNaN, Double.NaN)
+        .otherwise(setQtlScoreUDF(col("source_id"), col("feature"), col("qtl_score"))))
+      .withColumn("interval_score_q", when(col("interval_score").isNaN, Double.NaN)
+        .otherwise(setIntervalScoreUDF(col("source_id"), col("feature"), col("interval_score"))))
       .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
       .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
   }

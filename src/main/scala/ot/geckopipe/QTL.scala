@@ -9,7 +9,7 @@ import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.index.VariantIndex
 
 object QTL extends LazyLogging {
-  val features: Seq[String] = Seq("qtl_beta", "qtl_se", "qtl_pval")
+  val features: Seq[String] = Seq("qtl_beta", "qtl_se", "qtl_pval", "qtl_score")
 
   val schema = StructType(
     StructField("chr_id", StringType) ::
@@ -48,6 +48,7 @@ object QTL extends LazyLogging {
       .withColumnRenamed("beta", "qtl_beta")
       .withColumnRenamed("se", "qtl_se")
       .withColumnRenamed("pval", "qtl_pval")
+      .withColumn("qtl_score", lit(1.0) - col("qtl_pval"))
       .drop("filename", "tokens")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 

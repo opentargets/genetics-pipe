@@ -1,5 +1,13 @@
 -- a good idea is to include the source_name in order to partition by (chr_id and source_name)
 
+-- generate quantiles using clickhouse
+-- create materialized view ot.v2g_quantiles engine=Memory populate as select
+--  source_id, feature,
+--  quantilesIf(0.10, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)(1 - qtl_pval, qtl_pval > 0) as qtl_quantiles,
+--  quantilesIf(0.10, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9)(interval_score, qtl_pval = 0) as interval_quantiles
+-- from ot.v2g
+-- where source_id <> 'vep'
+-- group by source_id, feature
 -- variantindex ("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
 -- geneindex ("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name")
 -- v2g additionals ("feature", "value") + variantindex + geneindex
