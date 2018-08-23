@@ -115,9 +115,6 @@ object V2GIndex extends LazyLogging  {
         setQtlScoreUDF(col("source_id"), col("feature"), col("qtl_score"))))
       .withColumn("interval_score_q", when(col("interval_score").isNotNull,
         setIntervalScoreUDF(col("source_id"), col("feature"), col("interval_score"))))
-      // stringify array columns
-      .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
-      .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */

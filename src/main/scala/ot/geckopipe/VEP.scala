@@ -189,8 +189,8 @@ object VEP extends LazyLogging {
       .withColumnRenamed("consequence_set", "fpred_labels")
       .withColumn("fpred_max_label", getMaxCsqLabel(col("fpred_labels"), col("fpred_scores")))
       .withColumn("fpred_max_score", getMaxCsqScore(col("fpred_labels"), col("fpred_scores")))
-      // .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
-      // .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
+      .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
+      .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
 
     new Component {
       /** unique column name list per component */
