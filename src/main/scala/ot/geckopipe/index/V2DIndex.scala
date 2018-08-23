@@ -77,7 +77,6 @@ object V2DIndex extends LazyLogging  {
     val ldAndFm = ldExpansion.join(fmExpansion,
       Seq("stid", "index_variant_id", "tag_variant_id"), "full_outer")
       .join(indexVariants, Seq("stid", "index_variant_id"), "left_outer")
-      .drop("trait_mapped", "trait_efos", "trait_label", "trait_code")
       .withColumnRenamed("tag_variant_id", "variant_id")
 
     val ldAndFmEnriched = splitVariantID(ldAndFm).get
@@ -95,7 +94,7 @@ object V2DIndex extends LazyLogging  {
     val removeSuffix = udf((col: String) => col.split("\\.").head)
 
     val pStudies = studies
-      .withColumn("trait_efos", arrayToString(split(col("trait_efos"),";")))
+      .withColumn("trait_efos", stringifyColumnString(split(col("trait_efos"),";")))
       .withColumn("pmid", removeSuffix(col("pmid")))
 
     pStudies
