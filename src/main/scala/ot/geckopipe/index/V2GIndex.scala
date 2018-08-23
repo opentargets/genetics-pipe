@@ -91,14 +91,14 @@ object V2GIndex extends LazyLogging  {
     logger.info(s"compute quantiles for intervals ${intervalQs.value.toString}")
 
     // fill missing values
-    val filledDS = ds
-      .na.fill(Map(
-      "interval_score" -> Double.NaN,
-      "qtl_beta" -> Double.NaN,
-      "qtl_se" -> Double.NaN,
-      "qtl_pval" -> Double.NaN,
-      "fpred_scores" -> Seq.empty
-    ))
+//    val filledDS = ds
+//      .na.fill(Map(
+//      "interval_score" -> Double.NaN,
+//      "qtl_beta" -> Double.NaN,
+//      "qtl_se" -> Double.NaN,
+//      "qtl_pval" -> Double.NaN,
+//      "fpred_scores" -> Seq.empty
+//    ))
 
     val setQtlScoreUDF = udf((source_id: String, feature: String, qtl_score: Double) => {
       val qns = qtlQs.value.apply(source_id).apply(feature)
@@ -110,12 +110,12 @@ object V2GIndex extends LazyLogging  {
       qns.view.dropWhile(p => p._1 < interval_score).head._2
     })
 
-    // stringify array columns
-    filledDS
-      .withColumn("qtl_score_q", when(col("qtl_score").isNaN, Double.NaN)
-        .otherwise(setQtlScoreUDF(col("source_id"), col("feature"), col("qtl_score"))))
-      .withColumn("interval_score_q", when(col("interval_score").isNaN, Double.NaN)
-        .otherwise(setIntervalScoreUDF(col("source_id"), col("feature"), col("interval_score"))))
+    ds
+      .withColumn("qtl_score_q", when(col("qtl_score").isNotNull,
+        setQtlScoreUDF(col("source_id"), col("feature"), col("qtl_score"))))
+      .withColumn("interval_score_q", when(col("interval_score").isNotNull,
+        setIntervalScoreUDF(col("source_id"), col("feature"), col("interval_score"))))
+      // stringify array columns
       .withColumn("fpred_labels", stringifyColumnString(col("fpred_labels")))
       .withColumn("fpred_scores", stringifyColumnDouble(col("fpred_scores")))
   }

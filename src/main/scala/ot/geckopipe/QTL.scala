@@ -48,7 +48,7 @@ object QTL extends LazyLogging {
       .withColumnRenamed("beta", "qtl_beta")
       .withColumnRenamed("se", "qtl_se")
       .withColumnRenamed("pval", "qtl_pval")
-      .withColumn("qtl_score", lit(1.0) - col("qtl_pval"))
+      .withColumn("qtl_score", - log(10, col("qtl_pval")))
       .drop("filename", "tokens")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 

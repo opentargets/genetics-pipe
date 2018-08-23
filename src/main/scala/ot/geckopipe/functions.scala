@@ -140,6 +140,10 @@ object functions extends LazyLogging {
     }
 
     // bizarre reduction to a proper map of maps of lists
-    assocs.groupBy(_._1).mapValues(_.map(_._2).groupBy(_._1).mapValues(_.flatMap(_._2))).map(identity)
+    assocs.groupBy(_._1)
+      .mapValues(_.map(_._2)
+        .groupBy(_._1)
+        .mapValues(_.flatMap(_._2)).map(identity))
+      .map(identity)
   }
 }
