@@ -94,7 +94,8 @@ object V2DIndex extends LazyLogging  {
     val removeSuffix = udf((col: String) => col.split("\\.").head)
 
     val pStudies = studies
-      .withColumn("trait_efos", stringifyColumnString(split(col("trait_efos"),";")))
+      .withColumn("trait_efos", when(col("trait_efos").isNotNull,
+        stringifyColumnString(split(col("trait_efos"),";"))))
       .withColumn("pmid", removeSuffix(col("pmid")))
 
     pStudies

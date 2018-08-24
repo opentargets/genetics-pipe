@@ -31,6 +31,22 @@ and edit for your own data.
 
 To use your own configuration you need to pass `-f where/file/application.conf` to any executed command.
 
+## Build a spark cluster on Google Cloud
+
+You need to have installed `terraform`. Then, go to `src/main/resources/terraform` and you will find a file
+there called `genetics-platform-dataproc.tf`. It will need a Google Cloud json service key configured in order
+to use your Google Cloud project.
+
+This section is important to change
+```
+// Configure the Google Cloud provider
+provider "google" "google-account" {
+  credentials = "${file("open-targets-genetics-63ea40a7fb68.json")}"
+  project     = "open-targets-genetics"
+  region      = "${var.region}"
+}
+```
+
 ## Variant index generation
 
 You will need vep consequences file from ensembl ftp
