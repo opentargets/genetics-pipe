@@ -31,7 +31,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val dtSeq = Seq(vepDts, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
-    v2g.save(c.output.stripSuffix("/").concat("/v2g/"))
+    v2g.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
   }
 
   def variantToDisease(): Unit = {
@@ -40,7 +40,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
     val v2d = V2DIndex.build(vIdx, c)
 
-    v2d.save(c.output.stripSuffix("/").concat("/v2d/"))
+    v2d.saveToJSON(c.output.stripSuffix("/").concat("/v2d/"))
   }
 
   def diseaseToVariantToGene(): Unit = {
@@ -51,7 +51,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
 
     val merged = v2d.table.join(v2g.table, VariantIndex.columns)
 
-    saveToCSV(merged, c.output.stripSuffix("/").concat("/d2v2g/"))
+    saveToJSON(merged, c.output.stripSuffix("/").concat("/d2v2g/"))
   }
 
   def dictionaries(): Unit = {

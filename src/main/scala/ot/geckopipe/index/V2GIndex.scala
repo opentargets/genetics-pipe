@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.DataFrameStatFunctions
+import org.apache.spark.sql.types._
 import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
 
@@ -31,6 +32,35 @@ object V2GIndex extends LazyLogging  {
     val features: Seq[String]
     val table: DataFrame
   }
+
+  val fullSchema =
+    StructType(
+      StructField("chr_id", StringType) ::
+      StructField("position", LongType) ::
+      StructField("ref_allele", StringType) ::
+      StructField("alt_allele", StringType) ::
+      StructField("variant_id", StringType) ::
+      StructField("rs_id", StringType) ::
+      StructField("gene_chr", StringType) ::
+      StructField("gene_id", StringType) ::
+      StructField("gene_start", LongType) ::
+      StructField("gene_stop", LongType) ::
+      StructField("gene_type", StringType) ::
+      StructField("gene_name", StringType) ::
+      StructField("feature", StringType) ::
+      StructField("type_id", StringType) ::
+      StructField("source_id", StringType) ::
+      StructField("fpred_labels", ArrayType(StringType)) ::
+      StructField("fpred_scores", ArrayType(StringType)) ::
+      StructField("fpred_max_label", StringType) ::
+      StructField("fpred_max_score", DoubleType) ::
+      StructField("qtl_beta", DoubleType) ::
+      StructField("qtl_se", DoubleType) ::
+      StructField("qtl_pval", DoubleType) ::
+      StructField("qtl_score", DoubleType) ::
+      StructField("interval_score", DoubleType) ::
+      StructField("qtl_score_q", DoubleType) ::
+      StructField("interval_score_q", DoubleType) :: Nil)
 
   /** all data sources to incorporate needs to meet this format at the end
     *
@@ -148,10 +178,8 @@ object V2GIndex extends LazyLogging  {
 
     logger.info("load variant to gene dataset from built one")
     val v2g = ss.read
-      .format("csv")
-      .option("header", "true")
-      .option("delimiter","\t")
-      .load(conf.variantGene.path)
+      .schema(fullSchema)
+      .json(conf.variantGene.path)
 
     new V2GIndex {
       /** uniform way to get the dataframe */

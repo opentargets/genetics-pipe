@@ -32,16 +32,21 @@ create table if not exists ot.v2g_log(
   source_id String,
   fpred_labels Array(String),
   fpred_scores Array(Float64),
+  fpred_max_label Nullable(String),
+  fpred_max_score Nullable(Float64),
   qtl_beta Nullable(Float64),
   qtl_se Nullable(Float64),
   qtl_pval Nullable(Float64),
-  interval_score Nullable(Float64))
+  qtl_score Nullable(Float64),
+  interval_score Nullable(Float64),
+  qtl_score_q Nullable(Float64),
+  interval_score_q Nullable(Float64))
 engine = Log;
 
 -- how insert the data from files into the log db
-insert into ot.v2g_log format TabSeparatedWithNames from '/opt/out/v2g/*.json';
+-- insert into ot.v2g_log format TabSeparatedWithNames from '/opt/out/v2g/*.json';
 -- for line in $(cat list_files.txt); do
---  gsutil cat $line | clickhouse-client --query="insert into ot.v2g_log format TabSeparatedWithNames ";
+--  gsutil cat $line | clickhouse-client -h 127.0.0.1 --query="insert into ot.v2g_log format TabSeparatedWithNames ";
 -- done
 
 -- main v2g table with proper mergetree engine

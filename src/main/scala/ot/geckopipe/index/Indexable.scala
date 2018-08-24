@@ -4,7 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql.functions._
 
-import ot.geckopipe.functions.saveToCSV
+import ot.geckopipe.functions
 
 /** just a simple wrapper to uniform the access to a few common predefined functions
   * in different places with diferent indices
@@ -34,5 +34,8 @@ trait Indexable extends LazyLogging {
   }
 
   /** save the dataframe as tsv file using filename as a output path */
-  def save(to: String)(implicit sampleFactor: Double = 0d): Unit = saveToCSV(table, to)
+  def save(to: String)(implicit sampleFactor: Double = 0d): Unit = functions.saveToCSV(table, to)
+
+  /** save the dataframe as tsv file using filename as a output path */
+  def saveToJSON(to: String)(implicit sampleFactor: Double = 0d): Unit = functions.saveToJSON(table, to)
 }

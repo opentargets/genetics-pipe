@@ -13,7 +13,7 @@ lazy val root = (project in file("."))
     inThisBuild(List(
       organization := "io.opentargets",
       scalaVersion := "2.11.12",
-      version      := "0.20.2"
+      version      := "0.21.0"
     )),
     name := "ot-geckopipe",
     // libraryDependencies += scalaTest % Test,

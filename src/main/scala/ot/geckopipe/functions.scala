@@ -42,6 +42,18 @@ object functions extends LazyLogging {
   })
 
   /** save the dataframe as tsv file using filename as a output path */
+  def saveToJSON(table: DataFrame, to: String)(implicit sampleFactor: Double = 0d): Unit = {
+    logger.info("write datasets to output files")
+    if (sampleFactor > 0d) {
+      table
+        .sample(withReplacement = false, sampleFactor)
+        .write.json(to)
+    } else {
+      table.write.json(to)
+    }
+  }
+
+  /** save the dataframe as tsv file using filename as a output path */
   def saveToCSV(table: DataFrame, to: String)(implicit sampleFactor: Double = 0d): Unit = {
     logger.info("write datasets to output files")
     if (sampleFactor > 0d) {

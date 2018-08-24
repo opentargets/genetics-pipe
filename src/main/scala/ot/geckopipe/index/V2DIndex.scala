@@ -18,6 +18,43 @@ object V2DIndex extends LazyLogging  {
     "sas_1000g_prop", "log10_abf", "posterior_prob")
   val indexColumns: Seq[String] = Seq("efo_code", "index_variant_id")
 
+  val fullSchema = StructType(
+    StructField("chr_id", StringType) ::
+    StructField("position", LongType) ::
+    StructField("ref_allele", StringType) ::
+    StructField("alt_allele", StringType) ::
+    StructField("stid", StringType) ::
+    StructField("index_variant_id", StringType) ::
+    StructField("r2", DoubleType) ::
+    StructField("afr_1000g_prop", DoubleType) ::
+    StructField("mar_1000g_prop", DoubleType) ::
+    StructField("eas_1000g_prop", DoubleType) ::
+    StructField("eur_1000g_prop", DoubleType) ::
+    StructField("sas_1000g_prop", DoubleType) ::
+    StructField("log10_abf", DoubleType) ::
+    StructField("posterior_prob", DoubleType) ::
+    StructField("pmid", StringType) ::
+    StructField("pub_date", DateType) ::
+    StructField("pub_journal", StringType) ::
+    StructField("pub_title", StringType) ::
+    StructField("pub_author", StringType) ::
+    StructField("trait_reported", StringType) ::
+    StructField("trait_efos", ArrayType(StringType)) ::
+    StructField("trait_code", StringType) ::
+    StructField("ancestry_initial", StringType) ::
+    StructField("ancestry_replication", StringType) ::
+    StructField("n_initial", LongType) ::
+    StructField("n_replication", LongType) ::
+    StructField("n_cases", LongType) ::
+    StructField("pval", DoubleType) ::
+    StructField("index_variant_rsid", StringType) ::
+    StructField("index_chr_id", StringType) ::
+    StructField("index_position", LongType) ::
+    StructField("ref_allele", StringType) ::
+    StructField("alt_allele", StringType) ::
+    StructField("variant_id", StringType) ::
+    StructField("rs_id", StringType) :: Nil)
+
   val studiesSchema = StructType(
     StructField("stid", StringType) ::
       StructField("pmid", StringType) ::
@@ -95,7 +132,7 @@ object V2DIndex extends LazyLogging  {
 
     val pStudies = studies
       .withColumn("trait_efos", when(col("trait_efos").isNotNull,
-        stringifyColumnString(split(col("trait_efos"),";"))))
+        split(col("trait_efos"),";")))
       .withColumn("pmid", removeSuffix(col("pmid")))
 
     pStudies
@@ -143,10 +180,8 @@ object V2DIndex extends LazyLogging  {
 
     logger.info("load variant to gene dataset from built one")
     val v2d = ss.read
-      .format("csv")
-      .option("header", "true")
-      .option("delimiter","\t")
-      .load(conf.variantDisease.path)
+      .schema(fullSchema)
+      .json(conf.variantDisease.path)
 
     new V2DIndex {
       /** uniform way to get the dataframe */
