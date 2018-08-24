@@ -50,8 +50,8 @@ object V2DIndex extends LazyLogging  {
     StructField("index_variant_rsid", StringType) ::
     StructField("index_chr_id", StringType) ::
     StructField("index_position", LongType) ::
-    StructField("ref_allele", StringType) ::
-    StructField("alt_allele", StringType) ::
+    StructField("index_ref_allele", StringType) ::
+    StructField("index_alt_allele", StringType) ::
     StructField("variant_id", StringType) ::
     StructField("rs_id", StringType) :: Nil)
 
