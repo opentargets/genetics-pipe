@@ -70,11 +70,17 @@ as select
   assumeNotNull(feature) as feature,
   assumeNotNull(type_id) as type_id,
   assumeNotNull(source_id) as source_id,
-  ifNull(csq_counts, NULL) as csq_counts,
-  ifNull(qtl_beta, NULL) as qtl_beta,
-  ifNull(qtl_se, NULL) as qtl_se,
-  ifNull(qtl_pval, NULL) as qtl_pval,
-  ifNull(interval_score, NULL) as interval_score
+  fpred_labels,
+  fpred_scores,
+  fpred_max_label,
+  fpred_max_score,
+  qtl_beta,
+  qtl_se,
+  qtl_pval,
+  qtl_score,
+  interval_score,
+  qtl_score_q,
+  interval_score_q
 from ot.v2g_log;
 
 create table if not exists ot.v2g_nested

@@ -14,7 +14,7 @@ abstract class V2DIndex extends Indexable {
 object V2DIndex extends LazyLogging  {
   val columns: Seq[String] = Seq("stid", "pmid", "index_chr_id", "index_position",
     "index_ref_allele", "index_alt_allele", "index_rs_id", "n_initial", "n_replication", "tag_variant_id",
-    "r2", "afr_1000g_prop", "mar_1000g_prop", "eas_1000g_prop", "eur_1000g_prop",
+    "r2", "afr_1000g_prop", "amr_1000g_prop", "eas_1000g_prop", "eur_1000g_prop",
     "sas_1000g_prop", "log10_abf", "posterior_prob")
   val indexColumns: Seq[String] = Seq("efo_code", "index_variant_id")
 
@@ -27,7 +27,7 @@ object V2DIndex extends LazyLogging  {
     StructField("index_variant_id", StringType) ::
     StructField("r2", DoubleType) ::
     StructField("afr_1000g_prop", DoubleType) ::
-    StructField("mar_1000g_prop", DoubleType) ::
+    StructField("amr_1000g_prop", DoubleType) ::
     StructField("eas_1000g_prop", DoubleType) ::
     StructField("eur_1000g_prop", DoubleType) ::
     StructField("sas_1000g_prop", DoubleType) ::
@@ -84,7 +84,7 @@ object V2DIndex extends LazyLogging  {
       StructField("tag_variant_id", StringType) ::
       StructField("r2", DoubleType) ::
       StructField("afr_1000g_prop", DoubleType) ::
-      StructField("mar_1000g_prop", DoubleType) ::
+      StructField("amr_1000g_prop", DoubleType) ::
       StructField("eas_1000g_prop", DoubleType) ::
       StructField("eur_1000g_prop", DoubleType) ::
       StructField("sas_1000g_prop", DoubleType) :: Nil)
@@ -107,16 +107,18 @@ object V2DIndex extends LazyLogging  {
     val indexVariants = studies.join(topLoci, Seq("stid"))
     val ldExpansion = indexVariants.join(ldLoci, Seq("stid", "index_variant_id"))
       .select("stid", "index_variant_id", "tag_variant_id", "r2", "afr_1000g_prop",
-        "mar_1000g_prop", "eas_1000g_prop", "eur_1000g_prop", "sas_1000g_prop")
+        "amr_1000g_prop", "eas_1000g_prop", "eur_1000g_prop", "sas_1000g_prop")
     val fmExpansion = indexVariants
       .join(fmLoci, Seq("stid", "index_variant_id"))
       .select("stid", "index_variant_id", "tag_variant_id", "log10_abf", "posterior_prob")
     val ldAndFm = ldExpansion.join(fmExpansion,
       Seq("stid", "index_variant_id", "tag_variant_id"), "full_outer")
-      .join(indexVariants, Seq("stid", "index_variant_id"), "left_outer")
+
+    // fill the (study, index variant) extended information as publications and pval
+    val indexExpanded = indexVariants.join(ldAndFm, Seq("stid", "index_variant_id"))
       .withColumnRenamed("tag_variant_id", "variant_id")
 
-    val ldAndFmEnriched = splitVariantID(ldAndFm).get
+    val ldAndFmEnriched = splitVariantID(indexExpanded).get
       .drop("variant_id")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
       .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
@@ -133,7 +135,6 @@ object V2DIndex extends LazyLogging  {
     val pStudies = studies
       .withColumn("trait_efos", when(col("trait_efos").isNotNull,
         split(col("trait_efos"),";")))
-      .withColumn("pmid", removeSuffix(col("pmid")))
 
     pStudies
   }

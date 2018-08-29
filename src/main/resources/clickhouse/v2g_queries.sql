@@ -40,6 +40,37 @@ GROUP BY
     gene_id
 LIMIT 20
 
+-- query for compute score
+SELECT
+    variant_id,
+    gene_id,
+    avg(source_score) AS total_score
+FROM
+(
+    SELECT
+        variant_id,
+        gene_id,
+        source_id,
+        max(ifNull(qtl_score_q, 0.)) AS max_qtl,
+        max(ifNull(interval_score_q, 0.)) AS max_int,
+        max(ifNull(fpred_max_score, 0.)) AS max_fpred,
+        (max_qtl + max_int) + max_fpred AS source_score
+    FROM ot.v2g
+    PREWHERE (chr_id = '1') AND ((position = 1564952) OR (position = 121346913)) AND (variant_id IN ('1_1564952_TG_T', '1_121346913_A_T'))
+    GROUP BY
+        variant_id,
+        gene_id,
+        source_id
+)
+GROUP BY
+    variant_id,
+    gene_id
+ORDER BY
+    variant_id ASC,
+    total_score DESC
+LIMIT 5 BY variant_id
+
+
 
 -- get all variants in a range where they have tissues and
 -- and get pval < 1e-6
