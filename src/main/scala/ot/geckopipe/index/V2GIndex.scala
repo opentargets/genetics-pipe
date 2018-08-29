@@ -177,8 +177,8 @@ object V2GIndex extends LazyLogging  {
       Seq("chr_id", "variant_id", "gene_id"))
       .persist(StorageLevel.DISK_ONLY)
 
-    jointScoresTable.show(10, false)
-    dsWithQs.show(10, false)
+    // jointScoresTable.show(10, false)
+    // dsWithQs.show(10, false)
 
     val dsAggregated = dsWithQs.join(jointScoresTable,Seq("chr_id", "variant_id", "gene_id", "source_id"))
 
