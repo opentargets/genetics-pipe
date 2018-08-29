@@ -155,12 +155,12 @@ object V2GIndex extends LazyLogging  {
         | max(ifNull(qtl_score_q, 0.)) AS max_qtl,
         | max(ifNull(interval_score_q, 0.)) AS max_int,
         | max(ifNull(fpred_max_score, 0.)) AS max_fpred,
-        | (max_qtl + max_int + max_fpred) AS source_score
+        | max(ifNull(qtl_score_q, 0.)) + max(ifNull(interval_score_q, 0.)) + max(ifNull(fpred_max_score, 0.)) AS source_score
         |from v2g_table
         |group by chr_id, variant_id, gene_id, source_id
       """.stripMargin)
 
-    perSourceScore.createOrReplaceTempView("v2g_table")
+    perSourceScore.createOrReplaceTempView("v2g_table_sscore")
 
     val overAllScores = ss.sqlContext.sql(
       """
@@ -169,7 +169,7 @@ object V2GIndex extends LazyLogging  {
         | variant_id,
         | gene_id,
         | avg(source_score) AS overall_score
-        |from v2g_table
+        |from v2g_table_sscore
         |group by chr_id, variant_id, gene_id
       """.stripMargin)
 
@@ -178,6 +178,7 @@ object V2GIndex extends LazyLogging  {
       .persist(StorageLevel.DISK_ONLY)
 
     jointScoresTable.show(10, false)
+    dsWithQs.show(10, false)
 
     val dsAggregated = dsWithQs.join(jointScoresTable,Seq("chr_id", "variant_id", "gene_id", "source_id"))
 

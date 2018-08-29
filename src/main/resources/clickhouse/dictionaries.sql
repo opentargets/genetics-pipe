@@ -1,0 +1,1 @@
+create table genes (gene_id String, gene_name String, gene_start UInt32, gene_end UInt32, gene_type String, gene_forward Int8) Engine = Dictionary(genes);

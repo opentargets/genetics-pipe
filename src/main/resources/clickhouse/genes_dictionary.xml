@@ -33,6 +33,16 @@
 				<type>UInt32</type>
 				<null_value>0</null_value>
 			</attribute>
+			<attribute>
+				<name>gene_type</name>
+				<type>String</type>
+				<null_value>NA</null_value>
+			</attribute>
+			<attribute>
+				<name>gene_forward</name>
+				<type>Int8</type>
+				<null_value>1</null_value>
+			</attribute>
 		</structure>
 	</dictionary>
 </dictionaries>

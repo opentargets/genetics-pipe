@@ -16,7 +16,7 @@ create table if not exists ot.v2d_log(
   index_variant_id String,
   r2 Nullable(Float64),
   afr_1000g_prop Nullable(Float64),
-  mar_1000g_prop Nullable(Float64),
+  amr_1000g_prop Nullable(Float64),
   eas_1000g_prop Nullable(Float64),
   eur_1000g_prop Nullable(Float64),
   sas_1000g_prop Nullable(Float64),
@@ -35,7 +35,7 @@ create table if not exists ot.v2d_log(
   n_initial Nullable(UInt32),
   n_replication Nullable(UInt32),
   n_cases Nullable(UInt32),
-  pval Nullable(Float64),
+  pval Float64,
   index_variant_rsid String,
   index_chr_id String,
   index_position UInt32,
@@ -45,7 +45,7 @@ create table if not exists ot.v2d_log(
   rs_id String)
 engine = Log;
 
-create table if not exists ot.v2d
+create table if not exists ot.v2d_by_chrpos
 engine MergeTree partition by (chr_id) order by (chr_id, position)
 as select
   assumeNotNull(chr_id) as chr_id,
@@ -57,8 +57,8 @@ as select
   assumeNotNull(index_variant_id) as index_variant_id,
   r2,
   afr_1000g_prop,
-  mar_1000g_prop,
-  eas_1000g_prop ,
+  amr_1000g_prop,
+  eas_1000g_prop,
   eur_1000g_prop,
   sas_1000g_prop,
   log10_abf,
@@ -76,8 +76,49 @@ as select
   n_initial,
   n_replication,
   n_cases,
-  pval,
-  assumeNotNull(index_variant_rsid) as index_variant_rsid,
+  assumeNotNull(pval) as pval,
+  assumeNotNull(index_variant_rsid) as index_rs_id,
+  assumeNotNull(index_chr_id) as index_chr_id,
+  assumeNotNull(index_position) as index_position,
+  assumeNotNull(index_ref_allele) as index_ref_allele,
+  assumeNotNull(index_alt_allele) as index_alt_allele,
+  assumeNotNull(variant_id) as variant_id,
+  assumeNotNull(rs_id) as rs_id
+from ot.v2d_log;
+
+create table if not exists ot.v2d_by_stchr
+engine MergeTree partition by (stid, chr_id) order by (chr_id, position)
+as select
+  assumeNotNull(chr_id) as chr_id,
+  assumeNotNull(position) as position,
+  assumeNotNull(segment) as segment,
+  assumeNotNull(ref_allele) as ref_allele,
+  assumeNotNull(alt_allele) as alt_allele,
+  assumeNotNull(stid) as stid,
+  assumeNotNull(index_variant_id) as index_variant_id,
+  r2,
+  afr_1000g_prop,
+  amr_1000g_prop,
+  eas_1000g_prop,
+  eur_1000g_prop,
+  sas_1000g_prop,
+  log10_abf,
+  posterior_prob,
+  pmid,
+  pub_date,
+  pub_journal,
+  pub_title,
+  pub_author,
+  trait_reported,
+  trait_efos,
+  trait_code,
+  ancestry_initial,
+  ancestry_replication,
+  n_initial,
+  n_replication,
+  n_cases,
+  assumeNotNull(pval) as pval,
+  assumeNotNull(index_variant_rsid) as index_rs_id,
   assumeNotNull(index_chr_id) as index_chr_id,
   assumeNotNull(index_position) as index_position,
   assumeNotNull(index_ref_allele) as index_ref_allele,
