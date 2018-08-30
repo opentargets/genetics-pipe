@@ -136,14 +136,14 @@ object V2GIndex extends LazyLogging  {
       qns.view.dropWhile(p => p._1 < interval_score).head._2
     })
 
-    val dsWithQs = ds
+    val qdf = ds
       .withColumn("qtl_score_q", when(col("qtl_score").isNotNull,
         setQtlScoreUDF(col("source_id"), col("feature"), col("qtl_score"))))
       .withColumn("interval_score_q", when(col("interval_score").isNotNull,
         setIntervalScoreUDF(col("source_id"), col("feature"), col("interval_score"))))
       .persist(StorageLevel.DISK_ONLY)
 
-    dsWithQs.createOrReplaceTempView("v2g_table")
+    qdf.createOrReplaceTempView("v2g_table")
 
     val perSourceScore = ss.sqlContext.sql(
       """
@@ -173,14 +173,23 @@ object V2GIndex extends LazyLogging  {
         |group by chr_id, variant_id, gene_id
       """.stripMargin)
 
-    val jointScoresTable = perSourceScore.join(overAllScores,
+    val sdf = perSourceScore.join(overAllScores,
       Seq("chr_id", "variant_id", "gene_id"))
+      .toDF("chr_id1", "variant_id1", "gene_id1", "source_id1", "max_qtl",
+        "max_int", "max_fpred", "source_score", "overall_score")
       .persist(StorageLevel.DISK_ONLY)
 
     // jointScoresTable.show(10, false)
     // dsWithQs.show(10, false)
 
-    val dsAggregated = dsWithQs.join(jointScoresTable,Seq("chr_id", "variant_id", "gene_id", "source_id"))
+    // thanks to stackoverflow
+    // https://stackoverflow.com/questions/51676083/java-spark-spark-bug-workaround-for-datasets-joining-with-unknow-join-column-n
+    // https://issues.apache.org/jira/browse/SPARK-14948
+    // toDF and change the column name
+    val dsAggregated = qdf.join(sdf,qdf.col("chr_id") === sdf.col("chr_id1") and
+      qdf.col("variant_id") === sdf.col("variant_id1") and
+      qdf.col("gene_id") === sdf.col("gene_id1") and
+      qdf.col("source_id") === sdf.col("source_id1"))
 
     dsAggregated
   }

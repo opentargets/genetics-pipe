@@ -1,5 +1,5 @@
 variable "version-suffix" {
-  default = "0-22-2"
+  default = "0-22-3"
   type = "string"
 }
 
@@ -41,7 +41,7 @@ resource "google_dataproc_cluster" "gp-cluster" {
         }
 
         worker_config {
-            num_instances     = 5
+            num_instances     = 3
             machine_type      = "n1-highmem-32"
             disk_config {
                 boot_disk_size_gb = 500
