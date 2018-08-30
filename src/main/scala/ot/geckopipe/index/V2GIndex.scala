@@ -141,6 +141,7 @@ object V2GIndex extends LazyLogging  {
         setQtlScoreUDF(col("source_id"), col("feature"), col("qtl_score"))))
       .withColumn("interval_score_q", when(col("interval_score").isNotNull,
         setIntervalScoreUDF(col("source_id"), col("feature"), col("interval_score"))))
+      .repartitionByRange(col("chr_id").asc, col("variant_id").asc)
       .persist(StorageLevel.DISK_ONLY)
 
     qdf.createOrReplaceTempView("v2g_table")
@@ -177,6 +178,7 @@ object V2GIndex extends LazyLogging  {
       Seq("chr_id", "variant_id", "gene_id"))
       .toDF("chr_id1", "variant_id1", "gene_id1", "source_id1", "max_qtl",
         "max_int", "max_fpred", "source_score", "overall_score")
+      .repartitionByRange(col("chr_id1").asc, col("variant_id1").asc)
       .persist(StorageLevel.DISK_ONLY)
 
     // jointScoresTable.show(10, false)
