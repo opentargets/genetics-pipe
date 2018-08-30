@@ -127,6 +127,23 @@ as select
   assumeNotNull(rs_id) as rs_id
 from ot.v2d_log;
 
+-- create studies table
+create materialized view ot.studies
+engine=Memory populate as
+select
+  stid,
+  any(trait_code) as trait_code,
+  any(trait_reported) as trait_reported,
+  any(trait_efos) as trait_efos,
+  any(pmid) as pmid,
+  any(pub_date) as pub_date,
+  any(pub_journal) as pub_journal,
+  any(pub_title) as pub_title,
+  any(pub_author) as pub_author
+from ot.v2d_by_chrpos
+group by stid
+order by stid asc
+
 -- create table if not exists ot.v2d_by_stchr
 -- engine MergeTree partition by (stid, chr_id) order by (chr_id, position)
 -- as select
