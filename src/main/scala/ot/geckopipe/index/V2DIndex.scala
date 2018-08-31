@@ -105,17 +105,10 @@ object V2DIndex extends LazyLogging  {
     val fmLoci = buildFMIndex(conf.variantDisease.finemapping)
 
     val indexVariants = studies.join(topLoci, Seq("stid"))
-    val ldExpansion = indexVariants.join(ldLoci, Seq("stid", "index_variant_id"))
-      .select("stid", "index_variant_id", "tag_variant_id", "r2", "afr_1000g_prop",
-        "amr_1000g_prop", "eas_1000g_prop", "eur_1000g_prop", "sas_1000g_prop")
-    val fmExpansion = indexVariants
-      .join(fmLoci, Seq("stid", "index_variant_id"))
-      .select("stid", "index_variant_id", "tag_variant_id", "log10_abf", "posterior_prob")
-    val ldAndFm = ldExpansion.join(fmExpansion,
-      Seq("stid", "index_variant_id", "tag_variant_id"), "full_outer")
+    val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "outer")
 
     // fill the (study, index variant) extended information as publications and pval
-    val indexExpanded = indexVariants.join(ldAndFm, Seq("stid", "index_variant_id"))
+    val indexExpanded = ldAndFm.join(indexVariants, Seq("stid", "index_variant_id"))
       .withColumnRenamed("tag_variant_id", "variant_id")
 
     val ldAndFmEnriched = splitVariantID(indexExpanded).get

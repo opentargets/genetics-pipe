@@ -1,5 +1,5 @@
 variable "version-suffix" {
-  default = "0-22-3"
+  default = "0-22-4"
   type = "string"
 }
 
