@@ -113,10 +113,6 @@ object V2GIndex extends LazyLogging  {
         |order by source_id asc, feature asc
       """.stripMargin).cache
 
-    // show all quantiles
-    computedQtlQs.show(500, false)
-    computedIntervalQs.show(500, false)
-
     // build and broadcast qtl and interval maps for the
     val qtlQs = ss.sparkContext
       .broadcast(fromQ2Map(computedQtlQs))
@@ -144,56 +140,57 @@ object V2GIndex extends LazyLogging  {
       .repartitionByRange(col("chr_id").asc, col("variant_id").asc)
       .persist(StorageLevel.DISK_ONLY)
 
-    qdf.createOrReplaceTempView("v2g_table")
-
-    val perSourceScore = ss.sqlContext.sql(
-      """
-        |select
-        | chr_id,
-        | variant_id,
-        | gene_id,
-        | source_id,
-        | max(ifNull(qtl_score_q, 0.)) AS max_qtl,
-        | max(ifNull(interval_score_q, 0.)) AS max_int,
-        | max(ifNull(fpred_max_score, 0.)) AS max_fpred,
-        | max(ifNull(qtl_score_q, 0.)) + max(ifNull(interval_score_q, 0.)) + max(ifNull(fpred_max_score, 0.)) AS source_score
-        |from v2g_table
-        |group by chr_id, variant_id, gene_id, source_id
-      """.stripMargin)
-
-    perSourceScore.createOrReplaceTempView("v2g_table_sscore")
-
-    val overAllScores = ss.sqlContext.sql(
-      """
-        |select
-        | chr_id,
-        | variant_id,
-        | gene_id,
-        | avg(source_score) AS overall_score
-        |from v2g_table_sscore
-        |group by chr_id, variant_id, gene_id
-      """.stripMargin)
-
-    val sdf = perSourceScore.join(overAllScores,
-      Seq("chr_id", "variant_id", "gene_id"))
-      .toDF("chr_id1", "variant_id1", "gene_id1", "source_id1", "max_qtl",
-        "max_int", "max_fpred", "source_score", "overall_score")
-      .repartitionByRange(col("chr_id1").asc, col("variant_id1").asc)
-      .persist(StorageLevel.DISK_ONLY)
-
-    // jointScoresTable.show(10, false)
-    // dsWithQs.show(10, false)
-
-    // thanks to stackoverflow
-    // https://stackoverflow.com/questions/51676083/java-spark-spark-bug-workaround-for-datasets-joining-with-unknow-join-column-n
-    // https://issues.apache.org/jira/browse/SPARK-14948
-    // toDF and change the column name
-    val dsAggregated = qdf.join(sdf,qdf.col("chr_id") === sdf.col("chr_id1") and
-      qdf.col("variant_id") === sdf.col("variant_id1") and
-      qdf.col("gene_id") === sdf.col("gene_id1") and
-      qdf.col("source_id") === sdf.col("source_id1"))
-
-    dsAggregated
+    qdf
+//    qdf.createOrReplaceTempView("v2g_table")
+//
+//    val perSourceScore = ss.sqlContext.sql(
+//      """
+//        |select
+//        | chr_id,
+//        | variant_id,
+//        | gene_id,
+//        | source_id,
+//        | max(ifNull(qtl_score_q, 0.)) AS max_qtl,
+//        | max(ifNull(interval_score_q, 0.)) AS max_int,
+//        | max(ifNull(fpred_max_score, 0.)) AS max_fpred,
+//        | max(ifNull(qtl_score_q, 0.)) + max(ifNull(interval_score_q, 0.)) + max(ifNull(fpred_max_score, 0.)) AS source_score
+//        |from v2g_table
+//        |group by chr_id, variant_id, gene_id, source_id
+//      """.stripMargin)
+//
+//    perSourceScore.createOrReplaceTempView("v2g_table_sscore")
+//
+//    val overAllScores = ss.sqlContext.sql(
+//      """
+//        |select
+//        | chr_id,
+//        | variant_id,
+//        | gene_id,
+//        | avg(source_score) AS overall_score
+//        |from v2g_table_sscore
+//        |group by chr_id, variant_id, gene_id
+//      """.stripMargin)
+//
+//    val sdf = perSourceScore.join(overAllScores,
+//      Seq("chr_id", "variant_id", "gene_id"))
+//      .toDF("chr_id1", "variant_id1", "gene_id1", "source_id1", "max_qtl",
+//        "max_int", "max_fpred", "source_score", "overall_score")
+//      .repartitionByRange(col("chr_id1").asc, col("variant_id1").asc)
+//      .persist(StorageLevel.DISK_ONLY)
+//
+//    // jointScoresTable.show(10, false)
+//    // dsWithQs.show(10, false)
+//
+//    // thanks to stackoverflow
+//    // https://stackoverflow.com/questions/51676083/java-spark-spark-bug-workaround-for-datasets-joining-with-unknow-join-column-n
+//    // https://issues.apache.org/jira/browse/SPARK-14948
+//    // toDF and change the column name
+//    val dsAggregated = qdf.join(sdf,qdf.col("chr_id") === sdf.col("chr_id1") and
+//      qdf.col("variant_id") === sdf.col("variant_id1") and
+//      qdf.col("gene_id") === sdf.col("gene_id1") and
+//      qdf.col("source_id") === sdf.col("source_id1"))
+//
+//    dsAggregated
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */

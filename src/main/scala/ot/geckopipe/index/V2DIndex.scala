@@ -34,7 +34,7 @@ object V2DIndex extends LazyLogging  {
     StructField("log10_abf", DoubleType) ::
     StructField("posterior_prob", DoubleType) ::
     StructField("pmid", StringType) ::
-    StructField("pub_date", DateType) ::
+    StructField("pub_date", StringType) ::
     StructField("pub_journal", StringType) ::
     StructField("pub_title", StringType) ::
     StructField("pub_author", StringType) ::
@@ -58,7 +58,7 @@ object V2DIndex extends LazyLogging  {
   val studiesSchema = StructType(
     StructField("stid", StringType) ::
       StructField("pmid", StringType) ::
-      StructField("pub_date", DateType) ::
+      StructField("pub_date", StringType) ::
       StructField("pub_journal", StringType) ::
       StructField("pub_title", StringType) ::
       StructField("pub_author", StringType) ::
@@ -106,11 +106,8 @@ object V2DIndex extends LazyLogging  {
 
     val indexVariants = studies.join(topLoci, Seq("stid"))
     val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "outer")
-
-    // fill the (study, index variant) extended information as publications and pval
     val indexExpanded = ldAndFm.join(indexVariants, Seq("stid", "index_variant_id"))
       .withColumnRenamed("tag_variant_id", "variant_id")
-
     val ldAndFmEnriched = splitVariantID(indexExpanded).get
       .drop("variant_id")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
