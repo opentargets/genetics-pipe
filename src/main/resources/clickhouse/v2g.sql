@@ -8,9 +8,7 @@
 -- from ot.v2g
 -- where source_id <> 'vep'
 -- group by source_id, feature
--- variantindex ("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
--- geneindex ("gene_chr", "gene_id", "gene_start", "gene_end", "gene_name")
--- v2g additionals ("feature", "value") + variantindex + geneindex
+
 -- drop and create the table in the case it exists
 create database if not exists ot;
 create table if not exists ot.v2g_log(
@@ -30,8 +28,8 @@ create table if not exists ot.v2g_log(
   feature String,
   type_id String,
   source_id String,
-  fpred_labels Array(String),
-  fpred_scores Array(Float64),
+  fpred_labels Array(String) default [],
+  fpred_scores Array(Float64)default [],
   fpred_max_label Nullable(String),
   fpred_max_score Nullable(Float64),
   qtl_beta Nullable(Float64),
@@ -52,7 +50,7 @@ engine = Log;
 -- main v2g table with proper mergetree engine
 -- maybe partition by chr_id and source_id
 create table if not exists ot.v2g
-engine MergeTree partition by (chr_id) order by (chr_id, position)
+engine MergeTree partition by (source_id, chr_id) order by (position)
 as select
   assumeNotNull(chr_id) as chr_id,
   assumeNotNull(position) as position,
@@ -82,6 +80,32 @@ as select
   qtl_score_q,
   interval_score_q
 from ot.v2g_log;
+
+create table if not exists ot.v2g_score_by_source
+engine MergeTree partition by (source_id, chr_id) order by (variant_id, gene_id)
+as select
+  chr_id,
+  variant_id,
+  gene_id,
+  source_id,
+  max(ifNull(qtl_score_q, 0.)) AS max_qtl,
+  max(ifNull(interval_score_q, 0.)) AS max_int,
+  max(ifNull(fpred_max_score, 0.)) AS max_fpred,
+  max_qtl + max_int + max_fpred as source_score
+from ot.v2g
+group by source_id, chr_id, variant_id, gene_id
+
+
+create table if not exists ot.v2g_score_by_overall
+engine MergeTree partition by (chr_id) order by (variant_id, gene_id)
+as select
+  chr_id,
+  variant_id,
+  gene_id,
+  avg(source_score) as overall_score
+from ot.v2g_score_by_source
+group by chr_id, variant_id, gene_id
+
 
 create table if not exists ot.v2g_nested
 (

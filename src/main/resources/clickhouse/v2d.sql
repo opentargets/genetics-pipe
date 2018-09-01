@@ -87,7 +87,7 @@ as select
 from ot.v2d_log;
 
 create table if not exists ot.v2d_by_stchr
-engine MergeTree partition by (stid, chr_id) order by (chr_id, position)
+engine MergeTree partition by (chr_id) order by (stid, chr_id, position)
 as select
   assumeNotNull(chr_id) as chr_id,
   assumeNotNull(position) as position,

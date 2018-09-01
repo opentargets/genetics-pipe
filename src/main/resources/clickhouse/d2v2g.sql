@@ -5,13 +5,11 @@ create table if not exists ot.d2v2g_log(
   segment UInt32 MATERIALIZED (position % 1000000),
   ref_allele String,
   alt_allele String,
-  variant_id String,
-  rs_id String,
   stid String,
   index_variant_id String,
   r2 Nullable(Float64),
   afr_1000g_prop Nullable(Float64),
-  mar_1000g_prop Nullable(Float64),
+  amr_1000g_prop Nullable(Float64),
   eas_1000g_prop Nullable(Float64),
   eur_1000g_prop Nullable(Float64),
   sas_1000g_prop Nullable(Float64),
@@ -23,51 +21,59 @@ create table if not exists ot.d2v2g_log(
   pub_title Nullable(String),
   pub_author Nullable(String),
   trait_reported String,
+  trait_efos Array(String) default [],
+  trait_code String,
   ancestry_initial Nullable(String),
   ancestry_replication Nullable(String),
   n_initial Nullable(UInt32),
   n_replication Nullable(UInt32),
-  efo_code String,
-  efo_label String,
-  index_rs_id String,
-  pval Nullable(Float64),
+  n_cases Nullable(UInt32),
+  pval Float64,
+  index_variant_rsid String,
   index_chr_id String,
   index_position UInt32,
   index_ref_allele String,
   index_alt_allele String,
+  variant_id String,
+  rs_id String,
   gene_chr String,
   gene_id String,
   gene_start UInt32,
   gene_end UInt32,
+  gene_type String,
   gene_name String,
   feature String,
   type_id String,
   source_id String,
-  csq_counts Nullable(UInt32),
+  fpred_labels Array(String) default [],
+  fpred_scores Array(Float64)default [],
+  fpred_max_label Nullable(String),
+  fpred_max_score Nullable(Float64),
   qtl_beta Nullable(Float64),
   qtl_se Nullable(Float64),
   qtl_pval Nullable(Float64),
-  interval_score Nullable(Float64)
+  qtl_score Nullable(Float64),
+  interval_score Nullable(Float64),
+  qtl_score_q Nullable(Float64),
+  interval_score_q Nullable(Float64)
 )
 engine = Log;
 
 create table if not exists ot.d2v2g
-engine MergeTree partition by (chr_id) order by (chr_id, position)
+engine MergeTree partition by (source_id, chr_id) order by (position)
 as select
-  chr_id,
-  position ,
-  segment,
+  chr_id ,
+  position,
+  segment ,
   ref_allele ,
   alt_allele ,
-  variant_id ,
-  rs_id ,
   stid ,
   index_variant_id ,
-  r2 ,
+  r2 Nullable,
   afr_1000g_prop ,
-  mar_1000g_prop ,
+  amr_1000g_prop ,
   eas_1000g_prop ,
-  eur_1000g_prop,
+  eur_1000g_prop ,
   sas_1000g_prop ,
   log10_abf ,
   posterior_prob ,
@@ -77,29 +83,96 @@ as select
   pub_title ,
   pub_author ,
   trait_reported ,
+  trait_efos ,
+  trait_code ,
   ancestry_initial ,
   ancestry_replication ,
   n_initial ,
   n_replication ,
-  efo_code ,
-  efo_label ,
-  index_rs_id ,
+  n_cases ,
   pval ,
+  index_variant_rsid ,
   index_chr_id ,
   index_position ,
   index_ref_allele ,
   index_alt_allele ,
+  variant_id ,
+  rs_id ,
   gene_chr ,
   gene_id ,
   gene_start ,
   gene_end ,
+  gene_type ,
   gene_name ,
   feature ,
   type_id ,
   source_id ,
-  csq_counts ,
+  fpred_labels ,
+  fpred_scores ,
+  fpred_max_label ,
+  fpred_max_score ,
   qtl_beta ,
   qtl_se ,
   qtl_pval ,
-  interval_score
+  qtl_score ,
+  interval_score,
+  qtl_score_q ,
+  interval_score_q
 from ot.d2v2g_log;
+
+create table if not exists ot.d2v2g_score_by_source
+engine MergeTree partition by (source_id, chr_id) order by (variant_id, gene_id)
+as select
+  chr_id,
+  variant_id,
+  gene_id,
+  source_id,
+  max(ifNull(qtl_score_q, 0.)) AS max_qtl,
+  max(ifNull(interval_score_q, 0.)) AS max_int,
+  max(ifNull(fpred_max_score, 0.)) AS max_fpred,
+  max_qtl + max_int + max_fpred as source_score
+from ot.d2v2g
+group by source_id, chr_id, variant_id, gene_id
+
+
+create table if not exists ot.d2v2g_score_by_overall
+engine MergeTree partition by (chr_id) order by (variant_id, gene_id)
+as select
+  chr_id,
+  variant_id,
+  gene_id,
+  avg(source_score) as overall_score
+from ot.d2v2g_score_by_source
+group by chr_id, variant_id, gene_id
+
+-- query to join overall scores
+-- select gene_id, overall_score from (select variant_id, gene_id from ot.d2v2g prewhere chr_id = '10' and v
+-- ariant_id = '10_102075479_G_A' group by variant_id, gene_id) all inner join (select chr_id, variant_id, gene_id, overall_score from ot.d2v2g_score_by_overall p
+-- rewhere chr_id = '10' and variant_id = '10_102075479_G_A') using variant_id, gene_id order by overall_score desc
+--
+-- SELECT
+--     gene_id,
+--     overall_score
+-- FROM
+-- (
+--     SELECT
+--         variant_id,
+--         gene_id
+--     FROM ot.d2v2g
+--     PREWHERE (chr_id = '10') AND (variant_id = '10_102075479_G_A')
+--     GROUP BY
+--         variant_id,
+--         gene_id
+-- )
+-- ALL INNER JOIN
+-- (
+--     SELECT
+--         chr_id,
+--         variant_id,
+--         gene_id,
+--         overall_score
+--     FROM ot.d2v2g_score_by_overall
+--     PREWHERE (chr_id = '10') AND (variant_id = '10_102075479_G_A')
+-- ) USING (variant_id, gene_id)
+-- ORDER BY overall_score DESC
+
