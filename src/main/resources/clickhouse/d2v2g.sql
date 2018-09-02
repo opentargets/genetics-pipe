@@ -69,7 +69,7 @@ as select
   alt_allele ,
   stid ,
   index_variant_id ,
-  r2 Nullable,
+  r2,
   afr_1000g_prop ,
   amr_1000g_prop ,
   eas_1000g_prop ,
@@ -176,3 +176,32 @@ group by chr_id, variant_id, gene_id
 -- ) USING (variant_id, gene_id)
 -- ORDER BY overall_score DESC
 
+-- join best genes but missing lambda array to get the top ones
+-- select index_variant_id, top_genes, len_top_genes from (select index_variant_id from ot.v2d_by_stchr prewhere stid = 'NEALEUKB_50' group by index_variant_id) all inner join (select variant_id as index_variant_id, groupArray(tuple(gene_id,overall_score)) as top_genes, length(top_genes) as len_top_genes from ot.d2v2g_score_by_overall prewhere variant_id = index_variant_id and overall_score >= 0.9 group by variant_id ) using index_variant_id order by len_top_genes desc
+--
+-- select
+--  index_variant_id,
+--  top_genes,
+--  len_top_genes
+-- from
+--  (
+--    select
+--      index_variant_id
+--    from ot.v2d_by_stchr
+--    prewhere stid = 'NEALEUKB_50'
+--    group by index_variant_id
+--  )
+--    all inner join
+--  (
+--    select
+--      variant_id as index_variant_id,
+--      groupArray(tuple(gene_id,overall_score)) as top_genes,
+--      length(top_genes) as len_top_genes
+--    from ot.d2v2g_score_by_overall
+--    prewhere
+--      variant_id = index_variant_id and
+--      overall_score >= 0.9
+--    group by variant_id
+--  )
+--  using index_variant_id
+--  order by len_top_genes desc
