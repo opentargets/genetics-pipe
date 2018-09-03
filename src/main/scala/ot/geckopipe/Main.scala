@@ -34,6 +34,15 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     v2g.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
   }
 
+  def variantToDiseaseFull(): Unit = {
+    logger.info("exec variant-disease-full command")
+
+    val vIdx = VariantIndex.builder(c).load
+    val v2d = V2DIndex.buildFull(vIdx, c)
+
+    v2d.saveToJSON(c.output.stripSuffix("/").concat("/v2df/"))
+  }
+
   def variantToDisease(): Unit = {
     logger.info("exec variant-disease command")
 
@@ -155,6 +164,9 @@ object Main extends LazyLogging {
           case Some("variant-disease") =>
             cmds.variantToDisease()
 
+          case Some("variant-disease-full") =>
+            cmds.variantToDiseaseFull()
+
           case Some("disease-variant-gene") =>
             cmds.diseaseToVariantToGene()
 
@@ -209,6 +221,10 @@ object Main extends LazyLogging {
     cmd("variant-disease").
       action( (_, c) => c.copy(command = Some("variant-disease")))
       .text("generate variant to disease table")
+
+    cmd("variant-disease-full").
+      action( (_, c) => c.copy(command = Some("variant-disease-full")))
+      .text("generate variant to disease table but with all toploci included")
 
     cmd("disease-variant-gene").
       action( (_, c) => c.copy(command = Some("disease-variant-gene")))

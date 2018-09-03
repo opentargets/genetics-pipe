@@ -97,6 +97,27 @@ object V2DIndex extends LazyLogging  {
       StructField("posterior_prob", DoubleType) :: Nil)
 
 
+  def buildFull(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
+
+    val studies = buildStudiesIndex(conf.variantDisease.studies)
+    val topLoci = buildTopLociIndex(conf.variantDisease.toploci)
+    val ldLoci = buildLDIndex(conf.variantDisease.ld)
+    val fmLoci = buildFMIndex(conf.variantDisease.finemapping)
+
+    val indexVariants = studies.join(topLoci, Seq("stid"))
+    val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "outer")
+    val indexExpanded = indexVariants.join(ldAndFm, Seq("stid", "index_variant_id"), "left_outer")
+      .withColumnRenamed("tag_variant_id", "variant_id")
+    val ldAndFmEnriched = splitVariantID(indexExpanded).get
+      .drop("variant_id")
+      .repartitionByRange(col("chr_id").asc, col("position").asc)
+      .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
+
+    new V2DIndex {
+      override val table: DataFrame = ldAndFmEnriched
+    }
+  }
+
   def build(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
 
     val studies = buildStudiesIndex(conf.variantDisease.studies)
