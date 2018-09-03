@@ -1,0 +1,97 @@
+[
+  {
+  "name":"chr_id",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"position",
+  "type": "INTEGER",
+  "mode": "REQUIRED"
+},
+{
+  "name":"ref_allele",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"alt_allele",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"variant_id",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"rs_id",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"gene_chr",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"gene_id",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"gene_start",
+  "type": "INTEGER",
+  "mode": "REQUIRED"
+},
+{
+  "name":"gene_end",
+  "type": "INTEGER",
+  "mode": "REQUIRED"
+},
+{
+  "name":"gene_name",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"feature",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"type_id",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"source_id",
+  "type": "STRING",
+  "mode": "REQUIRED"
+},
+{
+  "name":"csq_counts",
+  "type": "INTEGER",
+  "mode": "NULLABLE"
+},
+{
+  "name":"qtl_beta",
+  "type": "FLOAT",
+  "mode": "NULLABLE"
+},
+{
+  "name":"qtl_se",
+  "type": "FLOAT",
+  "mode": "NULLABLE"
+},
+{
+  "name":"qtl_pval",
+  "type": "FLOAT",
+  "mode": "NULLABLE"
+},
+{
+  "name":"interval_score",
+  "type": "FLOAT",
+  "mode": "NULLABLE"
+}
+]
