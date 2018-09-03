@@ -23,7 +23,7 @@ object V2DIndex extends LazyLogging  {
     StructField("position", LongType) ::
     StructField("ref_allele", StringType) ::
     StructField("alt_allele", StringType) ::
-    StructField("stid", StringType) ::
+    StructField("stid", StringType, false) ::
     StructField("index_variant_id", StringType) ::
     StructField("r2", DoubleType) ::
     StructField("afr_1000g_prop", DoubleType) ::
@@ -38,15 +38,15 @@ object V2DIndex extends LazyLogging  {
     StructField("pub_journal", StringType) ::
     StructField("pub_title", StringType) ::
     StructField("pub_author", StringType) ::
-    StructField("trait_reported", StringType) ::
+    StructField("trait_reported", StringType, false) ::
     StructField("trait_efos", ArrayType(StringType)) ::
-    StructField("trait_code", StringType) ::
+    StructField("trait_code", StringType, false) ::
     StructField("ancestry_initial", StringType) ::
     StructField("ancestry_replication", StringType) ::
-    StructField("n_initial", LongType) ::
-    StructField("n_replication", LongType) ::
-    StructField("n_cases", LongType) ::
-    StructField("pval", DoubleType) ::
+    StructField("n_initial", DoubleType) ::
+    StructField("n_replication", DoubleType) ::
+    StructField("n_cases", DoubleType) ::
+    StructField("pval", DoubleType, false) ::
     StructField("index_variant_rsid", StringType) ::
     StructField("index_chr_id", StringType) ::
     StructField("index_position", LongType) ::
@@ -56,32 +56,32 @@ object V2DIndex extends LazyLogging  {
     StructField("rs_id", StringType) :: Nil)
 
   val studiesSchema = StructType(
-    StructField("stid", StringType) ::
+    StructField("stid", StringType, false) ::
       StructField("pmid", StringType) ::
       StructField("pub_date", StringType) ::
       StructField("pub_journal", StringType) ::
       StructField("pub_title", StringType) ::
       StructField("pub_author", StringType) ::
-      StructField("trait_reported", StringType) ::
+      StructField("trait_reported", StringType, false) ::
       StructField("trait_efos", StringType) ::
-      StructField("trait_code", StringType) ::
+      StructField("trait_code", StringType, false) ::
       StructField("ancestry_initial", StringType) ::
       StructField("ancestry_replication", StringType) ::
       StructField("n_initial", DoubleType) ::
-      StructField("n_replication", LongType) ::
-      StructField("n_cases", LongType) :: Nil)
+      StructField("n_replication", DoubleType) ::
+      StructField("n_cases", DoubleType) :: Nil)
 
   val topLociSchema = StructType(
-    StructField("stid", StringType) ::
-      StructField("variant_id", StringType) ::
+    StructField("stid", StringType, false) ::
+      StructField("variant_id", StringType, false) ::
       StructField("rs_id", StringType) ::
-      StructField("pval_mantissa", DoubleType) ::
-      StructField("pval_exponent", DoubleType) :: Nil)
+      StructField("pval_mantissa", DoubleType, false) ::
+      StructField("pval_exponent", DoubleType, false) :: Nil)
 
   val ldSchema = StructType(
-    StructField("stid", StringType) ::
-      StructField("index_variant_id", StringType) ::
-      StructField("tag_variant_id", StringType) ::
+    StructField("stid", StringType, false) ::
+      StructField("index_variant_id", StringType, false) ::
+      StructField("tag_variant_id", StringType, false) ::
       StructField("r2", DoubleType) ::
       StructField("afr_1000g_prop", DoubleType) ::
       StructField("amr_1000g_prop", DoubleType) ::
@@ -90,45 +90,24 @@ object V2DIndex extends LazyLogging  {
       StructField("sas_1000g_prop", DoubleType) :: Nil)
 
   val finemappingSchema = StructType(
-    StructField("stid", StringType) ::
-      StructField("index_variant_id", StringType) ::
-      StructField("tag_variant_id", StringType) ::
+    StructField("stid", StringType, false) ::
+      StructField("index_variant_id", StringType, false) ::
+      StructField("tag_variant_id", StringType, false) ::
       StructField("log10_abf", DoubleType) ::
       StructField("posterior_prob", DoubleType) :: Nil)
 
-
-  def buildFull(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
-
-    val studies = buildStudiesIndex(conf.variantDisease.studies)
-    val topLoci = buildTopLociIndex(conf.variantDisease.toploci)
-    val ldLoci = buildLDIndex(conf.variantDisease.ld)
-    val fmLoci = buildFMIndex(conf.variantDisease.finemapping)
-
-    val indexVariants = studies.join(topLoci, Seq("stid"))
-    val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "outer")
-    val indexExpanded = indexVariants.join(ldAndFm, Seq("stid", "index_variant_id"), "left_outer")
-      .withColumnRenamed("tag_variant_id", "variant_id")
-    val ldAndFmEnriched = splitVariantID(indexExpanded).get
-      .drop("variant_id")
-      .repartitionByRange(col("chr_id").asc, col("position").asc)
-      .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
-
-    new V2DIndex {
-      override val table: DataFrame = ldAndFmEnriched
-    }
-  }
-
   def build(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
-
     val studies = buildStudiesIndex(conf.variantDisease.studies)
     val topLoci = buildTopLociIndex(conf.variantDisease.toploci)
     val ldLoci = buildLDIndex(conf.variantDisease.ld)
     val fmLoci = buildFMIndex(conf.variantDisease.finemapping)
 
     val indexVariants = studies.join(topLoci, Seq("stid"))
-    val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "outer")
-    val indexExpanded = ldAndFm.join(indexVariants, Seq("stid", "index_variant_id"))
+    val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "full_outer")
+    val indexExpanded = ldAndFm.join(indexVariants, Seq("stid", "index_variant_id"), "full_outer")
       .withColumnRenamed("tag_variant_id", "variant_id")
+      .withColumn("variant_id", when(col("variant_id").isNull, col("variant_id")))
+
     val ldAndFmEnriched = splitVariantID(indexExpanded).get
       .drop("variant_id")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
@@ -146,9 +125,9 @@ object V2DIndex extends LazyLogging  {
     val pStudies = studies
       .withColumn("trait_efos", when(col("trait_efos").isNotNull,
         split(col("trait_efos"),";")))
-      .withColumn("n_cases", when(col("n_cases").isNotNull,col("n_cases").cast(LongType)))
-      .withColumn("n_initial", when(col("n_initial").isNotNull,col("n_initial").cast(LongType)))
-      .withColumn("n_replication", when(col("n_replication").isNotNull,col("n_replication").cast(LongType)))
+//      .withColumn("n_cases", when(col("n_cases").isNotNull,col("n_cases").cast(LongType)))
+//      .withColumn("n_initial", when(col("n_initial").isNotNull,col("n_initial").cast(LongType)))
+//      .withColumn("n_replication", when(col("n_replication").isNotNull,col("n_replication").cast(LongType)))
 
     pStudies
   }
