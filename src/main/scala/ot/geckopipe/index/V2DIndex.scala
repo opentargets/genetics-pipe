@@ -43,9 +43,9 @@ object V2DIndex extends LazyLogging  {
     StructField("trait_code", StringType, false) ::
     StructField("ancestry_initial", StringType) ::
     StructField("ancestry_replication", StringType) ::
-    StructField("n_initial", DoubleType) ::
-    StructField("n_replication", DoubleType) ::
-    StructField("n_cases", DoubleType) ::
+    StructField("n_initial", LongType) ::
+    StructField("n_replication", LongType) ::
+    StructField("n_cases", LongType) ::
     StructField("pval", DoubleType, false) ::
     StructField("index_variant_rsid", StringType) ::
     StructField("index_chr_id", StringType) ::
@@ -67,9 +67,9 @@ object V2DIndex extends LazyLogging  {
       StructField("trait_code", StringType, false) ::
       StructField("ancestry_initial", StringType) ::
       StructField("ancestry_replication", StringType) ::
-      StructField("n_initial", DoubleType) ::
-      StructField("n_replication", DoubleType) ::
-      StructField("n_cases", DoubleType) :: Nil)
+      StructField("n_initial", LongType) ::
+      StructField("n_replication", LongType) ::
+      StructField("n_cases", LongType) :: Nil)
 
   val topLociSchema = StructType(
     StructField("stid", StringType, false) ::
