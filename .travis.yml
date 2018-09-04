@@ -20,9 +20,8 @@ deploy:
   file:
     - "target/scala-2.11/ot-geckopipe-assembly-*"
   on:
-    repo: opentargets/geckopipe
+    repo: opentargets/genetics-pipe
     tags: true
-    all_branches: true
   skip_cleanup: true
 notifications:
   email:
