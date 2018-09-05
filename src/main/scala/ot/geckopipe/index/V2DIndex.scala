@@ -43,9 +43,9 @@ object V2DIndex extends LazyLogging  {
     StructField("trait_code", StringType, false) ::
     StructField("ancestry_initial", StringType) ::
     StructField("ancestry_replication", StringType) ::
-    StructField("n_initial", DoubleType) ::
-    StructField("n_replication", DoubleType) ::
-    StructField("n_cases", DoubleType) ::
+    StructField("n_initial", LongType) ::
+    StructField("n_replication", LongType) ::
+    StructField("n_cases", LongType) ::
     StructField("pval", DoubleType, false) ::
     StructField("index_variant_rsid", StringType) ::
     StructField("index_chr_id", StringType) ::
@@ -67,9 +67,9 @@ object V2DIndex extends LazyLogging  {
       StructField("trait_code", StringType, false) ::
       StructField("ancestry_initial", StringType) ::
       StructField("ancestry_replication", StringType) ::
-      StructField("n_initial", DoubleType) ::
-      StructField("n_replication", DoubleType) ::
-      StructField("n_cases", DoubleType) :: Nil)
+      StructField("n_initial", LongType) ::
+      StructField("n_replication", LongType) ::
+      StructField("n_cases", LongType) :: Nil)
 
   val topLociSchema = StructType(
     StructField("stid", StringType, false) ::
@@ -105,13 +105,15 @@ object V2DIndex extends LazyLogging  {
     val indexVariants = studies.join(topLoci, Seq("stid"))
     val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "full_outer")
     val indexExpanded = ldAndFm.join(indexVariants, Seq("stid", "index_variant_id"), "full_outer")
-      .withColumnRenamed("tag_variant_id", "variant_id")
-      .withColumn("variant_id", when(col("variant_id").isNull, col("variant_id")))
+      // .withColumnRenamed("tag_variant_id", "variant_id")
+      .withColumn("variant_id", when(col("tag_variant_id").isNull, col("index_variant_id"))
+        .otherwise(col("tag_variant_id")))
+      .drop("tag_variant_id")
 
     val ldAndFmEnriched = splitVariantID(indexExpanded).get
-      .drop("variant_id")
+      //.drop("variant_id")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
-      .join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
+      .join(vIdx.table.select("chr_id", "position", "variant_id", "rs_id"), Seq("chr_id", "position", "variant_id"), "left_outer")
 
     new V2DIndex {
       override val table: DataFrame = ldAndFmEnriched
