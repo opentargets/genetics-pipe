@@ -1,4 +1,4 @@
-# Geckopipe
+# Genetics-pipe
 
 [![Build Status](https://travis-ci.com/opentargets/genetics-pipe.svg?branch=master)](https://travis-ci.com/opentargets/genetics-pipe)
 
