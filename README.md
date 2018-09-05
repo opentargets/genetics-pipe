@@ -1,6 +1,6 @@
 # Geckopipe
 
-[![Build Status](https://travis-ci.com/opentargets/geckopipe.svg?branch=master)](https://travis-ci.com/opentargets/geckopipe)
+[![Build Status](https://travis-ci.com/opentargets/genetics-pipe.svg?branch=master)](https://travis-ci.com/opentargets/genetics-pipe)
 
 **Everything is grch37 based**. ETL pipeline used to integrate and generate the following tables: 
 
