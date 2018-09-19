@@ -16,7 +16,7 @@ object V2DIndex extends LazyLogging  {
     "index_ref_allele", "index_alt_allele", "index_rs_id", "n_initial", "n_replication", "tag_variant_id",
     "r2", "afr_1000g_prop", "amr_1000g_prop", "eas_1000g_prop", "eur_1000g_prop",
     "sas_1000g_prop", "log10_abf", "posterior_prob")
-  val indexColumns: Seq[String] = Seq("efo_code", "index_variant_id")
+  val indexColumns: Seq[String] = Seq("stid", "index_variant_id")
 
   val fullSchema = StructType(
     StructField("chr_id", StringType) ::
@@ -46,6 +46,7 @@ object V2DIndex extends LazyLogging  {
     StructField("n_initial", LongType) ::
     StructField("n_replication", LongType) ::
     StructField("n_cases", LongType) ::
+    StructField("trait_category", StringType) ::
     StructField("pval", DoubleType, false) ::
     StructField("index_variant_rsid", StringType) ::
     StructField("index_chr_id", StringType) ::
@@ -69,7 +70,8 @@ object V2DIndex extends LazyLogging  {
       StructField("ancestry_replication", StringType) ::
       StructField("n_initial", LongType) ::
       StructField("n_replication", LongType) ::
-      StructField("n_cases", LongType) :: Nil)
+      StructField("n_cases", LongType) ::
+      StructField("trait_category", StringType) :: Nil)
 
   val topLociSchema = StructType(
     StructField("stid", StringType, false) ::
@@ -105,13 +107,11 @@ object V2DIndex extends LazyLogging  {
     val indexVariants = studies.join(topLoci, Seq("stid"))
     val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "full_outer")
     val indexExpanded = ldAndFm.join(indexVariants, Seq("stid", "index_variant_id"), "full_outer")
-      // .withColumnRenamed("tag_variant_id", "variant_id")
       .withColumn("variant_id", when(col("tag_variant_id").isNull, col("index_variant_id"))
         .otherwise(col("tag_variant_id")))
       .drop("tag_variant_id")
 
     val ldAndFmEnriched = splitVariantID(indexExpanded).get
-      //.drop("variant_id")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
       .join(vIdx.table.select("chr_id", "position", "variant_id", "rs_id"), Seq("chr_id", "position", "variant_id"), "left_outer")
 
