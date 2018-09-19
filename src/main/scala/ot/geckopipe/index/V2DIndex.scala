@@ -131,6 +131,9 @@ object V2DIndex extends LazyLogging  {
     val pStudies = studies
       .withColumn("trait_efos", when(col("trait_efos").isNotNull,
         split(col("trait_efos"),";")))
+//      .withColumn("n_cases", when(col("n_cases").isNotNull,col("n_cases").cast(LongType)))
+//      .withColumn("n_initial", when(col("n_initial").isNotNull,col("n_initial").cast(LongType)))
+//      .withColumn("n_replication", when(col("n_replication").isNotNull,col("n_replication").cast(LongType)))
 
     pStudies
   }

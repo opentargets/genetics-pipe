@@ -80,7 +80,6 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       .option("header", "false")
       .csv(c.output.stripSuffix("/").concat("/v2g-lut-gene/"))
 
-    // TODO write studies to tsv file
   }
 
   def summaryStats(): Unit = {
