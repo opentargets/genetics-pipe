@@ -72,6 +72,13 @@ object functions extends LazyLogging {
     }
   }
 
+
+  def loadFromJSON(uri: String, withSchema: StructType)
+                 (implicit ss: SparkSession): DataFrame = ss.read
+    .format("json")
+    .schema(withSchema)
+    .load(uri)
+
   def loadFromCSV(uri: String, withSchema: StructType, andHeader: Boolean = true)
                  (implicit ss: SparkSession): DataFrame = ss.read
     .format("csv")
