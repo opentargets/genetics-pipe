@@ -57,7 +57,7 @@ object V2DIndex extends LazyLogging  {
     StructField("rs_id", StringType) :: Nil)
 
   val studiesSchema = StructType(
-    StructField("stid", StringType, false) ::
+    StructField("study_id", StringType, false) ::
       StructField("pmid", StringType) ::
       StructField("pub_date", StringType) ::
       StructField("pub_journal", StringType) ::
@@ -129,6 +129,7 @@ object V2DIndex extends LazyLogging  {
     val removeSuffix = udf((col: String) => col.split("\\.").head)
 
     val pStudies = studies
+      .withColumnRenamed("study_id", "stid")
       .withColumn("trait_efos", when(col("trait_efos").isNotNull,
         split(col("trait_efos"),";")))
 
