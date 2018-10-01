@@ -163,8 +163,8 @@ object Main extends LazyLogging {
           case Some("dictionaries") =>
             cmds.dictionaries()
 
-          case Some("summary-stats") =>
-            cmds.summaryStats()
+//          case Some("summary-stats") =>
+//            cmds.summaryStats()
 
           case _ =>
             logger.error("failed to specify a command to run try --help")
