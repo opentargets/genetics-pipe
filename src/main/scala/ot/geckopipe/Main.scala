@@ -60,26 +60,19 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
   def dictionaries(): Unit = {
     logger.info("exec variant-gene-luts command")
 
-    val vIdx = VariantIndex.builder(c).load
+    val vIdxBuilder = VariantIndex.builder(c)
+    val vIdx = vIdxBuilder.load
+    val nearests = vIdxBuilder.loadNearestGenes.map( df => {
+      logger.info("generate variant index LUT with nearest genes (prot-cod and not prot-cod")
+      vIdx.table.join(df, VariantIndex.variantColumnNames, "left_outer")
+        .write
+        .json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
+    })
 
-    logger.info("write rs_id to chr-position")
-    vIdx.selectBy(Seq("rs_id", "chr_id", "position"))
-      .orderBy(col("rs_id").asc)
-      .distinct()
-      .write
-      .option("delimiter","\t")
-      .option("header", "false")
-      .csv(c.output.stripSuffix("/").concat("/v2g-lut-rsid/"))
-
-    logger.info("write gene name to chr position")
-    val _ = EnsemblIndex(c.ensembl.geneTranscriptPairs)
-      .aggByGene
-      .orderBy(col("gene_id").asc)
-      .write
-      .option("delimiter","\t")
-      .option("header", "false")
-      .csv(c.output.stripSuffix("/").concat("/v2g-lut-gene/"))
-
+    nearests match {
+      case scala.util.Success(lut) => logger.info("generated variant index LUT")
+      case scala.util.Failure(ex) => logger.error(ex.getMessage)
+    }
   }
 
   def summaryStats(): Unit = {
