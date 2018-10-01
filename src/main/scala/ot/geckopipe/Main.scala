@@ -64,13 +64,14 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = vIdxBuilder.load
     val nearests = vIdxBuilder.loadNearestGenes.map( df => {
       logger.info("generate variant index LUT with nearest genes (prot-cod and not prot-cod")
-      vIdx.table.join(df, VariantIndex.variantColumnNames, "left_outer")
-        .write
-        .json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
+      val joint = vIdx.table.join(df, VariantIndex.variantColumnNames, "left_outer")
+
+      joint.show(10, false)
+      joint.write.json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
     })
 
     nearests match {
-      case scala.util.Success(lut) => logger.info("generated variant index LUT")
+      case scala.util.Success(_) => logger.info("generated variant index LUT")
       case scala.util.Failure(ex) => logger.error(ex.getMessage)
     }
   }

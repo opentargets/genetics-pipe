@@ -32,9 +32,9 @@ object VariantIndex {
 
   val nearestGenesSchema = StructType(
     StructField("varid", StringType, false) ::
-      StructField("gene_id_prot_coding", StringType, false) ::
+      StructField("gene_id_prot_coding", StringType) ::
       StructField("gene_id_prot_coding_distance", LongType) ::
-      StructField("gene_id", StringType, false) ::
+      StructField("gene_id", StringType) ::
       StructField("gene_id_distance", LongType) :: Nil)
 
   /** this class build based on the Configuration it creates a VariantIndex */
