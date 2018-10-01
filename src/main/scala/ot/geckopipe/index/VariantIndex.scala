@@ -3,8 +3,12 @@ package ot.geckopipe.index
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types._
 import org.apache.spark.storage.StorageLevel
+import ot.geckopipe.functions.{loadFromCSV, splitVariantID}
 import ot.geckopipe.{Configuration, VEP}
+
+import scala.util.Try
 
 /** represents a cached table of variants with all variant columns
   *
@@ -26,6 +30,13 @@ object VariantIndex {
   /** types of the columns named in variantColumnNames */
   val variantColumnTypes: List[String] = List("String", "long", "string", "string")
 
+  val nearestGenesSchema = StructType(
+    StructField("varid", StringType, false) ::
+      StructField("gene_id_prot_coding", StringType) ::
+      StructField("gene_id_prot_coding_distance", LongType) ::
+      StructField("gene_id", StringType) ::
+      StructField("gene_id_distance", LongType) :: Nil)
+
   /** this class build based on the Configuration it creates a VariantIndex */
   class Builder (val conf: Configuration, val ss: SparkSession) extends LazyLogging {
     def load: VariantIndex = {
@@ -39,6 +50,14 @@ object VariantIndex {
       new VariantIndex {
         override val table: DataFrame = vIdx
       }
+    }
+
+    def loadNearestGenes: Try[DataFrame] = {
+      splitVariantID(loadFromCSV(conf.variantIndex.nearestGenes, nearestGenesSchema)(ss),
+        variantColName = "varid").map(df => {
+        df.drop("varid", "gene_id_prot_coding_distance", "gene_id_distance")
+          .repartitionByRange(col("chr_id").asc, col("position").asc)
+      })
     }
 
     def build: VariantIndex = {
