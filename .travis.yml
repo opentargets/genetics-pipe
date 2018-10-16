@@ -9,8 +9,8 @@ branches:
     - master
     - /\d+\.\d+\.\d+/
 script:
-  - sbt ++$TRAVIS_SCALA_VERSION test
-  - sbt ++$TRAVIS_SCALA_VERSION compile
+  - sbt ++$TRAVIS_SCALA_VERSION clean compile
+  - sbt ++$TRAVIS_SCALA_VERSION coverage test coverageReport
   - sbt ++$TRAVIS_SCALA_VERSION assembly
 deploy:
   provider: releases
@@ -26,6 +26,8 @@ deploy:
 notifications:
   email:
     recipients:
-    - mkarmona@gmail.com
+    - ops@opentargets.org
     on_success: never
     on_failure: always
+after_success:
+  - bash <(curl -s https://codecov.io/bash)
