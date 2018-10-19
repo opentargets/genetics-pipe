@@ -13,7 +13,7 @@
 In order to use this pipeline the input data must follow an exact pattern described in these repositories
 
 - [V2G](https://github.com/opentargets/g2v_data) Variant to gene data including tissues and cell-lines
-- [V2D](https://github.`com/opentargets/v2d_data) Variant to disease data
+- [V2D](https://github.com/opentargets/v2d_data) Variant to disease data
 
 ### Build the code
 
