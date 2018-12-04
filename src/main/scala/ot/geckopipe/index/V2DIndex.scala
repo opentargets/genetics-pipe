@@ -18,7 +18,7 @@ object V2DIndex extends LazyLogging  {
     "sas_1000g_prop", "log10_abf", "posterior_prob")
   val indexColumns: Seq[String] = Seq("stid", "index_variant_id")
 
-  val fullSchema = StructType(
+  val schema = StructType(
     StructField("chr_id", StringType) ::
     StructField("position", LongType) ::
     StructField("ref_allele", StringType) ::
@@ -178,7 +178,7 @@ object V2DIndex extends LazyLogging  {
 
     logger.info("load variant to gene dataset from built one")
     val v2d = ss.read
-      .schema(fullSchema)
+      .schema(schema)
       .json(conf.variantDisease.path)
 
     new V2DIndex {

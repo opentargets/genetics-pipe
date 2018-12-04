@@ -74,15 +74,6 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       case scala.util.Failure(ex) => logger.error(ex.getMessage)
     }
   }
-
-  def summaryStats(): Unit = {
-    logger.info("exec summary-stats command")
-
-    val vIdx = VariantIndex.builder(c).load
-    val sa = SummaryStatsIndex.load(vIdx, c)
-
-    saveToCSV(sa.table, c.output.stripSuffix("/").concat("/v2d_sa/"))
-  }
 }
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[String] = None)
@@ -156,9 +147,6 @@ object Main extends LazyLogging {
           case Some("dictionaries") =>
             cmds.dictionaries()
 
-//          case Some("summary-stats") =>
-//            cmds.summaryStats()
-
           case _ =>
             logger.error("failed to specify a command to run try --help")
         }
@@ -208,10 +196,6 @@ object Main extends LazyLogging {
     cmd("disease-variant-gene").
       action( (_, c) => c.copy(command = Some("disease-variant-gene")))
       .text("generate disease to variant to gene table")
-
-    cmd("summary-stats").
-      action( (_, c) => c.copy(command = Some("summary-stats")))
-      .text("generate summary stats table")
 
     cmd("dictionaries").
       action( (_, c) => c.copy(command = Some("dictionaries")))

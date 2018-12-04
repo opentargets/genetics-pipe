@@ -34,7 +34,7 @@ object V2GIndex extends LazyLogging  {
     val table: DataFrame
   }
 
-  val fullSchema =
+  val schema =
     StructType(
       StructField("chr_id", StringType) ::
       StructField("position", LongType) ::
@@ -223,7 +223,7 @@ object V2GIndex extends LazyLogging  {
 
     logger.info("load variant to gene dataset from built one")
     val v2g = ss.read
-      .schema(fullSchema)
+      .schema(schema)
       .json(conf.variantGene.path)
 
     new V2GIndex {
