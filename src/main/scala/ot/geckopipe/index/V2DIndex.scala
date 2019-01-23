@@ -47,6 +47,11 @@ object V2DIndex extends LazyLogging  {
     StructField("n_replication", LongType) ::
     StructField("n_cases", LongType) ::
     StructField("trait_category", StringType) ::
+    StructField("direction", StringType) ::
+    StructField("beta", DoubleType) ::
+    StructField("oddsr", DoubleType) ::
+    StructField("ci_lower", DoubleType) ::
+    StructField("ci_upper", DoubleType) ::
     StructField("pval", DoubleType, false) ::
     StructField("index_variant_rsid", StringType) ::
     StructField("index_chr_id", StringType) ::
@@ -77,6 +82,11 @@ object V2DIndex extends LazyLogging  {
     StructField("stid", StringType, false) ::
       StructField("variant_id", StringType, false) ::
       StructField("rs_id", StringType) ::
+      StructField("direction", StringType) ::
+      StructField("beta", DoubleType) ::
+      StructField("oddsr", DoubleType) ::
+      StructField("ci_lower", DoubleType) ::
+      StructField("ci_upper", DoubleType) ::
       StructField("pval_mantissa", DoubleType, false) ::
       StructField("pval_exponent", DoubleType, false) :: Nil)
 
@@ -105,15 +115,23 @@ object V2DIndex extends LazyLogging  {
     val fmLoci = buildFMIndex(conf.variantDisease.finemapping)
 
     val indexVariants = studies.join(topLoci, Seq("stid"))
-    indexVariants.where(col("pval").isNull).show(false)
 
+    logger.whenDebugEnabled {
+      indexVariants.show(false)
+      indexVariants.where(col("pval").isNull).show(false)
+    }
+
+    // ED WILL FIX THIS PROBLEMATIC ISSUE ABOUT TOPLOCI -> EXPANDED ONE
+    // EACH TOPLOCI MUST BE IN THE EXPANDED TABLE
     val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "full_outer")
     val indexExpanded = indexVariants.join(ldAndFm, Seq("stid", "index_variant_id"), "left_outer")
       .withColumn("variant_id", when(col("tag_variant_id").isNull, col("index_variant_id"))
         .otherwise(col("tag_variant_id")))
       .drop("tag_variant_id")
 
-    indexExpanded.where(col("pval").isNull).show(false)
+    logger.whenDebugEnabled {
+      indexExpanded.where(col("pval").isNull).show(false)
+    }
 
     val ldAndFmEnriched = splitVariantID(indexExpanded).get
       .repartitionByRange(col("chr_id").asc, col("position").asc)
@@ -160,18 +178,9 @@ object V2DIndex extends LazyLogging  {
       .drop("pval_mantissa", "pval_exponent", "variant_id", "rs_id", "_splitAndZip")
   }
 
-  def buildLDIndex(path: String)(implicit ss: SparkSession): DataFrame = {
-    val ld = loadFromCSV(path, ldSchema)
+  def buildLDIndex(path: String)(implicit ss: SparkSession): DataFrame = loadFromCSV(path, ldSchema)
 
-    ld
-  }
-
-
-  def buildFMIndex(path: String)(implicit ss: SparkSession): DataFrame = {
-    val fm = loadFromCSV(path, finemappingSchema)
-
-    fm
-  }
+  def buildFMIndex(path: String)(implicit ss: SparkSession): DataFrame = loadFromCSV(path, finemappingSchema)
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   def load(conf: Configuration)(implicit ss: SparkSession): V2DIndex = {

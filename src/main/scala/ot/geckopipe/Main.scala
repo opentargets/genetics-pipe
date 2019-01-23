@@ -9,6 +9,7 @@ import ot.geckopipe.index._
 import ot.geckopipe.functions._
 import scopt.OptionParser
 import org.apache.spark.sql.functions._
+import pureconfig.generic.auto._
 
 class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configuration) extends LazyLogging {
   implicit val sSesion: SparkSession = ss
