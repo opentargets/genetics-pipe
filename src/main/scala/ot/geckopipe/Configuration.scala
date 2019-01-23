@@ -22,8 +22,6 @@ case class VariantGeneSection(path: String)
 
 case class VariantDiseaseSection(path: String, studies: String, toploci: String, finemapping: String, ld: String)
 
-case class SummaryStatsSection(path: String, studies: String)
-
 /** Main configuration case class */
 case class Configuration(output: String,
                          sampleFactor: Double,
@@ -35,8 +33,7 @@ case class Configuration(output: String,
                          qtl: QTLSection,
                          variantIndex: VariantSection,
                          variantGene: VariantGeneSection,
-                         variantDisease: VariantDiseaseSection,
-                         summaryStats: SummaryStatsSection)
+                         variantDisease: VariantDiseaseSection)
 
 object Configuration {
   // companion object but nothing at the moment

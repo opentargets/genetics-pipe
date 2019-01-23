@@ -4,10 +4,6 @@ scala:
   - 2.11.12
 jdk:
   - oraclejdk8
-branches:
-  only:
-    - master
-    - "/\\d+\\.\\d+\\.\\d+/"
 script:
   - sbt ++$TRAVIS_SCALA_VERSION clean compile
   - sbt ++$TRAVIS_SCALA_VERSION coverage test coverageReport

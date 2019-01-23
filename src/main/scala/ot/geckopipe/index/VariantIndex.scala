@@ -24,7 +24,7 @@ object VariantIndex {
   val columns: Seq[String] = Seq("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
   val indexColumns: Seq[String] = Seq("chr_id", "position")
 
-  /** variant_id is represented as 1_123_T_C but splitted into columns 1 23456 T C */
+  /** variant_id is represented as 1_123_T_C but split into columns 1 23456 T C */
   val variantColumnNames: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
 
   /** types of the columns named in variantColumnNames */
