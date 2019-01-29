@@ -23,6 +23,8 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
   def variantToGene(): Unit = {
     logger.info("exec variant-gene command")
 
+    // TODO bring nearest coding and ncoding info to this
+
     val vIdx = VariantIndex.builder(c).load
 
     val vepDts = VEP(c)

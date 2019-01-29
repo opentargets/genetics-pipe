@@ -16,7 +16,7 @@ case class IntervalSection(path: String)
 
 case class QTLSection(path: String)
 
-case class VariantSection(path: String, nearestGenes: String)
+case class VariantSection(raw: String, path: String, nearestGenes: String)
 
 case class VariantGeneSection(path: String)
 
