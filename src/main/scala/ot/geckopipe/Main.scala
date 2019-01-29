@@ -23,8 +23,6 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
   def variantToGene(): Unit = {
     logger.info("exec variant-gene command")
 
-    // TODO bring nearest coding and ncoding info to this
-
     val vIdx = VariantIndex.builder(c).load
 
     val vepDts = VEP(c)
@@ -63,19 +61,8 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
   def dictionaries(): Unit = {
     logger.info("exec variant-gene-luts command")
 
-    val vIdxBuilder = VariantIndex.builder(c)
-    val vIdx = vIdxBuilder.load
-    val nearests = vIdxBuilder.loadNearestGenes.map( df => {
-      logger.info("generate variant index LUT with nearest genes (prot-cod and not prot-cod")
-      vIdx.table.join(df, VariantIndex.variantColumnNames, "left_outer")
-    })
-
-    nearests match {
-      case scala.util.Success(table) =>
-        logger.info("write to json variant index LUT")
-        table.write.json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
-      case scala.util.Failure(ex) => logger.error(ex.getMessage)
-    }
+    val _ = VariantIndex.builder(c)
+      .load.table.write.json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
   }
 }
 
