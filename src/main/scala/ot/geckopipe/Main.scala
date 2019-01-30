@@ -62,7 +62,10 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     logger.info("exec variant-gene-luts command")
 
     val _ = VariantIndex.builder(c)
-      .load.table.write.json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
+      .load
+      .flatten
+      .write
+      .json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
   }
 }
 

@@ -17,6 +17,7 @@ import scala.util._
 abstract class VariantIndex extends Indexable {
   def schema: StructType = table.schema
   def aggByVariant: DataFrame = aggBy(VariantIndex.indexColumns, VariantIndex.columns)
+  def flatten: DataFrame = table.select(col("*"), col("cadd.*"), col("af.*")).drop("cadd", "af")
 }
 
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
