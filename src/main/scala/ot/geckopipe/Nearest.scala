@@ -19,7 +19,8 @@ object Nearest extends LazyLogging {
     val tssDistance = conf.nearest.tssDistance
 
     val genes = ss.read.json(conf.ensembl.lut)
-      .select("gene_id", "biotype", "chr", "tss")
+      .where(col("biotype") === "protein_coding")
+      .select("gene_id", "chr", "tss")
       .repartitionByRange(col("chr").asc)
       .sortWithinPartitions(col("chr").asc, col("tss").asc)
       .cache()
@@ -33,6 +34,8 @@ object Nearest extends LazyLogging {
 
     val nearestPairs = nearests.join(genes, (col("chr_id") === col("chr")) and
       (abs(col("position") - col("tss")) <= tssDistance))
+      .withColumn("d", abs(col("position") - col("tss")))
+
     new Component {
       /** unique column name list per component */
       override val features: Seq[String] = Nearest.features
