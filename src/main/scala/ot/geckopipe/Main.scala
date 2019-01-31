@@ -20,6 +20,16 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val _ = VariantIndex.builder(c).build
   }
 
+  def distanceNearest(): Unit = {
+    logger.info("exec distance-nearest command")
+    val vIdx = VariantIndex.builder(c).load
+
+    val nearestDF = Nearest(vIdx, c)
+    nearestDF.table
+      .filter(col("chr_id") === "1")
+      .write.json(c.nearest.path)
+  }
+
   def variantToGene(): Unit = {
     logger.info("exec variant-gene command")
 
@@ -128,6 +138,9 @@ object Main extends LazyLogging {
           case Some("variant-index") =>
             cmds.variantIndex()
 
+          case Some("distance-nearest") =>
+            cmds.distanceNearest()
+
           case Some("variant-gene") =>
             cmds.variantToGene()
 
@@ -173,6 +186,11 @@ object Main extends LazyLogging {
       .valueName("k1=v1,k2=v2...")
       .action( (x, c) => c.copy(kwargs = x) )
       .text("other arguments")
+
+
+    cmd("distance-nearest")
+      .action( (_, c) => c.copy(command = Some("distance-nearest")) )
+      .text("generate distance nearest based dataset (chr == 1)")
 
     cmd("variant-index")
       .action( (_, c) => c.copy(command = Some("variant-index")) )
