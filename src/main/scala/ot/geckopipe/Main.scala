@@ -25,9 +25,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
 
     val nearestDF = Nearest(vIdx, c)
-    nearestDF.table
-      .filter(col("chr_id") === "1")
-      .write.json(c.nearest.path)
+    nearestDF.table.write.json(c.nearest.path)
   }
 
   def variantToGene(): Unit = {
