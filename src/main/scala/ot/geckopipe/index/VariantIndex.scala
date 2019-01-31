@@ -26,7 +26,7 @@ object VariantIndex {
     ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
     ("vep.most_severe_consequence", "most_severe_consequence"),
     ("cadd", "cadd"), ("af", "af"))
-  val columns: Seq[String] = Seq("chr_id", "position", "ref_allele", "alt_allele", "variant_id", "rs_id")
+  val columns: Seq[String] = Seq("chr_id", "position", "ref_allele", "alt_allele", "rs_id")
   val indexColumns: Seq[String] = Seq("chr_id", "position")
 
   /** variant_id is represented as 1_123_T_C but split into columns 1 23456 T C */
