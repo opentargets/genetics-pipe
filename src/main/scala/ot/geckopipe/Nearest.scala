@@ -26,10 +26,10 @@ object Nearest extends LazyLogging {
 
     logger.info("generate nearest dataset from variant annotated index")
     val nearests = vIdx.table
+      .select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
       .withColumn("type_id", lit("distance"))
       .withColumn("source_id", lit("nearest"))
       .withColumn("feature", lit("unspecified"))
-      .withColumn("qtl_score", - log(10, col("qtl_pval")))
 
     val nearestPairs = nearests.join(genes, (col("chr_id") === col("chr")) and
       (abs(col("position") - col("tss")) <= tssDistance))
