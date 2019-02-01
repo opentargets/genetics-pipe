@@ -10,11 +10,10 @@ import ot.geckopipe.index.{EnsemblIndex, VariantIndex}
 
 object Nearest extends LazyLogging {
 
-  val features: Seq[String] = Seq("tss", "d")
+  val features: Seq[String] = Seq("d", "inv_d")
   val columns: Seq[String] =
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
-  /** union all intervals and interpolate variants from intervals */
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
     val tssDistance = conf.nearest.tssDistance
 
@@ -29,12 +28,14 @@ object Nearest extends LazyLogging {
     val nearests = vIdx.table
       .select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
       .withColumn("type_id", lit("distance"))
-      .withColumn("source_id", lit("nearest"))
+      .withColumn("source_id", lit("canonical_tss"))
       .withColumn("feature", lit("unspecified"))
 
     val nearestPairs = nearests.join(genes, (col("chr_id") === col("chr")) and
       (abs(col("position") - col("tss")) <= tssDistance))
-      .withColumn("d", abs(col("position") - col("tss")))
+      .withColumn("d",  abs(col("position") - col("tss")))
+      .withColumn("inv_d", lit(1.0) / col("d"))
+      .select(columns.head, columns.tail:_*)
 
     new Component {
       /** unique column name list per component */
