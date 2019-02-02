@@ -22,7 +22,8 @@ case class VariantSection(raw: String, path: String, nearestGenes: String)
 
 case class VariantGeneSection(path: String)
 
-case class VariantDiseaseSection(path: String, studies: String, toploci: String, finemapping: String, ld: String)
+case class VariantDiseaseSection(path: String, studies: String, toploci: String,
+                                 finemapping: String, ld: String, overlapping: String)
 
 /** Main configuration case class */
 case class Configuration(output: String,

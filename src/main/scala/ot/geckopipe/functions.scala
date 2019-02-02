@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{Column, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
-import ot.geckopipe.index.V2DIndex.studiesSchema
 import ot.geckopipe.index.VariantIndex
 
 import scala.collection.mutable
