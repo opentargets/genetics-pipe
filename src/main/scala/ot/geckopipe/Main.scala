@@ -9,7 +9,6 @@ import ot.geckopipe.index._
 import ot.geckopipe.functions._
 import scopt.OptionParser
 import org.apache.spark.sql.functions._
-import pureconfig.generic.auto._
 
 class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configuration) extends LazyLogging {
   implicit val sSesion: SparkSession = ss
@@ -69,11 +68,22 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
   def dictionaries(): Unit = {
     logger.info("exec variant-gene-luts command")
 
+    logger.info("generate lut for variant index")
     val _ = VariantIndex.builder(c)
       .load
       .flatten
       .write
       .json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
+
+    logger.info("generate lut for studies")
+    val _ = V2DIndex.buildStudiesIndex(c.variantDisease.studies)
+      .write
+      .json(c.output.stripSuffix("/").concat("/study-index-lut/"))
+
+    logger.info("generate lut for overlapping index")
+    val _ = V2DIndex.buildOverlapIndex(c.variantDisease.overlapping)
+      .write
+      .json(c.output.stripSuffix("/").concat("/overlap-index-lut/"))
   }
 }
 

@@ -6,7 +6,6 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
 import ot.geckopipe.index.VariantIndex
 
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 object functions extends LazyLogging {
