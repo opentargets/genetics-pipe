@@ -73,17 +73,17 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       .load
       .flatten
       .write
-      .json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
+      .json(c.output.stripSuffix("/").concat("/lut/variant-index/"))
 
     logger.info("generate lut for studies")
     val _ = V2DIndex.buildStudiesIndex(c.variantDisease.studies)
       .write
-      .json(c.output.stripSuffix("/").concat("/study-index-lut/"))
+      .json(c.output.stripSuffix("/").concat("/lut/study-index/"))
 
     logger.info("generate lut for overlapping index")
     val _ = V2DIndex.buildOverlapIndex(c.variantDisease.overlapping)
       .write
-      .json(c.output.stripSuffix("/").concat("/overlap-index-lut/"))
+      .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
   }
 }
 

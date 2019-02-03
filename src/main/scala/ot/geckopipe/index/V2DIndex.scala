@@ -47,10 +47,6 @@ object V2DIndex extends LazyLogging  {
       indexExpanded.where(col("pval").isNull).show(false)
     }
 
-//    val ldAndFmEnriched = splitVariantID(indexExpanded).get
-//      .repartitionByRange(col("chr_id").asc, col("position").asc)
-//      .join(vIdx.table.select("chr_id", "position", "variant_id", "rs_id"), Seq("chr_id", "position", "variant_id"), "left_outer")
-
     new V2DIndex {
       override val table: DataFrame = indexExpanded
     }
