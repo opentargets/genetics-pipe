@@ -85,6 +85,11 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       .write
       .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
   }
+  def buildAll(): Unit = {
+    variantIndex()
+    dictionaries()
+    variantToDisease()
+  }
 }
 
 case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[String] = None)
@@ -161,6 +166,10 @@ object Main extends LazyLogging {
           case Some("dictionaries") =>
             cmds.dictionaries()
 
+
+          case Some("build-all") =>
+            cmds.buildAll()
+
           case _ =>
             logger.error("failed to specify a command to run try --help")
         }
@@ -219,6 +228,10 @@ object Main extends LazyLogging {
     cmd("dictionaries").
       action( (_, c) => c.copy(command = Some("dictionaries")))
       .text("generate variant to gene lookup tables")
+
+    cmd("build-all").
+      action( (_, c) => c.copy(command = Some("dictionaries")))
+      .text("generate variant index, dictionaries, v2d, v2g, and d2v2g")
 
     note(entryText)
 

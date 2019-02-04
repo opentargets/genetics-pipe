@@ -11,7 +11,10 @@ import ot.geckopipe.functions._
 import scala.collection.mutable
 
 object VEP extends LazyLogging {
-  val features: Seq[String] = Seq("fpred_labels", "fpred_scores", "fpred_max_label", "fpred_max_score")
+  val features: Seq[String] = Seq("fpred_labels", "fpred_scores",
+    "fpred_max_label", "fpred_max_score")
+  val columns: Seq[String] =
+    Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
   val schema = StructType(
     StructField("chr_id", StringType) ::
