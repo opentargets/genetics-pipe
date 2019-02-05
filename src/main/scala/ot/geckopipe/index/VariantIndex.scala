@@ -1,9 +1,11 @@
 package ot.geckopipe.index
 
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.api.java.StorageLevels
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.expressions.Window
 import ot.geckopipe.functions.loadFromParquet
 import ot.geckopipe.{Configuration, Nearest}
 
@@ -57,15 +59,20 @@ object VariantIndex {
       def computeNearests(idx: DataFrame): DataFrame = {
         val vidx = new VariantIndex(idx)
         val nearests = Nearest(vidx, conf, conf.variantIndex.tssDistance,
-          GeneIndex.biotypes)(ss)
+          GeneIndex.biotypes)(ss).table.persist(StorageLevels.DISK_ONLY)
 
-        val nearestGenes = nearests.table.groupBy(columns.head, columns.tail:_*)
-          .agg(min(col("d")).as("gene_id_distance"),
-            first(col("gene_id")).as("gene_id"))
-        val nearestPCGenes = nearests.table.where(col("biotype") === "protein_coding")
-          .groupBy(columns.head, columns.tail:_*)
-          .agg(min(col("d")).as("gene_id_prot_coding_distance"),
-            first(col("gene_id")).as("gene_id_prot_coding"))
+
+        val w = Window.partitionBy(columns.head, columns.tail:_*)
+
+        val nearestGenesCols = columns ++ List("gene_id", "gene_id_distance")
+        val nearestGenes = nearests.withColumn("gene_id_distance", min(col("d")).over(w))
+          .select(nearestGenesCols.head, nearestGenesCols.tail:_*)
+
+        val nearestPCGenesCols = columns ++ List("gene_id_prot_coding", "gene_id_prot_coding_distance")
+        val nearestPCGenes = nearests.where(col("biotype") === "protein_coding")
+          .withColumn("gene_id_prot_coding_distance", min(col("d")).over(w))
+          .withColumnRenamed("gene_id", "gene_id_prot_coding")
+            .select(nearestPCGenesCols.head, nearestPCGenesCols.tail:_*)
 
         nearestGenes.join(nearestPCGenes, columns, "full_outer")
       }
