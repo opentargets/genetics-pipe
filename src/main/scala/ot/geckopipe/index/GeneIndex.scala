@@ -40,7 +40,7 @@ object GeneIndex {
     * }
     */
   val columns: Seq[String] = Seq("chr", "gene_id", "tss", "start", "end", "biotype")
-  val indexColumns: Seq[String] = Seq("chr", "gene_id")
+  val indexColumns: Seq[String] = Seq("chr")
 
   /** load and transform lut gene from ensembl
     *
@@ -49,8 +49,9 @@ object GeneIndex {
     * @return the processed dataframe
     */
   def apply(from: String)(implicit ss: SparkSession): GeneIndex = {
+    val indexCols = indexColumns.map(c => col(c).asc)
     val genes = ss.read.json(from)
-      .repartitionByRange(col("chr").asc)
+      .repartitionByRange(indexCols:_*)
       .where(col("biotype") isInCollection biotypes)
 
     new GeneIndex(genes)

@@ -64,7 +64,7 @@ object VEP extends LazyLogging {
 
     val genes = GeneIndex(conf.ensembl.lut)
       .sortByID
-      .table.selectBy(GeneIndex.indexColumns)
+      .table.selectBy(GeneIndex.indexColumns :+ "gene_id")
       .cache()
 
     // from csqs table to a map to broadcast to all workers
