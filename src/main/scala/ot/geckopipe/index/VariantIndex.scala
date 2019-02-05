@@ -32,7 +32,7 @@ object VariantIndex {
   /** types of the columns named in variantColumnNames */
   val columnsTypes: List[String] = List("String", "Long", "String", "String")
 
-  val indexColumns: Seq[String] = Seq("chr_id")
+  val indexColumns: Seq[String] = Seq("chr_id", "position")
   val sortColumns: Seq[String] = Seq("chr_id", "position")
 
   /** this class build based on the Configuration it creates a VariantIndex */
@@ -59,10 +59,7 @@ object VariantIndex {
       def computeNearests(idx: DataFrame): DataFrame = {
         val vidx = new VariantIndex(idx)
         val nearests = Nearest(vidx, conf, conf.variantIndex.tssDistance,
-          GeneIndex.biotypes)(ss).table.persist(StorageLevels.DISK_ONLY)
-
-
-        val w = Window.partitionBy(columns.head, columns.tail:_*)
+          GeneIndex.biotypes)(ss).table
 
         val nearestGenesCols = columns ++ List("gene_id", "gene_id_distance")
         val nearestGenes = nearests.groupBy(columns.head, columns.tail:_*)
@@ -71,9 +68,11 @@ object VariantIndex {
           .withColumnRenamed("d", "gene_id_distance")
           .select(nearestGenesCols.head, nearestGenesCols.tail:_*)
 
+        val nearestsPC = Nearest(vidx, conf, conf.variantIndex.tssDistance,
+          Set("protein_coding"))(ss).table
+
         val nearestPCGenesCols = columns ++ List("gene_id_prot_coding", "gene_id_prot_coding_distance")
-        val nearestPCGenes = nearests.where(col("biotype") === "protein_coding")
-          .groupBy(columns.head, columns.tail:_*)
+        val nearestPCGenes = nearestsPC.groupBy(columns.head, columns.tail:_*)
           .agg(min(col("d")).as("d"),
             first(col("gene_id")).as("gene_id"))
           .withColumnRenamed("d", "gene_id_prot_coding_distance")
@@ -85,8 +84,8 @@ object VariantIndex {
       }
 
       logger.info("building variant index as specified in the configuration")
-      val raw = loadRawVariantIndex(rawColumnsWithAliases)
-      val nearests = computeNearests(raw)
+      val raw = loadRawVariantIndex(rawColumnsWithAliases).persist(StorageLevels.DISK_ONLY)
+      val nearests = computeNearests(raw).persist(StorageLevels.DISK_ONLY)
       val jointNearest = raw.join(nearests, columns, "left_outer")
 
       new VariantIndex(jointNearest)
