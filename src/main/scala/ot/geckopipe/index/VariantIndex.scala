@@ -65,16 +65,23 @@ object VariantIndex {
         val w = Window.partitionBy(columns.head, columns.tail:_*)
 
         val nearestGenesCols = columns ++ List("gene_id", "gene_id_distance")
-        val nearestGenes = nearests.withColumn("gene_id_distance", min(col("d")).over(w))
+        val nearestGenes = nearests.groupBy(columns.head, columns.tail:_*)
+          .agg(min(col("d")).as("d"),
+            first(col("gene_id")).as("gene_id"))
+          .withColumnRenamed("d", "gene_id_distance")
           .select(nearestGenesCols.head, nearestGenesCols.tail:_*)
 
         val nearestPCGenesCols = columns ++ List("gene_id_prot_coding", "gene_id_prot_coding_distance")
         val nearestPCGenes = nearests.where(col("biotype") === "protein_coding")
-          .withColumn("gene_id_prot_coding_distance", min(col("d")).over(w))
+          .groupBy(columns.head, columns.tail:_*)
+          .agg(min(col("d")).as("d"),
+            first(col("gene_id")).as("gene_id"))
+          .withColumnRenamed("d", "gene_id_prot_coding_distance")
           .withColumnRenamed("gene_id", "gene_id_prot_coding")
-            .select(nearestPCGenesCols.head, nearestPCGenesCols.tail:_*)
+          .select(nearestPCGenesCols.head, nearestPCGenesCols.tail:_*)
 
-        nearestGenes.join(nearestPCGenes, columns, "full_outer")
+        val computedNearests = nearestGenes.join(nearestPCGenes, columns, "full_outer")
+        computedNearests
       }
 
       logger.info("building variant index as specified in the configuration")
