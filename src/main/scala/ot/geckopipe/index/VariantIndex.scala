@@ -4,20 +4,18 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import ot.geckopipe.functions.{loadFromCSV, splitVariantID, loadFromParquet}
-import ot.geckopipe.Configuration
-
-import scala.util._
+import ot.geckopipe.functions.loadFromParquet
+import ot.geckopipe.{Configuration, Nearest}
 
 /** represents a cached table of variants with all variant columns
   *
   * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
   * this table is persisted and sorted by (chr_id, position) by default
   */
-abstract class VariantIndex extends Indexable {
+class VariantIndex(val table: DataFrame) {
   def schema: StructType = table.schema
-  def aggByVariant: DataFrame = aggBy(VariantIndex.indexColumns, VariantIndex.columns)
-  def flatten: DataFrame = table.select(col("*"), col("cadd.*"), col("af.*")).drop("cadd", "af")
+  def flatten: VariantIndex =
+    new VariantIndex(table.select(col("*"), col("cadd.*"), col("af.*")).drop("cadd", "af"))
 }
 
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
@@ -26,72 +24,58 @@ object VariantIndex {
     ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
     ("vep.most_severe_consequence", "most_severe_consequence"),
     ("cadd", "cadd"), ("af", "af"))
-  val columns: Seq[String] = Seq("chr_id", "position", "ref_allele", "alt_allele", "rs_id")
-  val indexColumns: Seq[String] = Seq("chr_id", "position")
 
   /** variant_id is represented as 1_123_T_C but split into columns 1 23456 T C */
-  val variantColumnNames: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
-
+  val columns: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
   /** types of the columns named in variantColumnNames */
-  val variantColumnTypes: List[String] = List("String", "long", "string", "string")
+  val columnsTypes: List[String] = List("String", "Long", "String", "String")
 
-  val nearestGenesSchema = StructType(
-    StructField("varid", StringType, nullable = false) ::
-      StructField("gene_id_prot_coding", StringType) ::
-      StructField("gene_id_prot_coding_distance", LongType) ::
-      StructField("gene_id", StringType) ::
-      StructField("gene_id_distance", LongType) :: Nil)
+  val indexColumns: Seq[String] = Seq("chr_id")
+  val sortColumns: Seq[String] = Seq("chr_id", "position")
 
   /** this class build based on the Configuration it creates a VariantIndex */
   class Builder (val conf: Configuration, val ss: SparkSession) extends LazyLogging {
     def load: VariantIndex = {
       logger.info("loading variant index as specified in the configuration")
-      // load from configuration
-      val vIdx = ss.read
-        .format("parquet")
-        .load(conf.variantIndex.path)
-        .persist()
+      val vIdx = ss.read.parquet(conf.variantIndex.path).persist()
 
-      new VariantIndex {
-        override val table: DataFrame = vIdx
-      }
-    }
-
-    def loadNearestGenes: Try[DataFrame] = {
-      splitVariantID(loadFromCSV(conf.variantIndex.nearestGenes, nearestGenesSchema)(ss),
-        variantColName = "varid").map(df => {
-        df.drop("varid", "gene_id_prot_coding_distance", "gene_id_distance")
-          .repartitionByRange(col("chr_id").asc, col("position").asc)
-          .sortWithinPartitions(col("chr_id").asc, col("position").asc)
-      })
+      new VariantIndex(vIdx)
     }
 
     def loadRawVariantIndex(columnsWithAliases: Seq[(String, String)]): DataFrame = {
+      val indexCols = indexColumns.map(c => col(c).asc)
+      val sortCols = sortColumns.map(c => col(c).asc)
       val inputCols = columnsWithAliases.map(s => col(s._1).alias(s._2))
       val raw = loadFromParquet(conf.variantIndex.raw)(ss)
+
       raw.select(inputCols:_*)
-        .repartitionByRange(col("chr_id").asc, col("position").asc)
-        .sortWithinPartitions(col("chr_id").asc, col("position").asc)
+        .repartitionByRange(indexCols:_*)
+        .sortWithinPartitions(sortCols:_*)
     }
 
     def build: VariantIndex = {
+      def computeNearests(idx: DataFrame): DataFrame = {
+        val vidx = new VariantIndex(idx)
+        val nearests = Nearest(vidx, conf, conf.variantIndex.tssDistance,
+          GeneIndex.biotypes)(ss)
+
+        val nearestGenes = nearests.table.groupBy(columns.head, columns.tail:_*)
+          .agg(min(col("d")).as("gene_id_distance"),
+            first(col("gene_id")).as("gene_id"))
+        val nearestPCGenes = nearests.table.where(col("biotype") === "protein_coding")
+          .groupBy(columns.head, columns.tail:_*)
+          .agg(min(col("d")).as("gene_id_prot_coding_distance"),
+            first(col("gene_id")).as("gene_id_prot_coding"))
+
+        nearestGenes.join(nearestPCGenes, columns, "full_outer")
+      }
+
       logger.info("building variant index as specified in the configuration")
-      val savePath = conf.variantIndex.path
-
       val raw = loadRawVariantIndex(rawColumnsWithAliases)
+      val nearests = computeNearests(raw)
+      val jointNearest = raw.join(nearests, columns, "left_outer")
 
-      val rawWithNGenes = loadNearestGenes match {
-        case Success(df) => raw.join(df, variantColumnNames, "left_outer")
-        case Failure(ex) =>
-          logger.error(ex.toString)
-          raw
-      }
-
-      rawWithNGenes.write.parquet(savePath)
-
-      new VariantIndex {
-        override val table: DataFrame = rawWithNGenes
-      }
+      new VariantIndex(jointNearest)
     }
   }
 

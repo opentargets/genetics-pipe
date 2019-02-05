@@ -95,8 +95,8 @@ object functions extends LazyLogging {
 
   def splitVariantID(df: DataFrame, variantColName: String = "variant_id",
                      prefix: String = "",
-                     intoColNames: List[String] = VariantIndex.variantColumnNames,
-                     withColTypes: List[String] = VariantIndex.variantColumnTypes): Try[DataFrame] = {
+                     intoColNames: List[String] = VariantIndex.columns,
+                     withColTypes: List[String] = VariantIndex.columnsTypes): Try[DataFrame] = {
     val variantID = col(variantColName)
     val tmpCol = col("_tmp")
 

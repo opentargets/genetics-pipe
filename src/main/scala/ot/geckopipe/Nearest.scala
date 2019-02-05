@@ -5,20 +5,25 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.index.{GeneIndex, VariantIndex}
+import ot.geckopipe.index.Indexable._
 
 object Nearest extends LazyLogging {
 
-  val features: Seq[String] = Seq("d", "inv_d")
+  val features: Seq[String] = Seq("d", "inv_d", "biotype")
   val columns: Seq[String] =
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
-    val tssDistance = conf.nearest.tssDistance
+    Nearest(vIdx, conf, conf.nearest.tssDistance, Set("protein_coding"))
+  }
+  def apply(vIdx: VariantIndex, conf: Configuration, tssDistance: Long, biotypes: Set[String])
+           (implicit ss: SparkSession): Component = {
 
     val genes = GeneIndex(conf.ensembl.lut)
-      .filterBiotypes(Set("protein_coding"))
+      .filterBiotypes(biotypes)
       .sortByTSS
-      .table.cache()
+      .table.selectBy(GeneIndex.columns)
+      .cache()
 
     logger.info("generate nearest dataset from variant annotated index")
     val nearests = vIdx.table

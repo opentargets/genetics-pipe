@@ -5,7 +5,7 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import ot.geckopipe.Configuration
 
-abstract class V2DIndex extends Indexable
+case class V2DIndex(table: DataFrame)
 
 object V2DIndex extends LazyLogging  {
   def build(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
@@ -47,9 +47,7 @@ object V2DIndex extends LazyLogging  {
       indexExpanded.where(col("pval").isNull).show(false)
     }
 
-    new V2DIndex {
-      override val table: DataFrame = indexExpanded
-    }
+    V2DIndex(indexExpanded)
   }
 
   def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame =
@@ -103,9 +101,6 @@ object V2DIndex extends LazyLogging  {
     val v2d = ss.read
       .parquet(conf.variantDisease.path)
 
-    new V2DIndex {
-      /** uniform way to get the dataframe */
-      override val table: DataFrame = v2d
-    }
+    V2DIndex(v2d)
   }
 }

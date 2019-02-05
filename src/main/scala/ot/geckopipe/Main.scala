@@ -7,8 +7,10 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import ot.geckopipe.index._
 import ot.geckopipe.functions._
+import ot.geckopipe.index.Indexable._
 import scopt.OptionParser
 import org.apache.spark.sql.functions._
+import pureconfig.generic.auto._
 
 class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configuration) extends LazyLogging {
   implicit val sSesion: SparkSession = ss
@@ -16,7 +18,8 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
 
   def variantIndex(): Unit = {
     logger.info("exec variant-index command")
-    val _ = VariantIndex.builder(c).build
+    val vidx = VariantIndex.builder(c).build
+    vidx.table.write.parquet(c.variantIndex.path)
   }
 
   def distanceNearest(): Unit = {
@@ -33,13 +36,14 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
 
     val vepDts = VEP(c)
+    val nearest = Nearest(vIdx, c)
     val positionalDts = QTL(vIdx, c)
     val intervalDt = Interval(vIdx, c)
 
-    val dtSeq = Seq(vepDts, positionalDts, intervalDt)
+    val dtSeq = Seq(vepDts, nearest, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
-    v2g.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
+    v2g.table.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
   }
 
   def variantToDisease(): Unit = {
@@ -48,7 +52,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
     val v2d = V2DIndex.build(vIdx, c)
 
-    v2d.saveToJSON(c.output.stripSuffix("/").concat("/v2d/"))
+    v2d.table.saveToJSON(c.output.stripSuffix("/").concat("/v2d/"))
   }
 
   def diseaseToVariantToGene(): Unit = {
@@ -69,22 +73,23 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     logger.info("exec variant-gene-luts command")
 
     logger.info("generate lut for variant index")
-    val _ = VariantIndex.builder(c)
+    VariantIndex.builder(c)
       .load
-      .flatten
-      .write
+      .flatten.table.write
       .json(c.output.stripSuffix("/").concat("/lut/variant-index/"))
 
     logger.info("generate lut for studies")
-    val _ = V2DIndex.buildStudiesIndex(c.variantDisease.studies)
+
+    V2DIndex.buildStudiesIndex(c.variantDisease.studies)
       .write
       .json(c.output.stripSuffix("/").concat("/lut/study-index/"))
 
     logger.info("generate lut for overlapping index")
-    val _ = V2DIndex.buildOverlapIndex(c.variantDisease.overlapping)
+    V2DIndex.buildOverlapIndex(c.variantDisease.overlapping)
       .write
       .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
   }
+
   def buildAll(): Unit = {
     variantIndex()
     dictionaries()
@@ -133,7 +138,6 @@ object Main extends LazyLogging {
             new SparkConf()
               .setAppName(progName)
 
-
         implicit val ss: SparkSession = SparkSession.builder
           .config(conf)
           .getOrCreate
@@ -141,10 +145,7 @@ object Main extends LazyLogging {
         logger.debug("setting sparkcontext logging level to log-level")
         ss.sparkContext.setLogLevel(logLevel)
 
-        // needed for save dataset function
-        implicit val sampleFactor: Double = c.sampleFactor
-
-        val cmds = new Commands(ss, sampleFactor, c)
+        val cmds = new Commands(ss, c.sampleFactor, c)
 
         logger.info("check command specified")
         config.command match {
@@ -165,7 +166,6 @@ object Main extends LazyLogging {
 
           case Some("dictionaries") =>
             cmds.dictionaries()
-
 
           case Some("build-all") =>
             cmds.buildAll()
@@ -230,7 +230,7 @@ object Main extends LazyLogging {
       .text("generate variant to gene lookup tables")
 
     cmd("build-all").
-      action( (_, c) => c.copy(command = Some("dictionaries")))
+      action( (_, c) => c.copy(command = Some("build-all")))
       .text("generate variant index, dictionaries, v2d, v2g, and d2v2g")
 
     note(entryText)
