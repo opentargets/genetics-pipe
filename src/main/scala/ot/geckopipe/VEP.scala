@@ -1,6 +1,7 @@
 package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.api.java.StorageLevels
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
@@ -97,7 +98,7 @@ object VEP extends LazyLogging {
     val raw = VariantIndex
       .builder(conf)
       .loadRawVariantIndex(rawColumnsWithAliases)
-      .persist()
+      .persist(StorageLevels.DISK_ONLY)
 
     val veps = raw.where(col("transcript_consequences").isNotNull)
 

@@ -39,7 +39,7 @@ object VariantIndex {
   class Builder (val conf: Configuration, val ss: SparkSession) extends LazyLogging {
     def load: VariantIndex = {
       logger.info("loading variant index as specified in the configuration")
-      val vIdx = ss.read.parquet(conf.variantIndex.path).persist()
+      val vIdx = ss.read.parquet(conf.variantIndex.path).persist(StorageLevels.DISK_ONLY)
 
       new VariantIndex(vIdx)
     }
