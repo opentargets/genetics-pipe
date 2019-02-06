@@ -22,6 +22,9 @@ class VariantIndex(val table: DataFrame) {
 
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
 object VariantIndex {
+  case class VIRow(chr_id: String, position: Long, ref_allele: String, alt_allele: String,
+                   d: Long, gene_id: String)
+
   val rawColumnsWithAliases: Seq[(String, String)] = Seq(("chrom_b37","chr_id"), ("pos_b37", "position"),
     ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
     ("vep.most_severe_consequence", "most_severe_consequence"),
@@ -57,27 +60,33 @@ object VariantIndex {
 
     def build: VariantIndex = {
       def computeNearests(idx: DataFrame): DataFrame = {
+        import ss.implicits._
+
         val vidx = new VariantIndex(idx)
-        val nearests = Nearest(vidx, conf, conf.variantIndex.tssDistance,
+
+        val nearests = Nearest(vidx, conf,
+          conf.variantIndex.tssDistance,
           GeneIndex.biotypes)(ss).table
 
-        val nearestGenesCols = columns ++ List("gene_id", "gene_id_distance")
-        val nearestGenes = nearests.groupBy(columns.head, columns.tail:_*)
-          .agg(min(col("d")).as("d"),
-            first(col("gene_id")).as("gene_id"))
-          .withColumnRenamed("d", "gene_id_distance")
-          .select(nearestGenesCols.head, nearestGenesCols.tail:_*)
+        val nearestGenes = nearests
+          .as[VIRow]
+          .groupByKey(r => (r.chr_id, r.position, r.ref_allele, r.alt_allele))
+          .reduceGroups((r1, r2) => if (r1.d < r2.d) r1 else r2)
+          .map(_._2)
+          .toDF.withColumnRenamed("d", "gene_id_distance")
 
-        val nearestsPC = Nearest(vidx, conf, conf.variantIndex.tssDistance,
+        val nearestsPC = Nearest(vidx, conf,
+          conf.variantIndex.tssDistance,
           Set("protein_coding"))(ss).table
 
-        val nearestPCGenesCols = columns ++ List("gene_id_prot_coding", "gene_id_prot_coding_distance")
-        val nearestPCGenes = nearestsPC.groupBy(columns.head, columns.tail:_*)
-          .agg(min(col("d")).as("d"),
-            first(col("gene_id")).as("gene_id"))
+        val nearestPCGenes = nearestsPC
+          .as[VIRow]
+          .groupByKey(r => (r.chr_id, r.position, r.ref_allele, r.alt_allele))
+          .reduceGroups((r1, r2) => if (r1.d < r2.d) r1 else r2)
+          .map(_._2)
+          .toDF
           .withColumnRenamed("d", "gene_id_prot_coding_distance")
           .withColumnRenamed("gene_id", "gene_id_prot_coding")
-          .select(nearestPCGenesCols.head, nearestPCGenesCols.tail:_*)
 
         val computedNearests = nearestGenes.join(nearestPCGenes, columns, "full_outer")
         computedNearests

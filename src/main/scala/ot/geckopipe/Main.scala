@@ -94,6 +94,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     variantIndex()
     dictionaries()
     variantToDisease()
+    distanceNearest()
   }
 }
 
