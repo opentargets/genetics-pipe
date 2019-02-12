@@ -6,7 +6,8 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import ot.geckopipe.functions._
 import ot.geckopipe.index.V2GIndex.Component
-import ot.geckopipe.index.{EnsemblIndex, VariantIndex}
+import ot.geckopipe.index.{GeneIndex, VariantIndex}
+import ot.geckopipe.index.Indexable._
 
 object Interval extends LazyLogging {
   val features: Seq[String] = Seq("interval_score")
@@ -37,10 +38,8 @@ object Interval extends LazyLogging {
 
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
     logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
-    val genes = EnsemblIndex(conf.ensembl.geneTranscriptPairs)
-      .aggByGene
-      .select("gene_id", "gene_chr")
-      .cache
+    val genes = GeneIndex(conf.ensembl.lut)
+      .sortByID.table.selectBy(GeneIndex.indexColumns).cache()
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val interval = load(conf.interval.path)
@@ -50,8 +49,8 @@ object Interval extends LazyLogging {
       .withColumn("feature", lower(col("tokens").getItem(2)))
       .drop("filename", "tokens")
       .join(genes, Seq("gene_id"))
-      .where(col("chr_id") === col("gene_chr"))
-      .drop("gene_chr")
+      .where(col("chr_id") === col("chr"))
+      .drop("chr")
       .groupBy("chr_id", "position_start", "position_end", "gene_id", "type_id", "source_id", "feature")
       .agg(max(col("score")).as("interval_score"))
       .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))

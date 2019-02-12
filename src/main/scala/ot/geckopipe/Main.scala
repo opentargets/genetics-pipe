@@ -7,6 +7,7 @@ import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import ot.geckopipe.index._
 import ot.geckopipe.functions._
+import ot.geckopipe.index.Indexable._
 import scopt.OptionParser
 import org.apache.spark.sql.functions._
 import pureconfig.generic.auto._
@@ -17,7 +18,16 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
 
   def variantIndex(): Unit = {
     logger.info("exec variant-index command")
-    val _ = VariantIndex.builder(c).build
+    val vidx = VariantIndex.builder(c).build
+    vidx.table.write.parquet(c.variantIndex.path)
+  }
+
+  def distanceNearest(): Unit = {
+    logger.info("exec distance-nearest command")
+    val vIdx = VariantIndex.builder(c).load
+
+    val nearestDF = Nearest(vIdx, c)
+    nearestDF.table.write.json(c.nearest.path)
   }
 
   def variantToGene(): Unit = {
@@ -26,13 +36,14 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
 
     val vepDts = VEP(c)
+    val nearest = Nearest(vIdx, c)
     val positionalDts = QTL(vIdx, c)
     val intervalDt = Interval(vIdx, c)
 
-    val dtSeq = Seq(vepDts, positionalDts, intervalDt)
+    val dtSeq = Seq(vepDts, nearest, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
-    v2g.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
+    v2g.table.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
   }
 
   def variantToDisease(): Unit = {
@@ -41,7 +52,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
     val v2d = V2DIndex.build(vIdx, c)
 
-    v2d.saveToJSON(c.output.stripSuffix("/").concat("/v2d/"))
+    v2d.table.saveToJSON(c.output.stripSuffix("/").concat("/v2d/"))
   }
 
   def diseaseToVariantToGene(): Unit = {
@@ -61,19 +72,29 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
   def dictionaries(): Unit = {
     logger.info("exec variant-gene-luts command")
 
-    val vIdxBuilder = VariantIndex.builder(c)
-    val vIdx = vIdxBuilder.load
-    val nearests = vIdxBuilder.loadNearestGenes.map( df => {
-      logger.info("generate variant index LUT with nearest genes (prot-cod and not prot-cod")
-      vIdx.table.join(df, VariantIndex.variantColumnNames, "left_outer")
-    })
+    logger.info("generate lut for variant index")
+    VariantIndex.builder(c)
+      .load
+      .flatten.table.write
+      .json(c.output.stripSuffix("/").concat("/lut/variant-index/"))
 
-    nearests match {
-      case scala.util.Success(table) =>
-        logger.info("write to json variant index LUT")
-        table.write.json(c.output.stripSuffix("/").concat("/variant-index-lut/"))
-      case scala.util.Failure(ex) => logger.error(ex.getMessage)
-    }
+    logger.info("generate lut for studies")
+
+    V2DIndex.buildStudiesIndex(c.variantDisease.studies)
+      .write
+      .json(c.output.stripSuffix("/").concat("/lut/study-index/"))
+
+    logger.info("generate lut for overlapping index")
+    V2DIndex.buildOverlapIndex(c.variantDisease.overlapping)
+      .write
+      .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
+  }
+
+  def buildAll(): Unit = {
+    variantIndex()
+    dictionaries()
+    variantToDisease()
+    distanceNearest()
   }
 }
 
@@ -118,7 +139,6 @@ object Main extends LazyLogging {
             new SparkConf()
               .setAppName(progName)
 
-
         implicit val ss: SparkSession = SparkSession.builder
           .config(conf)
           .getOrCreate
@@ -126,15 +146,15 @@ object Main extends LazyLogging {
         logger.debug("setting sparkcontext logging level to log-level")
         ss.sparkContext.setLogLevel(logLevel)
 
-        // needed for save dataset function
-        implicit val sampleFactor: Double = c.sampleFactor
-
-        val cmds = new Commands(ss, sampleFactor, c)
+        val cmds = new Commands(ss, c.sampleFactor, c)
 
         logger.info("check command specified")
         config.command match {
           case Some("variant-index") =>
             cmds.variantIndex()
+
+          case Some("distance-nearest") =>
+            cmds.distanceNearest()
 
           case Some("variant-gene") =>
             cmds.variantToGene()
@@ -147,6 +167,9 @@ object Main extends LazyLogging {
 
           case Some("dictionaries") =>
             cmds.dictionaries()
+
+          case Some("build-all") =>
+            cmds.buildAll()
 
           case _ =>
             logger.error("failed to specify a command to run try --help")
@@ -182,6 +205,11 @@ object Main extends LazyLogging {
       .action( (x, c) => c.copy(kwargs = x) )
       .text("other arguments")
 
+
+    cmd("distance-nearest")
+      .action( (_, c) => c.copy(command = Some("distance-nearest")) )
+      .text("generate distance nearest based dataset (chr == 1)")
+
     cmd("variant-index")
       .action( (_, c) => c.copy(command = Some("variant-index")) )
       .text("generate variant index from VEP file")
@@ -201,6 +229,10 @@ object Main extends LazyLogging {
     cmd("dictionaries").
       action( (_, c) => c.copy(command = Some("dictionaries")))
       .text("generate variant to gene lookup tables")
+
+    cmd("build-all").
+      action( (_, c) => c.copy(command = Some("build-all")))
+      .text("generate variant index, dictionaries, v2d, v2g, and d2v2g")
 
     note(entryText)
 

@@ -4,10 +4,8 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{Column, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
-import ot.geckopipe.index.V2DIndex.studiesSchema
 import ot.geckopipe.index.VariantIndex
 
-import scala.collection.mutable
 import scala.util.{Failure, Success, Try}
 
 object functions extends LazyLogging {
@@ -72,12 +70,13 @@ object functions extends LazyLogging {
     }
   }
 
-
   def loadFromJSON(uri: String, withSchema: StructType)
                  (implicit ss: SparkSession): DataFrame = ss.read
     .format("json")
     .schema(withSchema)
     .load(uri)
+
+  def loadFromParquet(uri: String)(implicit ss: SparkSession): DataFrame = ss.read.parquet(uri)
 
   def loadFromCSV(uri: String, withSchema: StructType, andHeader: Boolean = true)
                  (implicit ss: SparkSession): DataFrame = ss.read
@@ -96,8 +95,8 @@ object functions extends LazyLogging {
 
   def splitVariantID(df: DataFrame, variantColName: String = "variant_id",
                      prefix: String = "",
-                     intoColNames: List[String] = VariantIndex.variantColumnNames,
-                     withColTypes: List[String] = VariantIndex.variantColumnTypes): Try[DataFrame] = {
+                     intoColNames: List[String] = VariantIndex.columns,
+                     withColTypes: List[String] = VariantIndex.columnsTypes): Try[DataFrame] = {
     val variantID = col(variantColName)
     val tmpCol = col("_tmp")
 

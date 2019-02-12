@@ -8,7 +8,7 @@ package ot.geckopipe
   */
 case class GTExSection(tissueMap: String, variantGenePairs: String)
 
-case class EnsemblSection(geneTranscriptPairs: String)
+case class EnsemblSection(lut: String)
 
 case class VEPSection(homoSapiensCons: String, homoSapiensConsScores: String)
 
@@ -16,11 +16,14 @@ case class IntervalSection(path: String)
 
 case class QTLSection(path: String)
 
-case class VariantSection(path: String, nearestGenes: String)
+case class NearestSection(tssDistance: Long, path: String)
+
+case class VariantSection(raw: String, path: String, tssDistance: Long)
 
 case class VariantGeneSection(path: String)
 
-case class VariantDiseaseSection(path: String, studies: String, toploci: String, finemapping: String, ld: String)
+case class VariantDiseaseSection(path: String, studies: String, toploci: String,
+                                 finemapping: String, ld: String, overlapping: String)
 
 /** Main configuration case class */
 case class Configuration(output: String,
@@ -31,6 +34,7 @@ case class Configuration(output: String,
                          vep: VEPSection,
                          interval: IntervalSection,
                          qtl: QTLSection,
+                         nearest: NearestSection,
                          variantIndex: VariantSection,
                          variantGene: VariantGeneSection,
                          variantDisease: VariantDiseaseSection)

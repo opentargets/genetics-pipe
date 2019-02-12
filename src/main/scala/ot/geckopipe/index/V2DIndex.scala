@@ -3,156 +3,55 @@ package ot.geckopipe.index
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types._
 import ot.geckopipe.Configuration
-import ot.geckopipe.functions._
 
-abstract class V2DIndex extends Indexable {
-  def leanTable : DataFrame = selectBy(V2DIndex.indexColumns ++ V2DIndex.columns)
-}
+case class V2DIndex(table: DataFrame)
 
 object V2DIndex extends LazyLogging  {
-  val columns: Seq[String] = Seq("stid", "pmid", "index_chr_id", "index_position",
-    "index_ref_allele", "index_alt_allele", "index_rs_id", "n_initial", "n_replication", "tag_variant_id",
-    "r2", "afr_1000g_prop", "amr_1000g_prop", "eas_1000g_prop", "eur_1000g_prop",
-    "sas_1000g_prop", "log10_abf", "posterior_prob")
-  val indexColumns: Seq[String] = Seq("stid", "index_variant_id")
-
-  val schema = StructType(
-    StructField("chr_id", StringType) ::
-    StructField("position", LongType) ::
-    StructField("ref_allele", StringType) ::
-    StructField("alt_allele", StringType) ::
-    StructField("stid", StringType, false) ::
-    StructField("index_variant_id", StringType) ::
-    StructField("r2", DoubleType) ::
-    StructField("afr_1000g_prop", DoubleType) ::
-    StructField("amr_1000g_prop", DoubleType) ::
-    StructField("eas_1000g_prop", DoubleType) ::
-    StructField("eur_1000g_prop", DoubleType) ::
-    StructField("sas_1000g_prop", DoubleType) ::
-    StructField("log10_abf", DoubleType) ::
-    StructField("posterior_prob", DoubleType) ::
-    StructField("pmid", StringType) ::
-    StructField("pub_date", StringType) ::
-    StructField("pub_journal", StringType) ::
-    StructField("pub_title", StringType) ::
-    StructField("pub_author", StringType) ::
-    StructField("trait_reported", StringType, false) ::
-    StructField("trait_efos", ArrayType(StringType)) ::
-    StructField("trait_code", StringType, false) ::
-    StructField("ancestry_initial", StringType) ::
-    StructField("ancestry_replication", StringType) ::
-    StructField("n_initial", LongType) ::
-    StructField("n_replication", LongType) ::
-    StructField("n_cases", LongType) ::
-    StructField("trait_category", StringType) ::
-    StructField("direction", StringType) ::
-    StructField("beta", DoubleType) ::
-    StructField("oddsr", DoubleType) ::
-    StructField("ci_lower", DoubleType) ::
-    StructField("ci_upper", DoubleType) ::
-    StructField("pval", DoubleType, false) ::
-    StructField("index_variant_rsid", StringType) ::
-    StructField("index_chr_id", StringType) ::
-    StructField("index_position", LongType) ::
-    StructField("index_ref_allele", StringType) ::
-    StructField("index_alt_allele", StringType) ::
-    StructField("variant_id", StringType) ::
-    StructField("rs_id", StringType) :: Nil)
-
-  val studiesSchema = StructType(
-    StructField("study_id", StringType, false) ::
-      StructField("pmid", StringType) ::
-      StructField("pub_date", StringType) ::
-      StructField("pub_journal", StringType) ::
-      StructField("pub_title", StringType) ::
-      StructField("pub_author", StringType) ::
-      StructField("trait_reported", StringType, false) ::
-      StructField("trait_efos", StringType) ::
-      StructField("trait_code", StringType, false) ::
-      StructField("ancestry_initial", StringType) ::
-      StructField("ancestry_replication", StringType) ::
-      StructField("n_initial", LongType) ::
-      StructField("n_replication", LongType) ::
-      StructField("n_cases", LongType) ::
-      StructField("trait_category", StringType) :: Nil)
-
-  val topLociSchema = StructType(
-    StructField("stid", StringType, false) ::
-      StructField("variant_id", StringType, false) ::
-      StructField("rs_id", StringType) ::
-      StructField("direction", StringType) ::
-      StructField("beta", DoubleType) ::
-      StructField("oddsr", DoubleType) ::
-      StructField("ci_lower", DoubleType) ::
-      StructField("ci_upper", DoubleType) ::
-      StructField("pval_mantissa", DoubleType, false) ::
-      StructField("pval_exponent", DoubleType, false) :: Nil)
-
-  val ldSchema = StructType(
-    StructField("stid", StringType, false) ::
-      StructField("index_variant_id", StringType, false) ::
-      StructField("tag_variant_id", StringType, false) ::
-      StructField("r2", DoubleType) ::
-      StructField("afr_1000g_prop", DoubleType) ::
-      StructField("amr_1000g_prop", DoubleType) ::
-      StructField("eas_1000g_prop", DoubleType) ::
-      StructField("eur_1000g_prop", DoubleType) ::
-      StructField("sas_1000g_prop", DoubleType) :: Nil)
-
-  val finemappingSchema = StructType(
-    StructField("stid", StringType, false) ::
-      StructField("index_variant_id", StringType, false) ::
-      StructField("tag_variant_id", StringType, false) ::
-      StructField("log10_abf", DoubleType) ::
-      StructField("posterior_prob", DoubleType) :: Nil)
-
   def build(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
-    val studies = buildStudiesIndex(conf.variantDisease.studies)
-    val topLoci = buildTopLociIndex(conf.variantDisease.toploci)
-    val ldLoci = buildLDIndex(conf.variantDisease.ld)
-    val fmLoci = buildFMIndex(conf.variantDisease.finemapping)
+    val studies = buildStudiesIndex(conf.variantDisease.studies).cache()
+    val topLoci = buildTopLociIndex(conf.variantDisease.toploci).cache()
+    val ldLoci = buildLDIndex(conf.variantDisease.ld).cache()
+    val fmLoci = buildFMIndex(conf.variantDisease.finemapping).cache()
+    val overlapStudies = buildOverlapIndex(conf.variantDisease.overlapping).cache()
 
-    val indexVariants = studies.join(topLoci, Seq("stid"))
+    val svPairs = studies.join(topLoci, "study_id")
+      .orderBy(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt")).cache()
 
     logger.whenDebugEnabled {
-      indexVariants.show(false)
-      indexVariants.where(col("pval").isNull).show(false)
+      svPairs.show(false)
+      svPairs.where(col("pval").isNull).show(false)
     }
+
+    val svPairsOverlap = svPairs.join(overlapStudies, (col("study_id") === col("A_study_id")) and
+      (col("A_chrom") === col("lead_chrom")) and
+      (col("A_pos") === col("lead_pos")) and
+      (col("A_ref") === col("lead_ref")) and
+      (col("A_alt") === col("lead_alt")),"left_outer")
+      .drop("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
+
+    svPairsOverlap.show(false)
 
     // ED WILL FIX THIS PROBLEMATIC ISSUE ABOUT TOPLOCI -> EXPANDED ONE
     // EACH TOPLOCI MUST BE IN THE EXPANDED TABLE
-    val ldAndFm = ldLoci.join(fmLoci, Seq("stid", "index_variant_id", "tag_variant_id"), "full_outer")
-    val indexExpanded = indexVariants.join(ldAndFm, Seq("stid", "index_variant_id"), "left_outer")
-      .withColumn("variant_id", when(col("tag_variant_id").isNull, col("index_variant_id"))
-        .otherwise(col("tag_variant_id")))
-      .drop("tag_variant_id")
+    val joinCols = Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt",
+      "tag_chrom", "tag_pos", "tag_ref", "tag_alt")
+    val ldAndFm = ldLoci.join(fmLoci, joinCols, "full_outer")
+    val indexExpanded = svPairsOverlap.join(ldAndFm,
+      Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt"))
+//      .withColumn("variant_id", when(col("tag_variant_id").isNull, col("index_variant_id"))
+//        .otherwise(col("tag_variant_id")))
+//      .drop("tag_variant_id")
 
     logger.whenDebugEnabled {
       indexExpanded.where(col("pval").isNull).show(false)
     }
 
-    val ldAndFmEnriched = splitVariantID(indexExpanded).get
-      .repartitionByRange(col("chr_id").asc, col("position").asc)
-      .join(vIdx.table.select("chr_id", "position", "variant_id", "rs_id"), Seq("chr_id", "position", "variant_id"), "left_outer")
-
-    new V2DIndex {
-      override val table: DataFrame = ldAndFmEnriched
-    }
+    V2DIndex(indexExpanded)
   }
 
-  def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame = {
-    val studies = loadFromJSON(path, studiesSchema)
-    val removeSuffix = udf((col: String) => col.split("\\.").head)
-
-    val pStudies = studies
-      .withColumnRenamed("study_id", "stid")
-      .withColumn("trait_efos", when(col("trait_efos").isNotNull,
-        split(col("trait_efos"),";")))
-
-    pStudies
-  }
+  def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame =
+    ss.read.parquet(path).orderBy(col("study_id").asc)
 
   def buildTopLociIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val toDouble = udf((mantissa: Double, exponent: Double) => {
@@ -166,33 +65,42 @@ object V2DIndex extends LazyLogging  {
       }
     })
 
-    val loci = loadFromCSV(path, topLociSchema)
-
-    val fLoci = loci
+    ss.read.parquet(path).orderBy(col("study_id").asc)
       .withColumn("pval", toDouble(col("pval_mantissa"), col("pval_exponent")))
-      .withColumn("_splitAndZip", explode(splitAndZip(col("variant_id"), col("rs_id"))))
-      .withColumn("index_variant_id", col("_splitAndZip").getItem(0))
-      .withColumn("index_variant_rsid", col("_splitAndZip").getItem(1))
-
-    splitVariantID(fLoci, "index_variant_id", "index_").get
-      .drop("pval_mantissa", "pval_exponent", "variant_id", "rs_id", "_splitAndZip")
+      .withColumnRenamed("chrom", "lead_chrom")
+      .withColumnRenamed("pos", "lead_pos")
+      .withColumnRenamed("ref", "lead_ref")
+      .withColumnRenamed("alt", "lead_alt")
+      .orderBy(col("study_id").asc)
   }
 
-  def buildLDIndex(path: String)(implicit ss: SparkSession): DataFrame = loadFromCSV(path, ldSchema)
+  def buildLDIndex(path: String)(implicit ss: SparkSession): DataFrame =
+    ss.read.parquet(path)
+      .orderBy(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
 
-  def buildFMIndex(path: String)(implicit ss: SparkSession): DataFrame = loadFromCSV(path, finemappingSchema)
+  def buildFMIndex(path: String)(implicit ss: SparkSession): DataFrame =
+    ss.read.parquet(path)
+      .orderBy(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
+
+  def buildOverlapIndex(path: String)(implicit ss: SparkSession): DataFrame = {
+    val groupCols = Seq("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
+    val aggCols = Seq("B_study_id", "B_chrom", "B_pos", "B_ref", "B_alt", "A_distinct",
+    "AB_overlap", "B_distinct").map(c => collect_list(c).as(c))
+    val aggregation = ss.read.parquet(path).drop("set_type")
+      .groupBy(groupCols.head, groupCols.tail:_*)
+      .agg(aggCols.head, aggCols.tail:_*)
+
+    aggregation.orderBy(col("A_study_id"), col("A_chrom"), col("A_pos"),
+      col("A_ref"), col("A_alt"))
+  }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   def load(conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
 
     logger.info("load variant to gene dataset from built one")
     val v2d = ss.read
-      .schema(schema)
-      .json(conf.variantDisease.path)
+      .parquet(conf.variantDisease.path)
 
-    new V2DIndex {
-      /** uniform way to get the dataframe */
-      override val table: DataFrame = v2d
-    }
+    V2DIndex(v2d)
   }
 }
