@@ -39,14 +39,7 @@ object V2GIndex extends LazyLogging  {
       StructField("position", LongType) ::
       StructField("ref_allele", StringType) ::
       StructField("alt_allele", StringType) ::
-      StructField("variant_id", StringType) ::
-      StructField("rs_id", StringType) ::
-      StructField("gene_chr", StringType) ::
       StructField("gene_id", StringType) ::
-      StructField("gene_start", LongType) ::
-      StructField("gene_stop", LongType) ::
-      StructField("gene_type", StringType) ::
-      StructField("gene_name", StringType) ::
       StructField("feature", StringType) ::
       StructField("type_id", StringType) ::
       StructField("source_id", StringType) ::

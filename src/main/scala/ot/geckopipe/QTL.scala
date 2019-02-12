@@ -52,7 +52,7 @@ object QTL extends LazyLogging {
       .drop("filename", "tokens")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 
-    val qtlTable = qtls.join(vIdx.table, Seq("chr_id", "position", "ref_allele", "alt_allele"))
+    val qtlTable = qtls.join(vIdx.table, VariantIndex.columns)
 
     new Component {
       /** unique column name list per component */

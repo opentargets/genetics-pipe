@@ -37,9 +37,11 @@ object Interval extends LazyLogging {
     val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/interval/"))
 
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
-    logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
+    logger.info("load ensembl gene table and cache to enrich results")
     val genes = GeneIndex(conf.ensembl.lut)
-      .sortByID.table.selectBy(GeneIndex.indexColumns).cache()
+      .sortByID
+      .table.selectBy(GeneIndex.columns)
+      .cache()
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val interval = load(conf.interval.path)
@@ -57,7 +59,7 @@ object Interval extends LazyLogging {
       .drop("position_start", "position_end", "score")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
 
-    val inTable = interval.join(vIdx.table, Seq("chr_id", "position"))
+    val inTable = interval.join(vIdx.table, VariantIndex.columns)
 
     new Component {
       /** unique column name list per component */

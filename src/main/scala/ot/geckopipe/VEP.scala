@@ -17,7 +17,7 @@ object VEP extends LazyLogging {
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
   val rawColumnsWithAliases: Seq[(String, String)] = Seq(("chrom_b37","chr_id"), ("pos_b37", "position"),
-    ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
+    ("ref", "ref_allele"), ("alt", "alt_allele"),
     ("vep.transcript_consequences", "transcript_consequences"))
 
   /** load consequence table from file extracted from ensembl website
@@ -100,42 +100,26 @@ object VEP extends LazyLogging {
       .loadRawVariantIndex(rawColumnsWithAliases)
       .persist(StorageLevels.DISK_ONLY)
 
+    val groupingCols = VariantIndex.columns :+ "gene_id"
     val veps = raw.where(col("transcript_consequences").isNotNull)
+      .withColumn("_vep", explode(col("transcript_consequences")))
+      .withColumn("gene_id", col("_vep.gene_id"))
+      .withColumn("consequence", col("_vep.consequence_terms").getItem(0))
+      .drop("_vep", "transcript_consequences")
+      .groupBy(groupingCols.head, groupingCols.tail:_*)
+      .agg(collect_set("consequence").as("fpred_labels"))
+      .withColumn("fpred_scores", udfCsqScores(col("fpred_labels")))
+      .drop("consequence")
+      .withColumn("type_id", lit("fpred"))
+      .withColumn("source_id", lit("vep"))
+      .withColumn("feature", lit("unspecified"))
+      .withColumn("fpred_max_label", getMaxCsqLabel(col("fpred_labels"), col("fpred_scores")))
+      .withColumn("fpred_max_score", getMaxCsqScore(col("fpred_labels"), col("fpred_scores")))
+      .where(col("fpred_max_score") > 0F)
+
 
     // TODO finish the VEP
     veps.show(false)
-      // .withColumn("consequence_set",col())
-
-//    logger.info("load VEP table for homo sapiens")
-//    val veps = loadHumanVEP(conf.vep.homoSapiensCons)
-//      .withColumn("tsa", udfTSA($"info"))
-//      .withColumn("csq", udfCSQ($"info"))
-//      .withColumn("csq", filterCSQByAltAllele($"ref_allele", $"alt_allele", $"tsa", $"csq"))
-//      .withColumn("csq", explode($"csq"))
-//      .withColumn("csq", split($"csq", "\\|"))
-//      .withColumn("consequence", $"csq".getItem(1))
-//      .withColumn("trans_id", $"csq".getItem(3))
-//      .drop("qual", "filter", "info", "tsa")
-//
-//    logger.info("inner join vep consequences transcripts to genes")
-//    val vepsDF = veps.join(geneTrans, Seq("trans_id"), "left_outer")
-//      .where($"gene_id".isNotNull and $"chr_id" === $"gene_chr")
-//      .drop("trans_id", "csq", "tss_distance", "gene_chr")
-//      .groupBy("variant_id", "gene_id")
-//      .agg(collect_set("consequence").as("consequence_set"),
-//        first("chr_id").as("chr_id"),
-//        first("position").as("position"),
-//        first("ref_allele").as("ref_allele"),
-//        first("alt_allele").as("alt_allele"),
-//        first("rs_id").as("rs_id"))
-//      .withColumn("type_id", lit("fpred"))
-//      .withColumn("source_id", lit("vep"))
-//      .withColumn("feature", lit("unspecified"))
-//      .withColumn("fpred_scores", udfCsqScores(col("consequence_set")))
-//      .withColumnRenamed("consequence_set", "fpred_labels")
-//      .withColumn("fpred_max_label", getMaxCsqLabel(col("fpred_labels"), col("fpred_scores")))
-//      .withColumn("fpred_max_score", getMaxCsqScore(col("fpred_labels"), col("fpred_scores")))
-//      .where(col("fpred_max_score") > 0F)
 
     new Component {
       /** unique column name list per component */
