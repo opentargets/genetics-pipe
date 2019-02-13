@@ -132,7 +132,7 @@ object functions extends LazyLogging {
     */
   def extractValidTokensFromPath(path: String, usingToken: String): Array[String] = {
     path.split(usingToken).view.last.split("/").view
-      .map(_.toLowerCase).withFilter(_.nonEmpty).force
+      .map(_.toLowerCase).withFilter(_.nonEmpty).take(2).force
   }
 
   val decileList: Seq[Double] = (10 to 100 by 10).map(_ / 100D)
