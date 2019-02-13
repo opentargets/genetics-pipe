@@ -190,16 +190,12 @@ object V2GIndex extends LazyLogging  {
            (implicit ss: SparkSession): V2GIndex = {
 
     logger.info("build variant to gene dataset union the list of datasets")
-    logger.info("load ensembl gene to transcript table, aggregate by gene_id and cache to enrich results")
-    val geneTrans = GeneIndex(conf.ensembl.lut)
-      .sortByID.table.cache()
 
     val allFeatures = datasets.foldLeft(datasets.head.features)((agg, el) => agg ++ el.features).distinct
 
-    val processedDts = datasets.map( el => {
-      val table = (allFeatures diff el.features).foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
-      table.join(geneTrans, Seq("gene_id"))
-    })
+    val processedDts = datasets.map( el =>
+      (allFeatures diff el.features).foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
+    )
 
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
     val postDts = fillAndCompute(allDts)
