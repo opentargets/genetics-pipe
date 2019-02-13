@@ -9,7 +9,7 @@ import ot.geckopipe.index.{GeneIndex, VariantIndex}
 import ot.geckopipe.index.Indexable._
 
 object QTL extends LazyLogging {
-  val features: Seq[String] = Seq("qtl_beta", "qtl_se", "qtl_pval", "qtl_score")
+  val features: Seq[String] = Seq("feature", "type_id", "source_id", "qtl_beta", "qtl_se", "qtl_pval", "qtl_score")
 
   def load(from: String)(implicit ss: SparkSession): DataFrame = {
     val qtl = ss.read

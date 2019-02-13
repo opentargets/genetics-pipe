@@ -10,7 +10,7 @@ import ot.geckopipe.index.Indexable._
 object Nearest extends LazyLogging {
 
   // val features: Seq[String] = Seq("d", "inv_d", "biotype")
-  val features: Seq[String] = Seq("d", "inv_d")
+  val features: Seq[String] = Seq("feature", "type_id", "source_id", "d", "inv_d")
   val columns: Seq[String] =
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 

@@ -10,7 +10,7 @@ import ot.geckopipe.index.{GeneIndex, VariantIndex}
 import ot.geckopipe.index.Indexable._
 
 object Interval extends LazyLogging {
-  val features: Seq[String] = Seq("interval_score")
+  val features: Seq[String] = Seq("feature", "type_id", "source_id", "interval_score")
 
   case class IntervalRow(chrom: String, start: Long, end: Long, gene_id: String, bio_feature: String)
 
