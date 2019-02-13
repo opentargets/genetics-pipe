@@ -70,7 +70,7 @@ object V2GIndex extends LazyLogging  {
   /** columns to index the dataset */
   val indexColumns: Seq[String] = Seq("chr_id", "position")
   /** the whole list of columns this dataset will be outputing */
-  val columns: Seq[String] = (VariantIndex.columns ++ GeneIndex.columns ++ features).distinct
+  val columns: Seq[String] = (VariantIndex.columns ++ GeneIndex.idColumns ++ features).distinct
 
   /** set few columns to NaN and []
     *
