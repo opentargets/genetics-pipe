@@ -45,7 +45,7 @@ class Commands(val ss: SparkSession,
     nearestDts.table.show(false)
 
     val positionalDts = QTL(vIdx, c)
-//    positionalDts.table.show(false)
+    positionalDts.table.show(false)
 
     val intervalDt = Interval(vIdx, c)
 //    intervalDt.table.show(false)

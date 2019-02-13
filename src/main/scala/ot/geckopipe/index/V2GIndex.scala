@@ -117,9 +117,14 @@ object V2GIndex extends LazyLogging  {
         |order by source_id asc, feature asc
       """.stripMargin).cache
 
+    computedQtlQs.show(false)
+    computedIntervalQs.show(false)
+    computedNearestQs.show(false)
+
     // build and broadcast qtl and interval maps for the
     val qtlQs = ss.sparkContext
       .broadcast(fromQ2Map(computedQtlQs))
+
     val intervalQs = ss.sparkContext
       .broadcast(fromQ2Map(computedIntervalQs))
 
@@ -141,7 +146,7 @@ object V2GIndex extends LazyLogging  {
     })
 
     val setNearestScoreUDF = udf((source_id: String, feature: String, distance_score: Double) => {
-      val qns = intervalQs.value.apply(source_id).apply(feature)
+      val qns = nearestsQs.value.apply(source_id).apply(feature)
       qns.view.dropWhile(p => p._1 < distance_score).head._2
     })
 
@@ -165,7 +170,7 @@ object V2GIndex extends LazyLogging  {
     logger.info("build variant to gene dataset union the list of datasets")
 
     val allFeatures =
-      datasets.tail.foldLeft(datasets.head.features)((agg, el) => agg ++ el.features).distinct
+      datasets.foldLeft(Seq[String]())((agg, el) => agg ++ el.features).distinct
 
     val processedDts = datasets.map( el =>
       (allFeatures diff el.features).foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
