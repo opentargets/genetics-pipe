@@ -34,12 +34,6 @@ object Interval extends LazyLogging {
 
     val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/interval/"))
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
-    logger.info("load ensembl gene table and cache to enrich results")
-    val genes = GeneIndex(conf.ensembl.lut)
-      .sortByID
-      .table.selectBy(GeneIndex.indexColumns :+ "gene_id")
-      .withColumnRenamed("chr", "chr_id")
-      .cache()
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val interval = load(conf.interval.path)
@@ -48,7 +42,6 @@ object Interval extends LazyLogging {
       .withColumn("source_id", lower(col("tokens").getItem(1)))
       .withColumnRenamed("chrom", "chr_id")
       .drop("filename", "tokens")
-      .join(genes, Seq("chr_id", "gene_id"))
       .groupBy("chr_id", "start", "end", "gene_id", "type_id", "source_id", "feature")
       .agg(max(col("score")).as("interval_score"))
       .withColumn("position", explode(fromRangeToArray(col("start"), col("end"))))
