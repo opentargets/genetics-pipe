@@ -12,6 +12,8 @@ import ot.geckopipe.index.Indexable._
 object Interval extends LazyLogging {
   val features: Seq[String] = Seq("interval_score")
 
+  case class IntervalRow(chrom: String, start: Long, end: Long, gene_id: String, bio_feature: String)
+
   val schema = StructType(
     StructField("chr_id", StringType) ::
       StructField("position_start", LongType) ::
@@ -22,25 +24,21 @@ object Interval extends LazyLogging {
 
   def load(from: String)(implicit ss: SparkSession): DataFrame = {
     ss.read
-      .format("csv")
-      .option("header", "false")
-      .option("inferSchema", "false")
-      .option("delimiter","\t")
-      .option("mode", "DROPMALFORMED")
-      .schema(schema)
-      .load(from)
+      .parquet(from)
       .withColumn("filename", input_file_name)
-      .withColumn("feature", col("feature"))
+      .withColumnRenamed("bio_feature", "feature")
   }
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
-    val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/interval/"))
+    import ss.implicits._
 
+    val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/interval/"))
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
     logger.info("load ensembl gene table and cache to enrich results")
     val genes = GeneIndex(conf.ensembl.lut)
       .sortByID
-      .table.selectBy(GeneIndex.columns)
+      .table.selectBy(GeneIndex.indexColumns :+ "gene_id")
+      .withColumnRenamed("chr", "chr_id")
       .cache()
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
@@ -48,18 +46,19 @@ object Interval extends LazyLogging {
       .withColumn("tokens", extractValidTokensFromPathUDF(col("filename")))
       .withColumn("type_id", lower(col("tokens").getItem(0)))
       .withColumn("source_id", lower(col("tokens").getItem(1)))
-      .withColumn("feature", lower(col("tokens").getItem(2)))
+      .withColumnRenamed("chrom", "chr_id")
       .drop("filename", "tokens")
-      .join(genes, Seq("gene_id"))
-      .where(col("chr_id") === col("chr"))
-      .drop("chr")
-      .groupBy("chr_id", "position_start", "position_end", "gene_id", "type_id", "source_id", "feature")
+      .join(genes, Seq("chr_id", "gene_id"))
+      .groupBy("chr_id", "start", "end", "gene_id", "type_id", "source_id", "feature")
       .agg(max(col("score")).as("interval_score"))
-      .withColumn("position", explode(fromRangeToArray(col("position_start"), col("position_end"))))
-      .drop("position_start", "position_end", "score")
+      .withColumn("position", explode(fromRangeToArray(col("start"), col("end"))))
+      .drop("start", "end", "score")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
+      .sortWithinPartitions(col("chr_id").asc, col("position").asc)
 
-    val inTable = interval.join(vIdx.table, VariantIndex.columns)
+    interval.show(false)
+
+    val inTable = interval.join(vIdx.table, VariantIndex.indexColumns)
 
     new Component {
       /** unique column name list per component */

@@ -38,12 +38,14 @@ class Commands(val ss: SparkSession,
 
     val vIdx = VariantIndex.builder(c).load
 
-    val vepDts = VEP(c)
+//    val vepDts = VEP(c)
 //    val nearest = Nearest(vIdx, c)
 //    val positionalDts = QTL(vIdx, c)
-//    val intervalDt = Interval(vIdx, c)
+    val intervalDt = Interval(vIdx, c)
 
-    val dtSeq = Seq(vepDts/*, nearest, positionalDts, intervalDt*/)
+    intervalDt.table.show(false)
+
+    val dtSeq = Seq(/*vepDts, nearest, positionalDts*/ intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
     v2g.table.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
