@@ -6,13 +6,12 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import ot.geckopipe.index.V2GIndex.Component
-import ot.geckopipe.index.{GeneIndex, VariantIndex}
-import ot.geckopipe.index.Indexable._
+import ot.geckopipe.index.VariantIndex
 
 import scala.collection.mutable
 
 object VEP extends LazyLogging {
-  val features: Seq[String] = Seq("feature", "type_id", "source_id", "fpred_labels", "fpred_scores", "fpred_max_label", "fpred_max_score")
+  val features: Seq[String] = Seq("fpred_labels", "fpred_scores", "fpred_max_label", "fpred_max_score")
   val columns: Seq[String] =
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
@@ -60,13 +59,8 @@ object VEP extends LazyLogging {
       .filter(col("v2g_score").isNotNull)
   }
 
-  def apply(conf: Configuration)(implicit ss: SparkSession): Component = {
+  def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
     import ss.implicits._
-
-    val genes = GeneIndex(conf.ensembl.lut)
-      .sortByID
-      .table.selectBy(GeneIndex.indexColumns :+ "gene_id")
-      .cache()
 
     // from csqs table to a map to broadcast to all workers
     val csqsMap = loadConsequenceTable(conf.vep.homoSapiensConsScores)
@@ -90,9 +84,6 @@ object VEP extends LazyLogging {
     val getMaxCsqScore = udf( (labels: Seq[String], scores: Seq[Double]) =>
       (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._2
     )
-
-    val getMaxLabel = udf((p: (String, Double)) => p._1)
-    val getMaxScore = udf((p: (String, Double)) => p._2)
 
     logger.info("load VEP table from raw variant index")
     val raw = VariantIndex

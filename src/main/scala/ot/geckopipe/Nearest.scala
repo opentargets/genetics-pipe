@@ -10,7 +10,7 @@ import ot.geckopipe.index.Indexable._
 object Nearest extends LazyLogging {
 
   // val features: Seq[String] = Seq("d", "inv_d", "biotype")
-  val features: Seq[String] = Seq("feature", "type_id", "source_id", "d", "inv_d")
+  val features: Seq[String] = Seq("d", "inv_d")
   val columns: Seq[String] =
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
@@ -33,11 +33,12 @@ object Nearest extends LazyLogging {
       .withColumn("source_id", lit("canonical_tss"))
       .withColumn("feature", lit("unspecified"))
 
+    val selectCols = columns ++ Seq("type_id", "source_id", "feature")
     val nearestPairs = nearests.join(genes, (col("chr_id") === col("chr")) and
       (abs(col("position") - col("tss")) <= tssDistance))
       .withColumn("d",  abs(col("position") - col("tss")))
       .withColumn("inv_d", lit(1.0) / col("d"))
-      .select(columns.head, columns.tail:_*)
+      .select(selectCols.head, selectCols.tail:_*)
 
     new Component {
       /** unique column name list per component */

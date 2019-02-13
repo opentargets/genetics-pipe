@@ -6,11 +6,10 @@ import org.apache.spark.sql.types._
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import ot.geckopipe.functions._
 import ot.geckopipe.index.V2GIndex.Component
-import ot.geckopipe.index.{GeneIndex, VariantIndex}
-import ot.geckopipe.index.Indexable._
+import ot.geckopipe.index.VariantIndex
 
 object Interval extends LazyLogging {
-  val features: Seq[String] = Seq("feature", "type_id", "source_id", "interval_score")
+  val features: Seq[String] = Seq("interval_score")
 
   case class IntervalRow(chrom: String, start: Long, end: Long, gene_id: String, bio_feature: String)
 
@@ -30,8 +29,6 @@ object Interval extends LazyLogging {
   }
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
-    import ss.implicits._
-
     val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/interval/"))
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
 
@@ -49,7 +46,9 @@ object Interval extends LazyLogging {
       .repartitionByRange(col("chr_id").asc, col("position").asc)
       .sortWithinPartitions(col("chr_id").asc, col("position").asc)
 
-    val inTable = interval.join(vIdx.table, VariantIndex.indexColumns)
+    val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
+
+    val inTable = interval.join(vIdxS, VariantIndex.indexColumns)
 
     new Component {
       /** unique column name list per component */
