@@ -30,8 +30,6 @@ object V2DIndex extends LazyLogging  {
       (col("A_alt") === col("lead_alt")),"left_outer")
       .drop("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
 
-    svPairsOverlap.show(false)
-
     // ED WILL FIX THIS PROBLEMATIC ISSUE ABOUT TOPLOCI -> EXPANDED ONE
     // EACH TOPLOCI MUST BE IN THE EXPANDED TABLE
     val joinCols = Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt",

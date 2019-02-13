@@ -117,10 +117,6 @@ object VEP extends LazyLogging {
       .withColumn("fpred_max_score", getMaxCsqScore(col("fpred_labels"), col("fpred_scores")))
       .where(col("fpred_max_score") > 0F)
 
-
-    // TODO finish the VEP
-    veps.show(false)
-
     new Component {
       /** unique column name list per component */
       override val features: Seq[String] = VEP.features

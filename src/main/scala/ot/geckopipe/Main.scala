@@ -43,8 +43,6 @@ class Commands(val ss: SparkSession,
     val positionalDts = QTL(vIdx, c)
     val intervalDt = Interval(vIdx, c)
 
-    intervalDt.table.show(false)
-
     val dtSeq = Seq(vepDts, nearest, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
@@ -104,7 +102,7 @@ class Commands(val ss: SparkSession,
     variantIndex()
     dictionaries()
     variantToDisease()
-    distanceNearest()
+    variantToGene()
   }
 }
 

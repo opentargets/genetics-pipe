@@ -49,8 +49,6 @@ object Interval extends LazyLogging {
       .repartitionByRange(col("chr_id").asc, col("position").asc)
       .sortWithinPartitions(col("chr_id").asc, col("position").asc)
 
-    interval.show(false)
-
     val inTable = interval.join(vIdx.table, VariantIndex.indexColumns)
 
     new Component {
