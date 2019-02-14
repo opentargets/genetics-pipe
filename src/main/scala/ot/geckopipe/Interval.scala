@@ -9,7 +9,7 @@ import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.index.VariantIndex
 
 object Interval extends LazyLogging {
-  val features: Seq[String] = Seq("interval_score")
+  val features: Seq[String] = Seq("interval_score", "interval_score_q")
 
   case class IntervalRow(chrom: String, start: Long, end: Long, gene_id: String, bio_feature: String)
 
@@ -50,10 +50,14 @@ object Interval extends LazyLogging {
 
     val inTable = interval.join(vIdxS,VariantIndex.indexColumns)
 
+    // get a table to compute deciles
+    inTable.createOrReplaceTempView("interval_table")
+    val intWP = computePercentile(inTable, "interval_table", "interval_score", "interval_score_q")
+
     new Component {
       /** unique column name list per component */
       override val features: Seq[String] = Interval.features
-      override val table: DataFrame = inTable
+      override val table: DataFrame = intWP
     }
   }
 }

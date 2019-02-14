@@ -8,7 +8,7 @@ import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.index.VariantIndex
 
 object QTL extends LazyLogging {
-  val features: Seq[String] = Seq("qtl_beta", "qtl_se", "qtl_pval", "qtl_score")
+  val features: Seq[String] = Seq("qtl_beta", "qtl_se", "qtl_pval", "qtl_score", "qtl_score_q")
 
   def load(from: String)(implicit ss: SparkSession): DataFrame = {
     val qtl = ss.read
@@ -43,10 +43,14 @@ object QTL extends LazyLogging {
     val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
     val qtlTable = qtls.join(vIdxS, VariantIndex.columns)
 
+    // get a table to compute deciles
+    qtlTable.createOrReplaceTempView("qtl_table")
+    val qtlWP = computePercentile(qtlTable, "qtl_table", "qtl_score", "qtl_score_q")
+
     new Component {
       /** unique column name list per component */
       override val features: Seq[String] = QTL.features
-      override val table: DataFrame = qtlTable
+      override val table: DataFrame = qtlWP
     }
   }
 }

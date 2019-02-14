@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{Column, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
+import ot.geckopipe.index.V2GIndex.logger
 import ot.geckopipe.index.VariantIndex
 
 import scala.util.{Failure, Success, Try}
@@ -136,7 +137,6 @@ object functions extends LazyLogging {
   }
 
   val decileList: Seq[Double] = (10 to 100 by 10).map(_ / 100D)
-
   /** it maps source_id -> feature -> Seq[(quantile value, quantile number)]
     * gtex_v5 -> whole_blood -> [(0.356, 0.2)]
     */
@@ -159,5 +159,38 @@ object functions extends LazyLogging {
         .groupBy(_._1)
         .mapValues(_.flatMap(_._2)).map(identity))
       .map(identity)
+  }
+
+  def computePercentile(ds: DataFrame, tableName: String,
+                        scoreField: String, percentileField: String)
+                       (implicit ss: SparkSession): DataFrame = {
+    logger.info(s"compute quantiles for $scoreField")
+
+    val quantilesDF = ss.sqlContext.sql(
+      s"""
+         |select
+         | source_id,
+         | feature,
+         | percentile_approx(${scoreField}, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as ${percentileField}
+         |from ${tableName}
+         |group by source_id, feature
+         |order by source_id asc, feature asc
+      """.stripMargin)
+
+    // build and broadcast qtl and interval maps for the
+    val quantiles = ss.sparkContext
+      .broadcast(fromQ2Map(quantilesDF))
+
+
+    val setQuantilesUDF = udf((source_id: String, feature: String, qtl_score: Double) => {
+      val qns = quantiles.value.apply(source_id).apply(feature)
+      qns.view.dropWhile(p => p._1 < qtl_score).head._2
+    })
+
+    val qdf = ds
+      .withColumn(percentileField, when(col(scoreField).isNotNull,
+        setQuantilesUDF(col("source_id"), col("feature"), col(scoreField))))
+
+    qdf
   }
 }

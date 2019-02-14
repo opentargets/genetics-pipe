@@ -4,7 +4,6 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
 
@@ -75,38 +74,6 @@ object V2GIndex extends LazyLogging  {
   /** the whole list of columns this dataset will be outputing */
   val columns: Seq[String] = (VariantIndex.columns ++ GeneIndex.idColumns ++ features).distinct
 
-  def computePercentile(ds: DataFrame, tableName: String, scoreField: String)(implicit ss: SparkSession): DataFrame = {
-    logger.info(s"compute quantiles for $scoreField")
-
-    val quantilesDF = ss.sqlContext.sql(
-    s"""
-         |select
-        | source_id,
-        | feature,
-        | percentile_approx(${scoreField}, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as ${scoreField}_q
-        |from ${tableName}
-        |where ${scoreField} is not NULL
-        |group by source_id, feature
-        |order by source_id asc, feature asc
-      """.stripMargin)
-
-    // build and broadcast qtl and interval maps for the
-    val quantiles = ss.sparkContext
-      .broadcast(fromQ2Map(quantilesDF))
-
-
-    val setQuantilesUDF = udf((source_id: String, feature: String, qtl_score: Double) => {
-      val qns = quantiles.value.apply(source_id).apply(feature)
-      qns.view.dropWhile(p => p._1 < qtl_score).head._2
-    })
-
-    val qdf = ds
-      .withColumn(scoreField + "_q", when(col(scoreField).isNotNull,
-        setQuantilesUDF(col("source_id"), col("feature"), col(scoreField))))
-
-    qdf
-  }
-
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   def build(datasets: Seq[Component], vIdx: VariantIndex, conf: Configuration)
            (implicit ss: SparkSession): V2GIndex = {
@@ -121,16 +88,7 @@ object V2GIndex extends LazyLogging  {
     )
 
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
-
-    // get a table to compute deciles
-    allDts.createOrReplaceTempView("v2g_table")
-
-    //val postDts = fillAndCompute(allDts)
-
-    val computedDS = List("qtl_score", "interval_score", "distance_score")
-      .foldLeft(allDts)((agg, scoreField) => computePercentile(agg, "v2g_table", scoreField))
-
-    new V2GIndex(computedDS)
+    new V2GIndex(allDts)
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
