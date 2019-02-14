@@ -37,18 +37,18 @@ object Interval extends LazyLogging {
       .withColumn("tokens", extractValidTokensFromPathUDF(col("filename")))
       .withColumn("type_id", lower(col("tokens").getItem(0)))
       .withColumn("source_id", lower(col("tokens").getItem(1)))
-      .withColumnRenamed("chrom", "chr_id")
       .drop("filename", "tokens")
-      .groupBy("chr_id", "start", "end", "gene_id", "type_id", "source_id", "feature")
+      .groupBy("chrom", "start", "end", "gene_id", "type_id", "source_id", "feature")
       .agg(max(col("score")).as("interval_score"))
       .withColumn("position", explode(fromRangeToArray(col("start"), col("end"))))
-      .drop("start", "end", "score")
+      .withColumnRenamed("chrom", "chr_id")
+      .drop("score", "start", "end")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
       .sortWithinPartitions(col("chr_id").asc, col("position").asc)
 
     val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
 
-    val inTable = interval.join(vIdxS, VariantIndex.indexColumns)
+    val inTable = interval.join(vIdxS,VariantIndex.indexColumns)
 
     new Component {
       /** unique column name list per component */

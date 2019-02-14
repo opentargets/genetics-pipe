@@ -39,16 +39,12 @@ class Commands(val ss: SparkSession,
     val vIdx = VariantIndex.builder(c).load
 
     val vepDts = VEP(vIdx, c)
-    vepDts.table.show(false)
 
     val nearestDts = Nearest(vIdx, c)
-    nearestDts.table.show(false)
 
     val positionalDts = QTL(vIdx, c)
-    positionalDts.table.show(false)
 
     val intervalDt = Interval(vIdx, c)
-//    intervalDt.table.show(false)
 
     val dtSeq = Seq(vepDts, nearestDts, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
