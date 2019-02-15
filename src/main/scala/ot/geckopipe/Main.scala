@@ -6,7 +6,6 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import ot.geckopipe.index._
-import ot.geckopipe.functions._
 import ot.geckopipe.index.Indexable._
 import scopt.OptionParser
 import org.apache.spark.sql.functions._
@@ -68,11 +67,14 @@ class Commands(val ss: SparkSession,
     val v2d = V2DIndex.load(c)
 
     // v2d also contains rows with both null and we dont want those to be included
-    val merged = v2d.table
+    val _ = v2d.table
       .where(col("r2").isNotNull or col("posterior_prob").isNotNull)
-      .join(v2g.table, VariantIndex.columns)
-
-    saveToJSON(merged, c.output.stripSuffix("/").concat("/d2v2g/"))
+      .join(v2g.table, col("chr_id") === col("tag_chrom") and
+        (col("position") === col("tag_pos")) and
+        (col("ref_allele") === col("tag_ref")) and
+        (col("alt_allele") === col("tag_alt")))
+      .drop(VariantIndex.columns:_*)
+      .saveToJSON(c.output.stripSuffix("/").concat("/d2v2g/"))
   }
 
   def dictionaries(): Unit = {
@@ -106,6 +108,7 @@ class Commands(val ss: SparkSession,
     dictionaries()
     variantToDisease()
     variantToGene()
+    diseaseToVariantToGene()
   }
 }
 

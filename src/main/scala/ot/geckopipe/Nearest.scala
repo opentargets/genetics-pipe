@@ -18,6 +18,7 @@ object Nearest extends LazyLogging {
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
     Nearest(vIdx, conf, conf.nearest.tssDistance, Set("protein_coding"))
   }
+
   def apply(vIdx: VariantIndex, conf: Configuration, tssDistance: Long, biotypes: Set[String])
            (implicit ss: SparkSession): Component = {
 

@@ -193,4 +193,13 @@ object functions extends LazyLogging {
 
     qdf
   }
+
+  object Implicits {
+    implicit class ImplicitDataFrameFunctions(df: DataFrame) {
+      def withColumnListRenamed(columns: Seq[String], f: String => String): DataFrame = {
+        val zippedCols = columns zip columns.map(f(_))
+        zippedCols.foldLeft(df)((df, zippedCols) => df.withColumnRenamed(zippedCols._1, zippedCols._2))
+      }
+    }
+  }
 }
