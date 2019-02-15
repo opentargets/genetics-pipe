@@ -73,7 +73,7 @@ object VariantIndex {
           .groupByKey(r => (r.chr_id, r.position, r.ref_allele, r.alt_allele))
           .reduceGroups((r1, r2) => if (r1.d < r2.d) r1 else r2)
           .map(_._2)
-          .toDF.withColumnRenamed("d", "gene_id__any_distance")
+          .toDF.withColumnRenamed("d", "gene_id_any_distance")
           .withColumnRenamed("gene_id", "gene_id_any")
 
         val nearestsPC = Nearest(vidx, conf,
