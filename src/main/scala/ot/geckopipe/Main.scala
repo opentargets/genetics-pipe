@@ -68,7 +68,7 @@ class Commands(val ss: SparkSession,
 
     // v2d also contains rows with both null and we dont want those to be included
     val _ = v2d.table
-      .where(col("r2").isNotNull or col("posterior_prob").isNotNull)
+      .where(col("overall_r2").isNotNull or col("posterior_prob").isNotNull)
       .join(v2g.table, col("chr_id") === col("tag_chrom") and
         (col("position") === col("tag_pos")) and
         (col("ref_allele") === col("tag_ref")) and
