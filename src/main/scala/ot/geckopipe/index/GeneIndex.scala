@@ -41,6 +41,7 @@ object GeneIndex {
     */
   val columns: Seq[String] = Seq("chr", "gene_id", "tss", "start", "end", "biotype")
   val indexColumns: Seq[String] = Seq("chr")
+  val idColumns: Seq[String] = Seq("gene_id")
 
   /** load and transform lut gene from ensembl
     *

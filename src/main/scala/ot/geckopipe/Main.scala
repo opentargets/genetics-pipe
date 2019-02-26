@@ -6,13 +6,15 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import ot.geckopipe.index._
-import ot.geckopipe.functions._
 import ot.geckopipe.index.Indexable._
 import scopt.OptionParser
 import org.apache.spark.sql.functions._
 import pureconfig.generic.auto._
 
-class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configuration) extends LazyLogging {
+class Commands(val ss: SparkSession,
+               val sampleFactor: Double,
+               val c: Configuration)
+    extends LazyLogging {
   implicit val sSesion: SparkSession = ss
   implicit val sFactor: Double = sampleFactor
 
@@ -35,12 +37,15 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
 
     val vIdx = VariantIndex.builder(c).load
 
-    val vepDts = VEP(c)
-    val nearest = Nearest(vIdx, c)
+    val vepDts = VEP(vIdx, c)
+
+    val nearestDts = Nearest(vIdx, c)
+
     val positionalDts = QTL(vIdx, c)
+
     val intervalDt = Interval(vIdx, c)
 
-    val dtSeq = Seq(vepDts, nearest, positionalDts, intervalDt)
+    val dtSeq = Seq(vepDts, nearestDts, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
     v2g.table.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
@@ -62,30 +67,38 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val v2d = V2DIndex.load(c)
 
     // v2d also contains rows with both null and we dont want those to be included
-    val merged = v2d.table
-      .where(col("r2").isNotNull or col("posterior_prob").isNotNull)
-      .join(v2g.table, VariantIndex.columns)
-
-    saveToJSON(merged, c.output.stripSuffix("/").concat("/d2v2g/"))
+    val _ = v2d.table
+      .where(col("overall_r2").isNotNull or col("posterior_prob").isNotNull)
+      .join(v2g.table, col("chr_id") === col("tag_chrom") and
+        (col("position") === col("tag_pos")) and
+        (col("ref_allele") === col("tag_ref")) and
+        (col("alt_allele") === col("tag_alt")))
+      .drop(VariantIndex.columns:_*)
+      .saveToJSON(c.output.stripSuffix("/").concat("/d2v2g/"))
   }
 
   def dictionaries(): Unit = {
     logger.info("exec variant-gene-luts command")
 
     logger.info("generate lut for variant index")
-    VariantIndex.builder(c)
+    VariantIndex
+      .builder(c)
       .load
-      .flatten.table.write
+      .flatten
+      .table
+      .write
       .json(c.output.stripSuffix("/").concat("/lut/variant-index/"))
 
     logger.info("generate lut for studies")
 
-    V2DIndex.buildStudiesIndex(c.variantDisease.studies)
+    V2DIndex
+      .buildStudiesIndex(c.variantDisease.studies)
       .write
       .json(c.output.stripSuffix("/").concat("/lut/study-index/"))
 
     logger.info("generate lut for overlapping index")
-    V2DIndex.buildOverlapIndex(c.variantDisease.overlapping)
+    V2DIndex
+      .buildOverlapIndex(c.variantDisease.overlapping)
       .write
       .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
   }
@@ -94,11 +107,14 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     variantIndex()
     dictionaries()
     variantToDisease()
-    distanceNearest()
+    variantToGene()
+    diseaseToVariantToGene()
   }
 }
 
-case class CommandLineArgs(file: String = "", kwargs: Map[String,String] = Map(), command: Option[String] = None)
+case class CommandLineArgs(file: String = "",
+                           kwargs: Map[String, String] = Map(),
+                           command: Option[String] = None)
 
 object Main extends LazyLogging {
   val progName: String = "ot-geckopipe"
@@ -118,16 +134,17 @@ object Main extends LazyLogging {
   def run(config: CommandLineArgs): Unit = {
     println(s"running $progName")
     val conf = if (config.file.nonEmpty) {
-        logger.info(s"loading configuration from commandline as ${config.file}")
-        pureconfig.loadConfig[Configuration](Paths.get(config.file))
-      } else {
-        logger.info("load configuration from package resource")
-        pureconfig.loadConfig[Configuration]
-      }
+      logger.info(s"loading configuration from commandline as ${config.file}")
+      pureconfig.loadConfig[Configuration](Paths.get(config.file))
+    } else {
+      logger.info("load configuration from package resource")
+      pureconfig.loadConfig[Configuration]
+    }
 
     conf match {
       case Right(c) =>
-        logger.debug(s"running with cli args $config and with default configuracion $c")
+        logger.debug(
+          s"running with cli args $config and with default configuracion $c")
         val logLevel = c.logLevel
 
         val conf: SparkConf =
@@ -177,7 +194,8 @@ object Main extends LazyLogging {
 
         ss.stop
 
-      case Left(failures) => println(s"configuration contains errors like ${failures.toString}")
+      case Left(failures) =>
+        println(s"configuration contains errors like ${failures.toString}")
     }
     println("closing app... done.")
   }
@@ -191,51 +209,51 @@ object Main extends LazyLogging {
     }
   }
 
-  val parser:OptionParser[CommandLineArgs] = new OptionParser[CommandLineArgs](progName) {
-    head(progName)
+  val parser: OptionParser[CommandLineArgs] =
+    new OptionParser[CommandLineArgs](progName) {
+      head(progName)
 
-    opt[String]("file")
-      .abbr("f")
-      .valueName("<config-file>")
-      .action( (x, c) => c.copy(file = x) )
-      .text("file contains the configuration needed to run the pipeline")
+      opt[String]("file")
+        .abbr("f")
+        .valueName("<config-file>")
+        .action((x, c) => c.copy(file = x))
+        .text("file contains the configuration needed to run the pipeline")
 
-    opt[Map[String,String]]("kwargs")
-      .valueName("k1=v1,k2=v2...")
-      .action( (x, c) => c.copy(kwargs = x) )
-      .text("other arguments")
+      opt[Map[String, String]]("kwargs")
+        .valueName("k1=v1,k2=v2...")
+        .action((x, c) => c.copy(kwargs = x))
+        .text("other arguments")
 
+      cmd("distance-nearest")
+        .action((_, c) => c.copy(command = Some("distance-nearest")))
+        .text("generate distance nearest based dataset (chr == 1)")
 
-    cmd("distance-nearest")
-      .action( (_, c) => c.copy(command = Some("distance-nearest")) )
-      .text("generate distance nearest based dataset (chr == 1)")
+      cmd("variant-index")
+        .action((_, c) => c.copy(command = Some("variant-index")))
+        .text("generate variant index from VEP file")
 
-    cmd("variant-index")
-      .action( (_, c) => c.copy(command = Some("variant-index")) )
-      .text("generate variant index from VEP file")
+      cmd("variant-gene")
+        .action((_, c) => c.copy(command = Some("variant-gene")))
+        .text("generate variant to gene table")
 
-    cmd("variant-gene").
-      action( (_, c) => c.copy(command = Some("variant-gene")))
-      .text("generate variant to gene table")
+      cmd("variant-disease")
+        .action((_, c) => c.copy(command = Some("variant-disease")))
+        .text("generate variant to disease table")
 
-    cmd("variant-disease").
-      action( (_, c) => c.copy(command = Some("variant-disease")))
-      .text("generate variant to disease table")
+      cmd("disease-variant-gene")
+        .action((_, c) => c.copy(command = Some("disease-variant-gene")))
+        .text("generate disease to variant to gene table")
 
-    cmd("disease-variant-gene").
-      action( (_, c) => c.copy(command = Some("disease-variant-gene")))
-      .text("generate disease to variant to gene table")
+      cmd("dictionaries")
+        .action((_, c) => c.copy(command = Some("dictionaries")))
+        .text("generate variant to gene lookup tables")
 
-    cmd("dictionaries").
-      action( (_, c) => c.copy(command = Some("dictionaries")))
-      .text("generate variant to gene lookup tables")
+      cmd("build-all")
+        .action((_, c) => c.copy(command = Some("build-all")))
+        .text("generate variant index, dictionaries, v2d, v2g, and d2v2g")
 
-    cmd("build-all").
-      action( (_, c) => c.copy(command = Some("build-all")))
-      .text("generate variant index, dictionaries, v2d, v2g, and d2v2g")
+      note(entryText)
 
-    note(entryText)
-
-    override def showUsageOnError = true
-  }
+      override def showUsageOnError = true
+    }
 }

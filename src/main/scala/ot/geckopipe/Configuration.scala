@@ -10,7 +10,7 @@ case class GTExSection(tissueMap: String, variantGenePairs: String)
 
 case class EnsemblSection(lut: String)
 
-case class VEPSection(homoSapiensCons: String, homoSapiensConsScores: String)
+case class VEPSection(homoSapiensConsScores: String)
 
 case class IntervalSection(path: String)
 
