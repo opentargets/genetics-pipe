@@ -56,7 +56,7 @@ object V2GIndex extends LazyLogging  {
       StructField("max_qtl", DoubleType) ::
       StructField("max_int", DoubleType) ::
       StructField("max_fpred", DoubleType) ::
-      StructField("d", DoubleType) ::
+      StructField("d", LongType) ::
       StructField("distance_score", DoubleType) ::
       StructField("distance_score_q", DoubleType) ::
       StructField("source_score", DoubleType) ::
