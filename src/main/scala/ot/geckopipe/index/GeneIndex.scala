@@ -5,9 +5,6 @@ import org.apache.spark.sql.{DataFrame, SparkSession}
 
 /** This class represents a full table of gene with its transcripts grch37 */
 class GeneIndex(val table: DataFrame) {
-  def filterBiotypes(biotypes: Set[String]): GeneIndex = new GeneIndex(
-    table.where(col("biotype") isInCollection biotypes))
-
   def sortByTSS: GeneIndex = new GeneIndex(
     table.sortWithinPartitions(col("chr").asc, col("tss").asc))
 
@@ -17,12 +14,26 @@ class GeneIndex(val table: DataFrame) {
 
 /** Companion object to build the GeneIndex class */
 object GeneIndex {
-  val biotypes: Set[String] = Set("3prime_overlapping_ncrna", "antisense", "IG_C_gene",
-    "IG_C_pseudogene", "IG_D_gene", "IG_J_gene", "IG_J_pseudogene", "IG_V_gene",
-    "IG_V_pseudogene", "lincRNA", "miRNA", "misc_RNA", "Mt_rRNA", "Mt_tRNA",
-    "polymorphic_pseudogene", "processed_transcript", "protein_coding", "pseudogene",
-    "rRNA", "sense_intronic", "sense_overlapping", "snoRNA", "snRNA", "TR_C_gene",
-    "TR_D_gene", "TR_J_gene", "TR_J_pseudogene", "TR_V_gene", "TR_V_pseudogene")
+  val biotypes: Set[String] = Set(
+    "IG_C_pseudogene",
+    "IG_J_pseudogene",
+    "IG_pseudogene",
+    "IG_V_pseudogene",
+    "polymorphic_pseudogene",
+    "processed_pseudogene",
+    "pseudogene",
+    "rRNA",
+    "rRNA_pseudogene",
+    "snoRNA",
+    "snRNA",
+    "transcribed_processed_pseudogene",
+    "transcribed_unitary_pseudogene",
+    "transcribed_unprocessed_pseudogene",
+    "TR_J_pseudogene",
+    "TR_V_pseudogene",
+    "unitary_pseudogene",
+    "unprocessed_pseudogene")
+  val chromosomes: Set[String] = Set("MT")
 
   /** A subset of all possible gene columns that can be included
     *
@@ -52,8 +63,9 @@ object GeneIndex {
   def apply(from: String)(implicit ss: SparkSession): GeneIndex = {
     val indexCols = indexColumns.map(c => col(c).asc)
     val genes = ss.read.json(from)
+      .where(!(col("biotype") isInCollection biotypes) and
+        !(col("chr") isInCollection chromosomes))
       .repartitionByRange(indexCols:_*)
-      .where(col("biotype") isInCollection biotypes)
 
     new GeneIndex(genes)
   }

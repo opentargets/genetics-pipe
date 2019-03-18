@@ -26,14 +26,6 @@ object V2DIndex extends LazyLogging  {
         StructField("n_cases", LongType) ::
         StructField("trait_category", DoubleType) ::
         StructField("num_assoc_loci", LongType) ::
-        StructField("B_study_id", ArrayType(StringType)) ::
-        StructField("B_chrom", ArrayType(StringType)) ::
-        StructField("B_pos", ArrayType(LongType)) ::
-        StructField("B_ref", ArrayType(StringType)) ::
-        StructField("b_alt", ArrayType(StringType)) ::
-        StructField("AB_overlap", ArrayType(LongType)) ::
-        StructField("A_distinct", ArrayType(LongType)) ::
-        StructField("B_distinct", ArrayType(LongType)) ::
         StructField("lead_chrom", StringType) ::
         StructField("lead_pos", LongType) ::
         StructField("lead_ref", StringType) ::
@@ -64,9 +56,10 @@ object V2DIndex extends LazyLogging  {
   def build(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
     val studies = buildStudiesIndex(conf.variantDisease.studies).cache()
     val topLoci = buildTopLociIndex(conf.variantDisease.toploci).cache()
-    val ldLoci = buildLDIndex(conf.variantDisease.ld).cache()
+    val ldLoci = buildLDIndex(conf.variantDisease.ld)
+      .drop("ld_available")
+      .cache()
     val fmLoci = buildFMIndex(conf.variantDisease.finemapping).cache()
-    val overlapStudies = buildOverlapIndex(conf.variantDisease.overlapping).cache()
 
     val svPairs = studies.join(topLoci, "study_id")
       .orderBy(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt")).cache()
@@ -76,28 +69,24 @@ object V2DIndex extends LazyLogging  {
       svPairs.where(col("pval").isNull).show(false)
     }
 
-    val svPairsOverlap = svPairs.join(overlapStudies, (col("study_id") === col("A_study_id")) and
-      (col("A_chrom") === col("lead_chrom")) and
-      (col("A_pos") === col("lead_pos")) and
-      (col("A_ref") === col("lead_ref")) and
-      (col("A_alt") === col("lead_alt")),"left_outer")
-      .drop("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
-
     // ED WILL FIX THIS PROBLEMATIC ISSUE ABOUT TOPLOCI -> EXPANDED ONE
     // EACH TOPLOCI MUST BE IN THE EXPANDED TABLE
     val joinCols = Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt",
       "tag_chrom", "tag_pos", "tag_ref", "tag_alt")
     val ldAndFm = ldLoci.join(fmLoci, joinCols, "full_outer")
-    val indexExpanded = svPairsOverlap.join(ldAndFm,
+    val indexExpanded = svPairs.join(ldAndFm,
       Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt"))
-//      .withColumn("variant_id", when(col("tag_variant_id").isNull, col("index_variant_id"))
-//        .otherwise(col("tag_variant_id")))
 
     logger.whenDebugEnabled {
       indexExpanded.where(col("pval").isNull).show(false)
     }
 
-    V2DIndex(indexExpanded)
+    V2DIndex(indexExpanded.join(vIdx.table,
+      col("chr_id") === col("tag_chrom") and
+      (col("position") === col("tag_pos") and
+        (col("ref_allele") === col("tag_ref") and
+          (col("alt_allele") === col("tag_alt")))), "inner")
+    )
   }
 
   def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame =

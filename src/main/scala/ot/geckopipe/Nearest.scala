@@ -23,7 +23,6 @@ object Nearest extends LazyLogging {
            (implicit ss: SparkSession): Component = {
 
     val genes = GeneIndex(conf.ensembl.lut)
-      .filterBiotypes(biotypes)
       .sortByTSS
       .table.selectBy(GeneIndex.columns)
       .cache()
