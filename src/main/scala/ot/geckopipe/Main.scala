@@ -101,14 +101,20 @@ class Commands(val ss: SparkSession,
       .buildOverlapIndex(c.variantDisease.overlapping)
       .write
       .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
+
+    GeneIndex(c.ensembl.lut)
+      .sortByID
+      .table
+      .write
+      .json(c.output.stripSuffix("/").concat("/lut/genes-index/"))
   }
 
   def buildAll(): Unit = {
     variantIndex()
     dictionaries()
     variantToDisease()
-    variantToGene()
-    diseaseToVariantToGene()
+//    variantToGene()
+//    diseaseToVariantToGene()
   }
 }
 
