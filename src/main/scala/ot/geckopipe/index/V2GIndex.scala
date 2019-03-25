@@ -83,8 +83,11 @@ object V2GIndex extends LazyLogging  {
     val geneIDs = GeneIndex(conf.ensembl.lut)
       .sortByID
       .table.selectBy(GeneIndex.idColumns)
-      .collect().toSet
+      .collect()
+      .map(_.getString(0))
+      .toSet
 
+      // df.select("id").map(_.getString(0)).collect.toList
     val geneIDsBc = ss.sparkContext.broadcast(geneIDs)
 
     logger.info("build variant to gene dataset union the list of datasets")
