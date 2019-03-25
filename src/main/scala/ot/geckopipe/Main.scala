@@ -113,8 +113,8 @@ class Commands(val ss: SparkSession,
     variantIndex()
     dictionaries()
     variantToDisease()
-//    variantToGene()
-//    diseaseToVariantToGene()
+    variantToGene()
+    diseaseToVariantToGene()
   }
 }
 
