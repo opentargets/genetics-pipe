@@ -6,6 +6,7 @@ import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
 import ot.geckopipe.functions._
 import ot.geckopipe.{Chromosomes, Configuration}
+import ot.geckopipe.index.Indexable._
 
 /** represents a cached table of variants with all variant columns
   *
@@ -78,16 +79,29 @@ object V2GIndex extends LazyLogging  {
   def build(datasets: Seq[Component], vIdx: VariantIndex, conf: Configuration)
            (implicit ss: SparkSession): V2GIndex = {
 
+    logger.info("generate a set of genes resulting from bio exclusion and chromosome lists")
+    val geneIDs = GeneIndex(conf.ensembl.lut)
+      .sortByID
+      .table.selectBy(GeneIndex.idColumns)
+      .collect()
+      .map(_.getString(0))
+      .toSet
+
+      // df.select("id").map(_.getString(0)).collect.toList
+    val geneIDsBc = ss.sparkContext.broadcast(geneIDs)
+
     logger.info("build variant to gene dataset union the list of datasets")
 
     val allFeatures =
       datasets.foldLeft(Seq[String]())((agg, el) => agg ++ el.features).distinct
 
     val processedDts = datasets.map( el =>
-      (allFeatures diff el.features).foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
+      (allFeatures diff el.features)
+        .foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
     )
 
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
+      .filter(col("gene_id") isInCollection geneIDsBc.value)
     new V2GIndex(allDts)
   }
 

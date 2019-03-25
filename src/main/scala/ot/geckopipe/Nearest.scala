@@ -2,6 +2,7 @@ package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
+import org.apache.spark.sql.types.DoubleType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.functions._
@@ -23,7 +24,6 @@ object Nearest extends LazyLogging {
            (implicit ss: SparkSession): Component = {
 
     val genes = GeneIndex(conf.ensembl.lut)
-      .filterBiotypes(biotypes)
       .sortByTSS
       .table.selectBy(GeneIndex.columns)
       .cache()
@@ -39,7 +39,8 @@ object Nearest extends LazyLogging {
     val nearestPairs = nearests.join(genes, (col("chr_id") === col("chr")) and
       (abs(col("position") - col("tss")) <= tssDistance))
       .withColumn("d",  abs(col("position") - col("tss")))
-      .withColumn("distance_score", lit(1.0) / col("d"))
+      .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d"))
+        .otherwise(Double.MinPositiveValue))
 
     // get a table to compute deciles
     nearestPairs.createOrReplaceTempView("nearest_table")
