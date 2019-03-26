@@ -81,11 +81,12 @@ object V2DIndex extends LazyLogging  {
       indexExpanded.where(col("pval").isNull).show(false)
     }
 
-    V2DIndex(indexExpanded.join(vIdx.table,
+    V2DIndex(indexExpanded.join(vIdx.table.select("chr_id", "position", "ref_allele", "alt_allele"),
       col("chr_id") === col("tag_chrom") and
       (col("position") === col("tag_pos") and
         (col("ref_allele") === col("tag_ref") and
           (col("alt_allele") === col("tag_alt")))), "inner")
+        .drop("chr_id", "position", "ref_allele", "alt_allele")
     )
   }
 
