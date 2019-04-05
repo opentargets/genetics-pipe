@@ -28,7 +28,7 @@ class Commands(val ss: SparkSession,
     logger.info("exec distance-nearest command")
     val vIdx = VariantIndex.builder(c).load
 
-    val nearestDF = Nearest(vIdx, c)
+    val nearestDF = Distance(vIdx, c)
     nearestDF.table.write.json(c.nearest.path)
   }
 
@@ -39,7 +39,7 @@ class Commands(val ss: SparkSession,
 
     val vepDts = VEP(vIdx, c)
 
-    val nearestDts = Nearest(vIdx, c)
+    val nearestDts = Distance(vIdx, c)
 
     val positionalDts = QTL(vIdx, c)
 

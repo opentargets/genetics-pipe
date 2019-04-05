@@ -2,14 +2,13 @@ package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.types.DoubleType
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import ot.geckopipe.index.V2GIndex.Component
 import ot.geckopipe.functions._
 import ot.geckopipe.index.{GeneIndex, VariantIndex}
 import ot.geckopipe.index.Indexable._
 
-object Nearest extends LazyLogging {
+object Distance extends LazyLogging {
 
   // val features: Seq[String] = Seq("d", "inv_d", "biotype")
   val features: Seq[String] = Seq("d", "distance_score", "distance_score_q")
@@ -17,13 +16,13 @@ object Nearest extends LazyLogging {
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
-    Nearest(vIdx, conf, conf.nearest.tssDistance, Set("protein_coding"))
+    Distance(vIdx, conf, conf.nearest.tssDistance, GeneIndex.biotypes)
   }
 
   def apply(vIdx: VariantIndex, conf: Configuration, tssDistance: Long, biotypes: Set[String])
            (implicit ss: SparkSession): Component = {
 
-    val genes = GeneIndex(conf.ensembl.lut)
+    val genes = GeneIndex(conf.ensembl.lut, biotypes)
       .sortByTSS
       .table.selectBy(GeneIndex.columns)
       .cache()
@@ -49,7 +48,7 @@ object Nearest extends LazyLogging {
 
     new Component {
       /** unique column name list per component */
-      override val features: Seq[String] = Nearest.features
+      override val features: Seq[String] = Distance.features
       override val table: DataFrame = intWP
     }
   }

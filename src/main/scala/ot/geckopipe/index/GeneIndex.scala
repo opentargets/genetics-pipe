@@ -60,10 +60,10 @@ object GeneIndex {
     * @param ss implicit sparksession
     * @return the processed dataframe
     */
-  def apply(from: String)(implicit ss: SparkSession): GeneIndex = {
+  def apply(from: String, bioTypes: Set[String] = biotypes)(implicit ss: SparkSession): GeneIndex = {
     val indexCols = indexColumns.map(c => col(c).asc)
     val genes = ss.read.json(from)
-      .where(!(col("biotype") isInCollection biotypes) and
+      .where(!(col("biotype") isInCollection bioTypes) and
         !(col("chr") isInCollection chromosomes))
       .repartitionByRange(indexCols:_*)
 

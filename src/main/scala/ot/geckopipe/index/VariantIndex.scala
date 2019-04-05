@@ -5,9 +5,8 @@ import org.apache.spark.api.java.StorageLevels
 import org.apache.spark.sql._
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types._
-import org.apache.spark.sql.expressions.Window
 import ot.geckopipe.functions.loadFromParquet
-import ot.geckopipe.{Configuration, Nearest}
+import ot.geckopipe.{Configuration, Distance}
 
 /** represents a cached table of variants with all variant columns
   *
@@ -64,7 +63,7 @@ object VariantIndex {
 
         val vidx = new VariantIndex(idx)
 
-        val nearests = Nearest(vidx, conf,
+        val nearests = Distance(vidx, conf,
           conf.variantIndex.tssDistance,
           GeneIndex.biotypes)(ss).table
 
@@ -76,7 +75,7 @@ object VariantIndex {
           .toDF.withColumnRenamed("d", "gene_id_any_distance")
           .withColumnRenamed("gene_id", "gene_id_any")
 
-        val nearestsPC = Nearest(vidx, conf,
+        val nearestsPC = Distance(vidx, conf,
           conf.variantIndex.tssDistance,
           Set("protein_coding"))(ss).table
 
