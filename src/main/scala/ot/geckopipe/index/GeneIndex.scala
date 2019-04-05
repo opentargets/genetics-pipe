@@ -14,7 +14,70 @@ class GeneIndex(val table: DataFrame) {
 
 /** Companion object to build the GeneIndex class */
 object GeneIndex {
-  val biotypes: Set[String] = Set(
+  val allExceptProtCoding: Set[String] = Set(
+    "3prime_overlapping_ncrna",
+    "antisense",
+    "IG_C_gene",
+    "IG_C_pseudogene",
+    "IG_D_gene",
+    "IG_J_gene",
+    "IG_J_pseudogene",
+    "IG_V_gene",
+    "IG_V_pseudogene",
+    "lincRNA",
+    "miRNA",
+    "misc_RNA",
+    "Mt_rRNA",
+    "Mt_tRNA",
+    "polymorphic_pseudogene",
+    "processed_transcript",
+    "pseudogene",
+    "rRNA",
+    "sense_intronic",
+    "sense_overlapping",
+    "snoRNA",
+    "snRNA",
+    "TR_C_gene",
+    "TR_D_gene",
+    "TR_J_gene",
+    "TR_J_pseudogene",
+    "TR_V_gene",
+    "TR_V_pseudogene"
+  )
+
+  val allBioTypes: Set[String] = Set(
+    "3prime_overlapping_ncrna",
+    "antisense",
+    "IG_C_gene",
+    "IG_C_pseudogene",
+    "IG_D_gene",
+    "IG_J_gene",
+    "IG_J_pseudogene",
+    "IG_V_gene",
+    "IG_V_pseudogene",
+    "lincRNA",
+    "miRNA",
+    "misc_RNA",
+    "Mt_rRNA",
+    "Mt_tRNA",
+    "polymorphic_pseudogene",
+    "processed_transcript",
+    "protein_coding",
+    "pseudogene",
+    "rRNA",
+    "sense_intronic",
+    "sense_overlapping",
+    "snoRNA",
+    "snRNA",
+    "TR_C_gene",
+    "TR_D_gene",
+    "TR_J_gene",
+    "TR_J_pseudogene",
+    "TR_V_gene",
+    "TR_V_pseudogene"
+  )
+
+  val allExceptPseudo: Set[String] = Set(
     "IG_C_pseudogene",
     "IG_J_pseudogene",
     "IG_pseudogene",
@@ -33,6 +96,7 @@ object GeneIndex {
     "TR_V_pseudogene",
     "unitary_pseudogene",
     "unprocessed_pseudogene")
+
   val chromosomes: Set[String] = Set("MT")
 
   /** A subset of all possible gene columns that can be included
@@ -60,7 +124,7 @@ object GeneIndex {
     * @param ss implicit sparksession
     * @return the processed dataframe
     */
-  def apply(from: String, bioTypes: Set[String] = biotypes)(implicit ss: SparkSession): GeneIndex = {
+  def apply(from: String, bioTypes: Set[String] = allExceptPseudo)(implicit ss: SparkSession): GeneIndex = {
     val indexCols = indexColumns.map(c => col(c).asc)
     val genes = ss.read.json(from)
       .where(!(col("biotype") isInCollection bioTypes) and

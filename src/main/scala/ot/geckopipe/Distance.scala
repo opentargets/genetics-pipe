@@ -16,7 +16,7 @@ object Distance extends LazyLogging {
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
-    Distance(vIdx, conf, conf.nearest.tssDistance, GeneIndex.biotypes)
+    Distance(vIdx, conf, conf.nearest.tssDistance, GeneIndex.allExceptPseudo)
   }
 
   def apply(vIdx: VariantIndex, conf: Configuration, tssDistance: Long, biotypes: Set[String])

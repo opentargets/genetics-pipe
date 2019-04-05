@@ -65,7 +65,7 @@ object VariantIndex {
 
         val nearests = Distance(vidx, conf,
           conf.variantIndex.tssDistance,
-          GeneIndex.biotypes)(ss).table
+          GeneIndex.allExceptPseudo)(ss).table
 
         val nearestGenes = nearests
           .as[VIRow]
@@ -75,9 +75,12 @@ object VariantIndex {
           .toDF.withColumnRenamed("d", "gene_id_any_distance")
           .withColumnRenamed("gene_id", "gene_id_any")
 
+        // just prot coding genes
         val nearestsPC = Distance(vidx, conf,
           conf.variantIndex.tssDistance,
-          Set("protein_coding"))(ss).table
+          GeneIndex.allExceptProtCoding)(ss).table
+
+        // protein_coding
 
         val nearestPCGenes = nearestsPC
           .as[VIRow]
