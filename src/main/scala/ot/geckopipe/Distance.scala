@@ -29,7 +29,7 @@ object Distance extends LazyLogging {
 
     logger.info("generate nearest dataset from variant annotated index")
     val nearests = vIdx.table
-      .select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
+      .select(VariantIndex.columns.head, VariantIndex.columns.tail: _*)
       .withColumn("type_id", lit("distance"))
       .withColumn("source_id", lit("canonical_tss"))
       .withColumn("feature", lit("unspecified"))
@@ -37,14 +37,15 @@ object Distance extends LazyLogging {
     val selectCols = columns ++ Seq("type_id", "source_id", "feature")
     val nearestPairs = nearests.join(genes, (col("chr_id") === col("chr")) and
       (abs(col("position") - col("tss")) <= tssDistance))
-      .withColumn("d",  abs(col("position") - col("tss")))
+      .withColumn("d", abs(col("position") - col("tss")))
       .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d"))
         .otherwise(Double.MinPositiveValue))
 
     // get a table to compute deciles
     nearestPairs.createOrReplaceTempView("nearest_table")
-    val intWP = computePercentile(nearestPairs, "nearest_table", "distance_score", "distance_score_q")
-      .select(selectCols.head, selectCols.tail:_*)
+    val intWP =
+      computeScore(nearestPairs, Seq("source_id", "feature"), Seq("distance_score"), "distance_score_q")
+      .select(selectCols.head, selectCols.tail: _*)
 
     new Component {
       /** unique column name list per component */

@@ -129,7 +129,7 @@ object GeneIndex {
     val genes = ss.read.json(from)
       .where(!(col("biotype") isInCollection bioTypes) and
         !(col("chr") isInCollection chromosomes))
-      .repartitionByRange(indexCols:_*)
+      .repartitionByRange(indexCols: _*)
 
     new GeneIndex(genes)
   }

@@ -15,6 +15,6 @@ object Dependencies {
     "org.apache.spark" %% "spark-sql" % "2.4.0",
     "org.apache.spark" %% "spark-graphx" % "2.4.0",
     "org.apache.spark" %% "spark-mllib" % "2.4.0"
-    )
+  )
   lazy val configLB = "com.github.pureconfig" %% "pureconfig" % "0.10.1"
 }

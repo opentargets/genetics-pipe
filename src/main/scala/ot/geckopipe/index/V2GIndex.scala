@@ -19,14 +19,15 @@ class V2GIndex(val table: DataFrame) extends LazyLogging {
     import ss.implicits._
     val totalRows = table.count()
     // val rsidNullsCount = dataset.where($"rsid".isNull).count()
-    val inChrCount = table.where($"chr_id".isin(Chromosomes.chrList:_*)).count()
+    val inChrCount = table.where($"chr_id".isin(Chromosomes.chrList: _*)).count()
 
     logger.info(s"count number of rows in chr range $inChrCount of a total $totalRows")
     Seq(inChrCount, totalRows)
   }
 }
 
-object V2GIndex extends LazyLogging  {
+object V2GIndex extends LazyLogging {
+
   trait Component {
     /** unique column name list per component */
     val features: Seq[String]
@@ -36,32 +37,32 @@ object V2GIndex extends LazyLogging  {
   val schema =
     StructType(
       StructField("chr_id", StringType) ::
-      StructField("position", LongType) ::
-      StructField("ref_allele", StringType) ::
-      StructField("alt_allele", StringType) ::
-      StructField("gene_id", StringType) ::
-      StructField("feature", StringType) ::
-      StructField("type_id", StringType) ::
-      StructField("source_id", StringType) ::
-      StructField("fpred_labels", ArrayType(StringType)) ::
-      StructField("fpred_scores", ArrayType(DoubleType)) ::
-      StructField("fpred_max_label", StringType) ::
-      StructField("fpred_max_score", DoubleType) ::
-      StructField("qtl_beta", DoubleType) ::
-      StructField("qtl_se", DoubleType) ::
-      StructField("qtl_pval", DoubleType) ::
-      StructField("qtl_score", DoubleType) ::
-      StructField("interval_score", DoubleType) ::
-      StructField("qtl_score_q", DoubleType) ::
-      StructField("interval_score_q", DoubleType) ::
-      StructField("max_qtl", DoubleType) ::
-      StructField("max_int", DoubleType) ::
-      StructField("max_fpred", DoubleType) ::
-      StructField("d", LongType) ::
-      StructField("distance_score", DoubleType) ::
-      StructField("distance_score_q", DoubleType) ::
-      StructField("source_score", DoubleType) ::
-      StructField("overall_score", DoubleType) :: Nil)
+        StructField("position", LongType) ::
+        StructField("ref_allele", StringType) ::
+        StructField("alt_allele", StringType) ::
+        StructField("gene_id", StringType) ::
+        StructField("feature", StringType) ::
+        StructField("type_id", StringType) ::
+        StructField("source_id", StringType) ::
+        StructField("fpred_labels", ArrayType(StringType)) ::
+        StructField("fpred_scores", ArrayType(DoubleType)) ::
+        StructField("fpred_max_label", StringType) ::
+        StructField("fpred_max_score", DoubleType) ::
+        StructField("qtl_beta", DoubleType) ::
+        StructField("qtl_se", DoubleType) ::
+        StructField("qtl_pval", DoubleType) ::
+        StructField("qtl_score", DoubleType) ::
+        StructField("interval_score", DoubleType) ::
+        StructField("qtl_score_q", DoubleType) ::
+        StructField("interval_score_q", DoubleType) ::
+        StructField("max_qtl", DoubleType) ::
+        StructField("max_int", DoubleType) ::
+        StructField("max_fpred", DoubleType) ::
+        StructField("d", LongType) ::
+        StructField("distance_score", DoubleType) ::
+        StructField("distance_score_q", DoubleType) ::
+        StructField("source_score", DoubleType) ::
+        StructField("overall_score", DoubleType) :: Nil)
 
   /** all data sources to incorporate needs to meet this format at the end
     *
@@ -87,7 +88,7 @@ object V2GIndex extends LazyLogging  {
       .map(_.getString(0))
       .toSet
 
-      // df.select("id").map(_.getString(0)).collect.toList
+    // df.select("id").map(_.getString(0)).collect.toList
     val geneIDsBc = ss.sparkContext.broadcast(geneIDs)
 
     logger.info("build variant to gene dataset union the list of datasets")
@@ -95,13 +96,15 @@ object V2GIndex extends LazyLogging  {
     val allFeatures =
       datasets.foldLeft(Seq[String]())((agg, el) => agg ++ el.features).distinct
 
-    val processedDts = datasets.map( el =>
+    val processedDts = datasets.map(el =>
       (allFeatures diff el.features)
         .foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
     )
 
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
       .filter(col("gene_id") isInCollection geneIDsBc.value)
+
+
     new V2GIndex(allDts)
   }
 

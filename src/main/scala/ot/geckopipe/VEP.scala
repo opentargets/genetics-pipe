@@ -15,7 +15,7 @@ object VEP extends LazyLogging {
   val columns: Seq[String] =
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
-  val rawColumnsWithAliases: Seq[(String, String)] = Seq(("chrom_b37","chr_id"), ("pos_b37", "position"),
+  val rawColumnsWithAliases: Seq[(String, String)] = Seq(("chrom_b37", "chr_id"), ("pos_b37", "position"),
     ("ref", "ref_allele"), ("alt", "alt_allele"),
     ("vep.transcript_consequences", "transcript_consequences"))
 
@@ -36,7 +36,7 @@ object VEP extends LazyLogging {
 
     val csqSchema = StructType(
       StructField("accession", StringType) ::
-      StructField("term", StringType) ::
+        StructField("term", StringType) ::
         StructField("description", StringType) ::
         StructField("display_term", StringType) ::
         StructField("impact", StringType) ::
@@ -47,7 +47,7 @@ object VEP extends LazyLogging {
       .format("csv")
       .option("header", "true")
       .option("inferSchema", "false")
-      .option("delimiter","\t")
+      .option("delimiter", "\t")
       .option("ignoreLeadingWhiteSpace", "true")
       .option("ignoreTrailingWhiteSpace", "true")
       .option("mode", "DROPMALFORMED")
@@ -77,11 +77,11 @@ object VEP extends LazyLogging {
     })
 
     // return the max pair with label and score from the two lists of labels with scores
-    val getMaxCsqLabel = udf( (labels: Seq[String], scores: Seq[Double]) =>
+    val getMaxCsqLabel = udf((labels: Seq[String], scores: Seq[Double]) =>
       (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._1
     )
 
-    val getMaxCsqScore = udf( (labels: Seq[String], scores: Seq[Double]) =>
+    val getMaxCsqScore = udf((labels: Seq[String], scores: Seq[Double]) =>
       (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._2
     )
 
@@ -97,7 +97,7 @@ object VEP extends LazyLogging {
       .withColumn("gene_id", col("_vep.gene_id"))
       .withColumn("consequence", col("_vep.consequence_terms").getItem(0))
       .drop("_vep", "transcript_consequences")
-      .groupBy(groupingCols.head, groupingCols.tail:_*)
+      .groupBy(groupingCols.head, groupingCols.tail: _*)
       .agg(collect_set("consequence").as("fpred_labels"))
       .withColumn("fpred_scores", udfCsqScores(col("fpred_labels")))
       .drop("consequence")

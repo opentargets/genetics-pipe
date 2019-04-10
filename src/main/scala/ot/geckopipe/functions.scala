@@ -1,6 +1,7 @@
 package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{Column, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
@@ -23,11 +24,11 @@ object functions extends LazyLogging {
 
   /** split two columns by ; each column and then zip and map to an array */
   val splitAndZip = udf((codes: String, labels: String) => codes.split(";")
-    .zipAll(labels.split(";"),"", "")
+    .zipAll(labels.split(";"), "", "")
     .filter(_._1 != "")
-    .map(t => Array(t._1,t._2)))
+    .map(t => Array(t._1, t._2)))
 
-  val arrayToString = udf((xs: Array[String]) => xs.mkString("[",",","]"))
+  val arrayToString = udf((xs: Array[String]) => xs.mkString("[", ",", "]"))
 
   /** convert a seq to a stringify array */
   val stringifyColumnString = udf((ls: Seq[String]) => ls.mkString("['", "','", "']"))
@@ -37,7 +38,7 @@ object functions extends LazyLogging {
   /** convert a seq to a stringify array */
   val stringifyDouble = udf((vs: Seq[String]) => vs match {
     case null => null
-    case _    => s"""[${vs.mkString(",")}]"""
+    case _ => s"""[${vs.mkString(",")}]"""
   })
 
   /** save the dataframe as tsv file using filename as a output path */
@@ -72,7 +73,7 @@ object functions extends LazyLogging {
   }
 
   def loadFromJSON(uri: String, withSchema: StructType)
-                 (implicit ss: SparkSession): DataFrame = ss.read
+                  (implicit ss: SparkSession): DataFrame = ss.read
     .format("json")
     .schema(withSchema)
     .load(uri)
@@ -83,7 +84,7 @@ object functions extends LazyLogging {
                  (implicit ss: SparkSession): DataFrame = ss.read
     .format("csv")
     .option("header", andHeader.toString)
-    .option("delimiter","\t")
+    .option("delimiter", "\t")
     .schema(withSchema)
     .load(uri)
 
@@ -105,7 +106,7 @@ object functions extends LazyLogging {
       // get each item from 0 up to las element
       val tmpDF = df.withColumn(tmpCol.toString, split(variantID, "_"))
 
-      val modDF = intoColNames.zipWithIndex.foldLeft(tmpDF)( (df, pair) => {
+      val modDF = intoColNames.zipWithIndex.foldLeft(tmpDF)((df, pair) => {
         df.withColumn(prefix + pair._1, tmpCol.getItem(pair._2).cast(withColTypes(pair._2)))
       }).drop(tmpCol)
 
@@ -113,6 +114,25 @@ object functions extends LazyLogging {
 
     } else
       Failure(new IllegalArgumentException("You need >= 2 columns in order to split a variant_id -> chr, pos"))
+  }
+
+  def computeScore(dataframe: DataFrame,
+                   partitionByCol: Seq[String], orderByCol: Seq[String],
+                   columnNameScore: String): DataFrame = {
+    val rC = col("_rank_value")
+    val cC = col("_count_value")
+
+    val windowSpec = Window
+      .partitionBy(partitionByCol.head, partitionByCol.tail: _*)
+      .orderBy(orderByCol.head, orderByCol.tail: _*)
+
+    val _df = dataframe.withColumn(rC.toString, rank().over(windowSpec))
+    val _dfCounts = dataframe.groupBy(partitionByCol.head, partitionByCol.tail: _*)
+      .agg(count(partitionByCol.head).as(cC.toString))
+
+    _df.join(_dfCounts, partitionByCol)
+      .withColumn(columnNameScore, rC / cC)
+      .drop(rC.toString, cC.toString)
   }
 
   def concatDatasets(datasets: Seq[DataFrame], columns: Seq[String]): DataFrame = {
@@ -131,17 +151,20 @@ object functions extends LazyLogging {
     * @param usingToken the token used to partition the input path
     * @return the triplet of (type_name, source_nmae, tissue_name)
     */
-  def extractValidTokensFromPath(path: String, usingToken: String): Array[String] = {
-    path.split(usingToken).view.last.split("/").view
-      .map(_.toLowerCase).withFilter(_.nonEmpty).take(2).force
-  }
+  def extractValidTokensFromPath(path: String, usingToken: String): Array[String] =
+    path.split(usingToken).last
+      .split("/")
+      .withFilter(_.nonEmpty)
+      .map(_.toLowerCase)
+      .take(2)
 
   val decileList: Seq[Double] = (10 to 100 by 10).map(_ / 100D)
+
   /** it maps source_id -> feature -> Seq[(quantile value, quantile number)]
     * gtex_v5 -> whole_blood -> [(0.356, 0.2)]
     */
   /** it needs df contains 3 first columns datasource feature and the vector of doubles */
-  def fromQ2Map(df :DataFrame, qs: Seq[Double] = decileList): Map[String, Map[String, Seq[(Double, Double)]]] = {
+  def fromQ2Map(df: DataFrame, qs: Seq[Double] = decileList): Map[String, Map[String, Seq[(Double, Double)]]] = {
     var mapQ: Map[String, Map[String, Seq[(Double, Double)]]] = Map.empty
 
     val rows = df.collect.toList
@@ -195,11 +218,14 @@ object functions extends LazyLogging {
   }
 
   object Implicits {
+
     implicit class ImplicitDataFrameFunctions(df: DataFrame) {
       def withColumnListRenamed(columns: Seq[String], f: String => String): DataFrame = {
         val zippedCols = columns zip columns.map(f(_))
         zippedCols.foldLeft(df)((df, zippedCols) => df.withColumnRenamed(zippedCols._1, zippedCols._2))
       }
     }
+
   }
+
 }

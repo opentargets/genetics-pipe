@@ -14,7 +14,7 @@ import pureconfig.generic.auto._
 class Commands(val ss: SparkSession,
                val sampleFactor: Double,
                val c: Configuration)
-    extends LazyLogging {
+  extends LazyLogging {
   implicit val sSesion: SparkSession = ss
   implicit val sFactor: Double = sampleFactor
 
@@ -73,7 +73,7 @@ class Commands(val ss: SparkSession,
         (col("position") === col("tag_pos")) and
         (col("ref_allele") === col("tag_ref")) and
         (col("alt_allele") === col("tag_alt")))
-      .drop(VariantIndex.columns:_*)
+      .drop(VariantIndex.columns: _*)
       .saveToJSON(c.output.stripSuffix("/").concat("/d2v2g/"))
   }
 

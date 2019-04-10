@@ -8,7 +8,7 @@ import ot.geckopipe.Configuration
 
 case class V2DIndex(table: DataFrame)
 
-object V2DIndex extends LazyLogging  {
+object V2DIndex extends LazyLogging {
   val schema =
     StructType(
       StructField("study_id", StringType) ::
@@ -83,10 +83,10 @@ object V2DIndex extends LazyLogging  {
 
     V2DIndex(indexExpanded.join(vIdx.table.select("chr_id", "position", "ref_allele", "alt_allele"),
       col("chr_id") === col("tag_chrom") and
-      (col("position") === col("tag_pos") and
-        (col("ref_allele") === col("tag_ref") and
-          (col("alt_allele") === col("tag_alt")))), "inner")
-        .drop("chr_id", "position", "ref_allele", "alt_allele")
+        (col("position") === col("tag_pos") and
+          (col("ref_allele") === col("tag_ref") and
+            (col("alt_allele") === col("tag_alt")))), "inner")
+      .drop("chr_id", "position", "ref_allele", "alt_allele")
     )
   }
 
@@ -127,10 +127,10 @@ object V2DIndex extends LazyLogging  {
   def buildOverlapIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val groupCols = Seq("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
     val aggCols = Seq("B_study_id", "B_chrom", "B_pos", "B_ref", "B_alt", "A_distinct",
-    "AB_overlap", "B_distinct").map(c => collect_list(c).as(c))
+      "AB_overlap", "B_distinct").map(c => collect_list(c).as(c))
     val aggregation = ss.read.parquet(path).drop("set_type")
-      .groupBy(groupCols.head, groupCols.tail:_*)
-      .agg(aggCols.head, aggCols.tail:_*)
+      .groupBy(groupCols.head, groupCols.tail: _*)
+      .agg(aggCols.head, aggCols.tail: _*)
 
     aggregation.orderBy(col("A_study_id"), col("A_chrom"), col("A_pos"),
       col("A_ref"), col("A_alt"))

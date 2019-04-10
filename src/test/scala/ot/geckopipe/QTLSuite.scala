@@ -4,6 +4,6 @@ import minitest._
 
 object QTLSuite extends SimpleTestSuite {
   test("extract filename from fullpath") {
-    assertEquals("TODO","TODO")
+    assertEquals("TODO", "TODO")
   }
 }

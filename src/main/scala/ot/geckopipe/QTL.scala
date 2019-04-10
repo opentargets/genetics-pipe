@@ -35,12 +35,12 @@ object QTL extends LazyLogging {
       .withColumn("tokens", extractValidTokensFromPathUDF(col("filename")))
       .withColumn("type_id", lower(col("tokens").getItem(0)))
       .withColumn("source_id", lower(col("tokens").getItem(1)))
-      .withColumn("qtl_score", - log(10, col("qtl_pval")))
+      .withColumn("qtl_score", -log(10, col("qtl_pval")))
       .drop("filename", "tokens")
       .repartitionByRange(col("chr_id").asc, col("position").asc)
       .sortWithinPartitions(col("chr_id").asc, col("position").asc)
 
-    val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
+    val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail: _*)
     val qtlTable = qtls.join(vIdxS, VariantIndex.columns)
 
     // get a table to compute deciles
