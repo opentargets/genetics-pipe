@@ -50,9 +50,10 @@ object Interval extends LazyLogging {
 
     val inTable = interval.join(vIdxS, VariantIndex.indexColumns)
 
-    // get a table to compute deciles
-    inTable.createOrReplaceTempView("interval_table")
-    val intWP = computePercentile(inTable, "interval_table", "interval_score", "interval_score_q")
+    inTable.persist
+
+    val intWP =
+      computeScore(inTable, Seq("source_id", "feature"), Seq("interval_score"), "interval_score_q")
 
     new Component {
       /** unique column name list per component */
