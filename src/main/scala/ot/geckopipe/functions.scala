@@ -130,15 +130,13 @@ object functions extends LazyLogging {
 
     val _dfCounts = dataframe.groupBy(partitionByCol.head, partitionByCol.tail: _*)
       .agg(count(partitionByCol.head).as(cC.toString))
-        .select(cC.toString, partitionByCol:_*)
+        .select(cC.toString, partitionByCol:_*).toDF
 
-    val joinnedDF = _df.join(_dfCounts,
-      partitionByCol.tail.foldLeft(_df(partitionByCol.head) === _dfCounts(partitionByCol.head))
-      ((B, l) => B and _df(l) === _dfCounts(l)), "cross")
+    val joinnedDF = _df.join(_dfCounts, partitionByCol)
       .withColumn(columnNameScore, rC / cC)
       .drop(rC.toString, cC.toString)
 
-    partitionByCol.foldLeft(joinnedDF)((B, l) => B.drop(_dfCounts(l)))
+    joinnedDF
   }
 
   def concatDatasets(datasets: Seq[DataFrame], columns: Seq[String]): DataFrame = {
