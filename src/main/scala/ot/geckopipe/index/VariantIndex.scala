@@ -65,6 +65,7 @@ object VariantIndex {
 
         val vidx = new VariantIndex(idx)
 
+        logger.info("compute nearests any biotype")
         val nearests = Distance(vidx, conf,
           conf.variantIndex.tssDistance,
           GeneIndex.allExceptPseudo)(ss).table
@@ -77,6 +78,7 @@ object VariantIndex {
           .toDF.withColumnRenamed("d", "gene_id_any_distance")
           .withColumnRenamed("gene_id", "gene_id_any")
 
+        logger.info("compute nearests protein-coding biotype")
         // just prot coding genes
         val nearestsPC = Distance(vidx, conf,
           conf.variantIndex.tssDistance,
@@ -93,6 +95,7 @@ object VariantIndex {
           .withColumnRenamed("d", "gene_id_prot_coding_distance")
           .withColumnRenamed("gene_id", "gene_id_prot_coding")
 
+        logger.info("enrich variant index with nearests")
         val computedNearests = nearestGenes.join(nearestPCGenes, columns, "full_outer")
         computedNearests
       }

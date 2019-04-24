@@ -122,6 +122,8 @@ object functions extends LazyLogging {
     val rC = col("_rank_value")
     val cC = col("_count_value")
 
+    logger.info("computeScore based on rank method")
+
     val windowSpec = Window
       .partitionBy(partitionByCol.head, partitionByCol.tail: _*)
       .orderBy(orderByCol.head, orderByCol.tail: _*)
@@ -130,7 +132,10 @@ object functions extends LazyLogging {
 
     val _dfCounts = dataframe.groupBy(partitionByCol.head, partitionByCol.tail: _*)
       .agg(count(partitionByCol.head).as(cC.toString))
-        .select(cC.toString, partitionByCol:_*).toDF
+        .select(cC.toString, partitionByCol:_*).toDF.cache()
+
+    logger.info("computed counts to be used with ranks")
+    _dfCounts.show(false)
 
     val joinnedDF = _df.join(_dfCounts, partitionByCol)
       .withColumn(columnNameScore, rC / cC)

@@ -22,6 +22,7 @@ object Distance extends LazyLogging {
   def apply(vIdx: VariantIndex, conf: Configuration, tssDistance: Long, biotypes: Set[String])
            (implicit ss: SparkSession): Component = {
 
+    logger.info(s"generate Distance dataset with distance ${tssDistance} and biotypes: ${biotypes.toString}")
     val genes = GeneIndex(conf.ensembl.lut, biotypes)
       .sortByTSS
       .table.selectBy(GeneIndex.columns)
@@ -40,7 +41,7 @@ object Distance extends LazyLogging {
       .withColumn("d", abs(col("position") - col("tss")))
       .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d")).otherwise(1.0))
 
-    nearestPairs.persist
+    // nearestPairs.persist
 
     val intWP =
       computeScore(nearestPairs, Seq("source_id", "feature"), Seq("distance_score"), "distance_score_q")
