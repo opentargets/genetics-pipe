@@ -38,8 +38,7 @@ object Distance extends LazyLogging {
     val nearestPairs = nearests.join(genes, (col("chr_id") === col("chr")) and
       (abs(col("position") - col("tss")) <= tssDistance))
       .withColumn("d",  abs(col("position") - col("tss")))
-      .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d"))
-        .otherwise(Double.MinPositiveValue))
+      .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d")).otherwise(1.0))
 
     // get a table to compute deciles
     nearestPairs.createOrReplaceTempView("nearest_table")
