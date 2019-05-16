@@ -5,6 +5,7 @@ import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{Column, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
+import org.apache.spark.storage.StorageLevel
 import ot.geckopipe.index.V2GIndex.logger
 import ot.geckopipe.index.VariantIndex
 
@@ -116,9 +117,42 @@ object functions extends LazyLogging {
       Failure(new IllegalArgumentException("You need >= 2 columns in order to split a variant_id -> chr, pos"))
   }
 
-  def computeScore(dataframe: DataFrame,
-                   partitionByCol: Seq[String], orderByCol: Seq[String],
-                   columnNameScore: String): DataFrame = {
+  /** computeScore from a list of string columns used on a groupBy is a bit tricky
+    * as requires just a very concrete implementation and input due some constraints
+    * so have a look at the code in order to understand how it works
+    *
+    * We need to compute a score for each row based on a rank method.
+    * col1:String, col2:String, coli:String (partitionByCol)
+    * colj:Number (orderByCol
+    *
+    * so the function can define a window to go over the grouping
+    *
+    * Ex.
+    * val intWP = computeScore(nearestPairs,
+    *   Seq("source_id", "feature"),
+    *   "distance_score",
+    *   "distance_score_q")
+  */
+  def computeScore(dataframe: DataFrame, orderByCol: String, columnNameScore: String)
+                  (implicit ss: SparkSession): DataFrame = {
+    def _mkStringFromRow(r: Row, indexedPositions: Seq[Int]): String =
+      indexedPositions.map(r.getAs[String]).mkString
+
+    /** this just work for a list of string columns and a long column
+    * next to the last string column and is joint and transformed into
+    * a map k -> v
+    * */
+    def _fromRowToMap(ds: DataFrame, numStringColumns: Int): Map[String, Long] = {
+      val rows = ds.collect.toList
+
+      (for (r <- rows) yield {
+        val k = _mkStringFromRow(r, 0 until numStringColumns)
+        val v = r.getAs[Long](numStringColumns)
+        k -> v
+      }) toMap
+    }
+
+    val partitionByCol = Seq("source_id", "feature")
     val rC = col("_rank_value")
     val cC = col("_count_value")
 
@@ -126,20 +160,33 @@ object functions extends LazyLogging {
 
     val windowSpec = Window
       .partitionBy(partitionByCol.head, partitionByCol.tail: _*)
-      .orderBy(orderByCol.head, orderByCol.tail: _*)
+      .orderBy(orderByCol)
 
-    val _df = dataframe.withColumn(rC.toString, rank().over(windowSpec)).toDF
+    val _df = dataframe.withColumn(rC.toString, rank().over(windowSpec))
 
+    // TODO finish here computescore by rank
+    // compute dataframe counts from a dataset and convert to a map and broadcast
+    val selectedCols = partitionByCol :+ cC.toString
     val _dfCounts = dataframe.groupBy(partitionByCol.head, partitionByCol.tail: _*)
       .agg(count(partitionByCol.head).as(cC.toString))
-        .select(cC.toString, partitionByCol:_*).toDF.cache()
+      .select(selectedCols.head, selectedCols.tail:_*)
+    val mapCounts =
+      ss.sparkContext.broadcast(_fromRowToMap(_dfCounts, partitionByCol.length))
+
+    logger.info(s"mapped counts into a map ${mapCounts.toString}")
 
     logger.info("computed counts to be used with ranks")
     _dfCounts.show(false)
 
-    val joinnedDF = _df.join(_dfCounts, partitionByCol)
-      .withColumn(columnNameScore, rC / cC)
-      .drop(rC.toString, cC.toString)
+    val finalCols = _df.columns.map(c => col("_l." + c)) :+ col(columnNameScore)
+    val joinnedDF = _df.join(broadcast(_dfCounts),
+      partitionByCol.tail.foldLeft(col("_l." + partitionByCol.head) === col("_r." + partitionByCol.head))
+      ((B, el) => B and col("_l." + el) === col("_r." + el)), "inner")
+      .withColumn(columnNameScore, col("_l." + rC.toString) / col("_r." + cC.toString))
+      // .drop(rC.toString, cC.toString)
+      .select(finalCols:_*)
+
+    joinnedDF.show(false)
 
     joinnedDF
   }
@@ -227,8 +274,16 @@ object functions extends LazyLogging {
   }
 
   object Implicits {
-
     implicit class ImplicitDataFrameFunctions(df: DataFrame) {
+
+      /** rename a list of columns by the newColumns list */
+      def withColumnListRenamed(columns: Seq[String], newColumns: Seq[String]): DataFrame =
+        columns zip newColumns match {
+          case Nil => df
+          case xs => xs.foldLeft(df)((b, l) => b.withColumnRenamed(l._1, l._2))
+        }
+
+      /** rename a list of columns by a columns.map(f) */
       def withColumnListRenamed(columns: Seq[String], f: String => String): DataFrame = {
         val zippedCols = columns zip columns.map(f(_))
         zippedCols.foldLeft(df)((df, zippedCols) => df.withColumnRenamed(zippedCols._1, zippedCols._2))

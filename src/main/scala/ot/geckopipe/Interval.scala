@@ -53,7 +53,7 @@ object Interval extends LazyLogging {
     inTable.persist
 
     val intWP =
-      computeScore(inTable, Seq("source_id", "feature"), Seq("interval_score"), "interval_score_q")
+      computeScore(inTable, "interval_score", "interval_score_q")
 
     new Component {
       /** unique column name list per component */

@@ -44,7 +44,7 @@ object Distance extends LazyLogging {
     // nearestPairs.persist
 
     val intWP =
-      computeScore(nearestPairs, Seq("source_id", "feature"), Seq("distance_score"), "distance_score_q")
+      computeScore(nearestPairs, "distance_score", "distance_score_q")
       .select(selectCols.head, selectCols.tail: _*)
 
     new Component {

@@ -80,6 +80,9 @@ object V2GIndex extends LazyLogging {
   def build(datasets: Seq[Component], vIdx: VariantIndex, conf: Configuration)
            (implicit ss: SparkSession): V2GIndex = {
 
+    // TODO Finish the computation of the scores for the v2g
+    def computeScores(df: DataFrame): DataFrame = df
+
     logger.info("generate a set of genes resulting from bio exclusion and chromosome lists")
     val geneIDs = GeneIndex(conf.ensembl.lut)
       .sortByID
@@ -88,7 +91,6 @@ object V2GIndex extends LazyLogging {
       .map(_.getString(0))
       .toSet
 
-    // df.select("id").map(_.getString(0)).collect.toList
     val geneIDsBc = ss.sparkContext.broadcast(geneIDs)
 
     logger.info("build variant to gene dataset union the list of datasets")
@@ -104,6 +106,7 @@ object V2GIndex extends LazyLogging {
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
       .filter(col("gene_id") isInCollection geneIDsBc.value)
 
+    val allDtsWithScores = computeScores(allDts)
 
     new V2GIndex(allDts)
   }

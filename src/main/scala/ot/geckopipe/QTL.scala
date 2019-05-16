@@ -46,7 +46,7 @@ object QTL extends LazyLogging {
     qtlTable.persist
 
     val qtlWP =
-      computeScore(qtlTable, Seq("source_id", "feature"), Seq("qtl_score"), "qtl_score_q")
+      computeScore(qtlTable, "qtl_score", "qtl_score_q")
 
     new Component {
       /** unique column name list per component */
