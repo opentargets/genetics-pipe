@@ -17,6 +17,7 @@ object V2DIndex extends LazyLogging  {
         StructField("pub_journal", StringType) ::
         StructField("pub_title", StringType) ::
         StructField("pub_author", StringType) ::
+        StructField("has_sumstats", BooleanType) ::
         StructField("trait_reported", StringType) ::
         StructField("trait_efos", ArrayType(StringType)) ::
         StructField("ancestry_initial", ArrayType(StringType)) ::
