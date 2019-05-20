@@ -11,10 +11,10 @@ object Dependencies {
   lazy val scopt = "com.github.scopt" %% "scopt" % "3.7.0"
   lazy val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.0"
   lazy val sparkSeq = Seq(
-    "org.apache.spark" %% "spark-core" % "2.4.0",
-    "org.apache.spark" %% "spark-sql" % "2.4.0",
-    "org.apache.spark" %% "spark-graphx" % "2.4.0",
-    "org.apache.spark" %% "spark-mllib" % "2.4.0"
+    "org.apache.spark" %% "spark-core" % "2.4.3",
+    "org.apache.spark" %% "spark-sql" % "2.4.3",
+    "org.apache.spark" %% "spark-graphx" % "2.4.3",
+    "org.apache.spark" %% "spark-mllib" % "2.4.3"
     )
   lazy val configLB = "com.github.pureconfig" %% "pureconfig" % "0.10.1"
 }
