@@ -25,14 +25,14 @@ object VariantIndex {
                    d: Long, gene_id: String)
 
   val rawColumnsWithAliases: Seq[(String, String)] =
-    Seq(("chrom_b37","chr_id_b37"), ("pos_b37", "position_b37"),
+    Seq(("chrom_b37", "chr_id_b37"), ("pos_b37", "position_b37"),
       ("chrom_b38","chr_id"), ("pos_b38", "position"),
       ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
       ("vep.most_severe_consequence", "most_severe_consequence"),
       ("cadd", "cadd"), ("af", "af"))
 
   val rawColumnsWithAliasesMinimal: Seq[(String, String)] =
-    Seq(("chrom_b38","chr_id"), ("pos_b38", "position"),
+    Seq(("chrom_b38", "chr_id"), ("pos_b38", "position"),
       ("ref", "ref_allele"), ("alt", "alt_allele"),
       ("vep.transcript_consequences", "transcript_consequences"))
 
@@ -56,12 +56,13 @@ object VariantIndex {
     def loadRawVariantIndex(columnsWithAliases: Seq[(String, String)]): DataFrame = {
       val indexCols = indexColumns.map(c => col(c).asc)
       val sortCols = sortColumns.map(c => col(c).asc)
-      val inputCols = columnsWithAliases.map(s => col(s._1).alias(s._2))
+      val inputCols = columnsWithAliases.map(s => col(s._1).as(s._2))
       val raw = loadFromParquet(conf.variantIndex.raw)(ss)
 
       raw.select(inputCols:_*)
         .repartitionByRange(indexCols:_*)
         .sortWithinPartitions(sortCols:_*)
+        .where(col("chr_id").isNotNull && col("position").isNotNull)
     }
 
     def build: VariantIndex = {
