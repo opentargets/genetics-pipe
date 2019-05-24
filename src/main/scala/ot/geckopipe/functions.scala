@@ -132,8 +132,8 @@ object functions extends LazyLogging {
     * @return the triplet of (type_name, source_nmae, tissue_name)
     */
   def extractValidTokensFromPath(path: String, usingToken: String): Array[String] = {
-    path.split(usingToken).view.last.split("/").view
-      .map(_.toLowerCase).withFilter(_.nonEmpty).take(2).force
+    path.split(usingToken).last.split("/")
+      .withFilter(_.nonEmpty).map(_.toLowerCase).take(2)
   }
 
   val decileList: Seq[Double] = (10 to 100 by 10).map(_ / 100D)

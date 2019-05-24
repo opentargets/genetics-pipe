@@ -87,8 +87,6 @@ object VariantIndex {
           conf.variantIndex.tssDistance,
           GeneIndex.allExceptProtCoding)(ss).table
 
-        // protein_coding
-
         val nearestPCGenes = nearestsPC
           .as[VIRow]
           .groupByKey(r => (r.chr_id, r.position, r.ref_allele, r.alt_allele))

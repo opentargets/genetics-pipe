@@ -62,8 +62,7 @@ object V2DIndex extends LazyLogging  {
       .cache()
     val fmLoci = buildFMIndex(conf.variantDisease.finemapping).cache()
 
-    val svPairs = studies.join(topLoci, "study_id")
-      .orderBy(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt")).cache()
+    val svPairs = topLoci.join(studies, "study_id").cache()
 
     logger.whenDebugEnabled {
       svPairs.show(false)
@@ -106,7 +105,7 @@ object V2DIndex extends LazyLogging  {
       }
     })
 
-    ss.read.parquet(path).orderBy(col("study_id").asc)
+    ss.read.parquet(path)
       .withColumn("pval", toDouble(col("pval_mantissa"), col("pval_exponent")))
       .withColumnRenamed("chrom", "lead_chrom")
       .withColumnRenamed("pos", "lead_pos")
@@ -114,16 +113,19 @@ object V2DIndex extends LazyLogging  {
       .withColumnRenamed("alt", "lead_alt")
       // TODO tell to remove the column from source so I can remove this line too
       .drop("rsid")
-      .orderBy(col("study_id").asc)
+      .repartitionByRange(col("lead_chrom"))
+      .sortWithinPartitions(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
   }
 
   def buildLDIndex(path: String)(implicit ss: SparkSession): DataFrame =
     ss.read.parquet(path)
-      .orderBy(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
+      .repartitionByRange(col("lead_chrom"))
+      .sortWithinPartitions(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
 
   def buildFMIndex(path: String)(implicit ss: SparkSession): DataFrame =
     ss.read.parquet(path)
-      .orderBy(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
+      .repartitionByRange(col("lead_chrom"))
+      .sortWithinPartitions(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
 
   def buildOverlapIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val groupCols = Seq("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
@@ -133,8 +135,7 @@ object V2DIndex extends LazyLogging  {
       .groupBy(groupCols.head, groupCols.tail:_*)
       .agg(aggCols.head, aggCols.tail:_*)
 
-    aggregation.orderBy(col("A_study_id"), col("A_chrom"), col("A_pos"),
-      col("A_ref"), col("A_alt"))
+    aggregation.repartitionByRange(col("A_chrom"))
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */

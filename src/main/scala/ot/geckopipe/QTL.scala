@@ -13,15 +13,16 @@ object QTL extends LazyLogging {
   def load(from: String)(implicit ss: SparkSession): DataFrame = {
     val qtl = ss.read
       .parquet(from)
-      .withColumn("filename", input_file_name)
-      .withColumnRenamed("bio_feature", "feature")
       .withColumnRenamed("chrom", "chr_id")
       .withColumnRenamed("pos", "position")
-      .withColumnRenamed("ref", "ref_allele")
-      .withColumnRenamed("alt", "alt_allele")
+      .withColumnRenamed("other_allele", "ref_allele")
+      .withColumnRenamed("effect_allele", "alt_allele")
       .withColumnRenamed("beta", "qtl_beta")
       .withColumnRenamed("se", "qtl_se")
       .withColumnRenamed("pval", "qtl_pval")
+      .withColumnRenamed("ensembl_id", "gene_id")
+      .withColumnRenamed("type", "type_id")
+      .withColumnRenamed("source", "source_id")
 
     qtl
   }
@@ -32,13 +33,9 @@ object QTL extends LazyLogging {
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val qtls = load(conf.qtl.path)
-      .withColumn("tokens", extractValidTokensFromPathUDF(col("filename")))
-      .withColumn("type_id", lower(col("tokens").getItem(0)))
-      .withColumn("source_id", lower(col("tokens").getItem(1)))
       .withColumn("qtl_score", - log(10, col("qtl_pval")))
-      .drop("filename", "tokens")
-      .repartitionByRange(col("chr_id").asc, col("position").asc)
-      .sortWithinPartitions(col("chr_id").asc, col("position").asc)
+      .repartitionByRange(col("chr_id"), col("position"))
+      .sortWithinPartitions(col("chr_id"), col("position"))
 
     val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
     val qtlTable = qtls.join(vIdxS, VariantIndex.columns)
