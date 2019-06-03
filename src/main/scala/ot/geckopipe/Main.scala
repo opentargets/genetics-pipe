@@ -21,7 +21,7 @@ class Commands(val ss: SparkSession,
   def variantIndex(): Unit = {
     logger.info("exec variant-index command")
     val vidx = VariantIndex.builder(c).build
-    vidx.table.write.parquet(c.variantIndex.path)
+    vidx.table.write.json(c.variantIndex.path)
   }
 
   def distanceNearest(): Unit = {
@@ -29,7 +29,7 @@ class Commands(val ss: SparkSession,
     val vIdx = VariantIndex.builder(c).load
 
     val nearestDF = Distance(vIdx, c)
-    nearestDF.table.write.parquet(c.nearest.path)
+    nearestDF.table.write.json(c.nearest.path)
   }
 
   def variantDiseaseColoc(): Unit = {
@@ -60,7 +60,7 @@ class Commands(val ss: SparkSession,
         (col("right_alt") === col("alt_allele")))
       .drop(columnsToDrop:_*)
 
-    colocVariantFiltered.write.parquet(c.output.stripSuffix("/").concat("/v2d_coloc/"))
+    colocVariantFiltered.write.json(c.output.stripSuffix("/").concat("/v2d_coloc/"))
   }
 
   def variantToGene(): Unit = {
@@ -79,7 +79,7 @@ class Commands(val ss: SparkSession,
     val dtSeq = Seq(vepDts, nearestDts, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
-    v2g.table.write.parquet(c.output.stripSuffix("/").concat("/v2g/"))
+    v2g.table.write.json(c.output.stripSuffix("/").concat("/v2g/"))
   }
 
   def variantToDisease(): Unit = {
@@ -88,7 +88,7 @@ class Commands(val ss: SparkSession,
     val vIdx = VariantIndex.builder(c).load
     val v2d = V2DIndex.build(vIdx, c)
 
-    v2d.table.write.parquet(c.output.stripSuffix("/").concat("/v2d/"))
+    v2d.table.write.json(c.output.stripSuffix("/").concat("/v2d/"))
   }
 
   def diseaseToVariantToGene(): Unit = {
@@ -105,7 +105,7 @@ class Commands(val ss: SparkSession,
         (col("ref_allele") === col("tag_ref")) and
         (col("alt_allele") === col("tag_alt")))
       .drop(VariantIndex.columns:_*)
-      .write.parquet(c.output.stripSuffix("/").concat("/d2v2g/"))
+      .write.json(c.output.stripSuffix("/").concat("/d2v2g/"))
   }
 
   def dictionaries(): Unit = {
@@ -118,26 +118,26 @@ class Commands(val ss: SparkSession,
       .flatten
       .table
       .write
-      .parquet(c.output.stripSuffix("/").concat("/lut/variant-index/"))
+      .json(c.output.stripSuffix("/").concat("/lut/variant-index/"))
 
     logger.info("generate lut for studies")
 
     V2DIndex
       .buildStudiesIndex(c.variantDisease.studies)
       .write
-      .parquet(c.output.stripSuffix("/").concat("/lut/study-index/"))
+      .json(c.output.stripSuffix("/").concat("/lut/study-index/"))
 
     logger.info("generate lut for overlapping index")
     V2DIndex
       .buildOverlapIndex(c.variantDisease.overlapping)
       .write
-      .parquet(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
+      .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
 
     GeneIndex(c.ensembl.lut)
       .sortByID
       .table
       .write
-      .parquet(c.output.stripSuffix("/").concat("/lut/genes-index/"))
+      .json(c.output.stripSuffix("/").concat("/lut/genes-index/"))
   }
 
   def buildAll(): Unit = {
