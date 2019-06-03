@@ -128,14 +128,13 @@ object V2DIndex extends LazyLogging  {
       .sortWithinPartitions(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
 
   def buildOverlapIndex(path: String)(implicit ss: SparkSession): DataFrame = {
-    val groupCols = Seq("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
-    val aggCols = Seq("B_study_id", "B_chrom", "B_pos", "B_ref", "B_alt", "A_distinct",
-    "AB_overlap", "B_distinct").map(c => collect_list(c).as(c))
-    val aggregation = ss.read.parquet(path).drop("set_type")
-      .groupBy(groupCols.head, groupCols.tail:_*)
-      .agg(aggCols.head, aggCols.tail:_*)
+    val aCols = Seq("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
+    val bCols = Seq("B_study_id", "B_chrom", "B_pos", "B_ref", "B_alt", "A_distinct",
+    "AB_overlap", "B_distinct")
 
-    aggregation.repartitionByRange(col("A_chrom"))
+    val selectCols = (aCols ++ bCols).map(col)
+    ss.read.parquet(path).drop("set_type")
+      .select(selectCols:_*)
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
