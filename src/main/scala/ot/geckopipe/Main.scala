@@ -21,7 +21,7 @@ class Commands(val ss: SparkSession,
   def variantIndex(): Unit = {
     logger.info("exec variant-index command")
     val vidx = VariantIndex.builder(c).build
-    vidx.table.write.json(c.variantIndex.path)
+    vidx.table.write.parquet(c.variantIndex.path)
   }
 
   def distanceNearest(): Unit = {
