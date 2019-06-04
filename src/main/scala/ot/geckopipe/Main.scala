@@ -47,7 +47,7 @@ class Commands(val ss: SparkSession,
 
     val columnsToDrop = VariantIndex.columns ++ GeneIndex.indexColumns ++ GeneIndex.idColumns
 
-    val coloc = ss.read.json(c.variantDisease.coloc)
+    val coloc = ss.read.parquet(c.variantDisease.coloc)
       .join(broadcast(gIdx), col("left_chrom") === col("chr") and
         col("right_gene_id") === col("gene_id"), "left_outer")
       .where(col("right_gene_id").isNull or
