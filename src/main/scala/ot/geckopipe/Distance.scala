@@ -16,10 +16,10 @@ object Distance extends LazyLogging {
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
-    Distance(vIdx, conf, conf.nearest.tssDistance, GeneIndex.allExceptPseudo)
+    Distance(vIdx, conf, conf.nearest.tssDistance, GeneIndex.BioTypes.ApprovedBioTypes)
   }
 
-  def apply(vIdx: VariantIndex, conf: Configuration, tssDistance: Long, biotypes: Set[String])
+  def apply(vIdx: VariantIndex, conf: Configuration, tssDistance: Long, biotypes: GeneIndex.BioTypes)
            (implicit ss: SparkSession): Component = {
 
     val genes = GeneIndex(conf.ensembl.lut, biotypes)

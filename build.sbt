@@ -30,6 +30,7 @@ lazy val root = (project in file("."))
     libraryDependencies += configLB,
     libraryDependencies += scalaLoggingDep,
     libraryDependencies += scalaLogging,
+    libraryDependencies += enumeratum,
 
     testFrameworks += new TestFramework("minitest.runner.Framework"),
 

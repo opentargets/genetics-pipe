@@ -17,4 +17,5 @@ object Dependencies {
     "org.apache.spark" %% "spark-mllib" % "2.4.3"
     )
   lazy val configLB = "com.github.pureconfig" %% "pureconfig" % "0.10.1"
+  lazy val enumeratum = "com.beachape" %% "enumeratum" % "1.5.13"
 }
