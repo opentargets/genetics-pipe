@@ -1,5 +1,6 @@
-sudo: false
+sudo: required
 language: scala
+dist: xenial
 scala:
   - 2.11.12
 jdk:
