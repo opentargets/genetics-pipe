@@ -32,6 +32,37 @@ class Commands(val ss: SparkSession,
     nearestDF.table.write.json(c.nearest.path)
   }
 
+  def variantDiseaseColoc(): Unit = {
+    logger.info("exec distance-nearest command")
+    val variantColumns = VariantIndex.columns.map(col)
+    val vIdx = VariantIndex.builder(c)
+      .load.table
+      .select(variantColumns:_*)
+
+    val geneColumns = (GeneIndex.indexColumns ++ GeneIndex.idColumns) map col
+    val gIdx = GeneIndex(c.ensembl.lut)
+      .sortByID
+      .table
+      .select(geneColumns:_*)
+
+    val columnsToDrop = VariantIndex.columns ++ GeneIndex.indexColumns ++ GeneIndex.idColumns
+
+    val coloc = ss.read.parquet(c.variantDisease.coloc)
+      .join(broadcast(gIdx), col("left_chrom") === col("chr") and
+        col("right_gene_id") === col("gene_id"), "left_outer")
+      .where(col("right_gene_id").isNull or
+        col("right_gene_id") === col("gene_id"))
+
+    val colocVariantFiltered = coloc.join(vIdx,
+      (col("right_chrom") === col("chr_id")) and
+        (col("right_pos") === col("position")) and
+        (col("right_ref") === col("ref_allele")) and
+        (col("right_alt") === col("alt_allele")))
+      .drop(columnsToDrop:_*)
+
+    colocVariantFiltered.write.json(c.output.stripSuffix("/").concat("/v2d_coloc/"))
+  }
+
   def variantToGene(): Unit = {
     logger.info("exec variant-gene command")
 
@@ -48,7 +79,7 @@ class Commands(val ss: SparkSession,
     val dtSeq = Seq(vepDts, nearestDts, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, vIdx, c)
 
-    v2g.table.saveToJSON(c.output.stripSuffix("/").concat("/v2g/"))
+    v2g.table.write.json(c.output.stripSuffix("/").concat("/v2g/"))
   }
 
   def variantToDisease(): Unit = {
@@ -57,7 +88,7 @@ class Commands(val ss: SparkSession,
     val vIdx = VariantIndex.builder(c).load
     val v2d = V2DIndex.build(vIdx, c)
 
-    v2d.table.saveToJSON(c.output.stripSuffix("/").concat("/v2d/"))
+    v2d.table.write.json(c.output.stripSuffix("/").concat("/v2d/"))
   }
 
   def diseaseToVariantToGene(): Unit = {
@@ -74,7 +105,7 @@ class Commands(val ss: SparkSession,
         (col("ref_allele") === col("tag_ref")) and
         (col("alt_allele") === col("tag_alt")))
       .drop(VariantIndex.columns:_*)
-      .saveToJSON(c.output.stripSuffix("/").concat("/d2v2g/"))
+      .write.json(c.output.stripSuffix("/").concat("/d2v2g/"))
   }
 
   def dictionaries(): Unit = {
@@ -112,6 +143,7 @@ class Commands(val ss: SparkSession,
   def buildAll(): Unit = {
     variantIndex()
     dictionaries()
+    variantDiseaseColoc()
     variantToDisease()
     variantToGene()
     diseaseToVariantToGene()
@@ -179,6 +211,9 @@ object Main extends LazyLogging {
           case Some("distance-nearest") =>
             cmds.distanceNearest()
 
+          case Some("variant-disease-coloc") =>
+            cmds.variantDiseaseColoc()
+
           case Some("variant-gene") =>
             cmds.variantToGene()
 
@@ -232,7 +267,11 @@ object Main extends LazyLogging {
 
       cmd("distance-nearest")
         .action((_, c) => c.copy(command = Some("distance-nearest")))
-        .text("generate distance nearest based dataset (chr == 1)")
+        .text("generate distance nearest based dataset")
+
+      cmd("variant-disease-coloc")
+        .action((_, c) => c.copy(command = Some("variant-disease-coloc")))
+        .text("load coloc and filter by gene table and variant index")
 
       cmd("variant-index")
         .action((_, c) => c.copy(command = Some("variant-index")))

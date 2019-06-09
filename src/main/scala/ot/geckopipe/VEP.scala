@@ -15,10 +15,6 @@ object VEP extends LazyLogging {
   val columns: Seq[String] =
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
-  val rawColumnsWithAliases: Seq[(String, String)] = Seq(("chrom_b37","chr_id"), ("pos_b37", "position"),
-    ("ref", "ref_allele"), ("alt", "alt_allele"),
-    ("vep.transcript_consequences", "transcript_consequences"))
-
   /** load consequence table from file extracted from ensembl website
     *
     * https://www.ensembl.org/info/genome/variation/predicted_data.html#consequences and
@@ -88,7 +84,7 @@ object VEP extends LazyLogging {
     logger.info("load VEP table from raw variant index")
     val raw = VariantIndex
       .builder(conf)
-      .loadRawVariantIndex(rawColumnsWithAliases)
+      .loadRawVariantIndex(VariantIndex.rawColumnsWithAliasesMinimal)
       .persist(StorageLevels.DISK_ONLY)
 
     val groupingCols = VariantIndex.columns :+ "gene_id"

@@ -24,10 +24,17 @@ object VariantIndex {
   case class VIRow(chr_id: String, position: Long, ref_allele: String, alt_allele: String,
                    d: Long, gene_id: String)
 
-  val rawColumnsWithAliases: Seq[(String, String)] = Seq(("chrom_b37","chr_id"), ("pos_b37", "position"),
-    ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
-    ("vep.most_severe_consequence", "most_severe_consequence"),
-    ("cadd", "cadd"), ("af", "af"))
+  val rawColumnsWithAliases: Seq[(String, String)] =
+    Seq(("chrom_b37", "chr_id_b37"), ("pos_b37", "position_b37"),
+      ("chrom_b38","chr_id"), ("pos_b38", "position"),
+      ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
+      ("vep.most_severe_consequence", "most_severe_consequence"),
+      ("cadd", "cadd"), ("af", "af"))
+
+  val rawColumnsWithAliasesMinimal: Seq[(String, String)] =
+    Seq(("chrom_b38", "chr_id"), ("pos_b38", "position"),
+      ("ref", "ref_allele"), ("alt", "alt_allele"),
+      ("vep.transcript_consequences", "transcript_consequences"))
 
   /** variant_id is represented as 1_123_T_C but split into columns 1 23456 T C */
   val columns: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
@@ -49,12 +56,13 @@ object VariantIndex {
     def loadRawVariantIndex(columnsWithAliases: Seq[(String, String)]): DataFrame = {
       val indexCols = indexColumns.map(c => col(c).asc)
       val sortCols = sortColumns.map(c => col(c).asc)
-      val inputCols = columnsWithAliases.map(s => col(s._1).alias(s._2))
+      val inputCols = columnsWithAliases.map(s => col(s._1).as(s._2))
       val raw = loadFromParquet(conf.variantIndex.raw)(ss)
 
       raw.select(inputCols:_*)
         .repartitionByRange(indexCols:_*)
         .sortWithinPartitions(sortCols:_*)
+        .where(col("chr_id").isNotNull && col("position").isNotNull)
     }
 
     def build: VariantIndex = {
@@ -65,7 +73,7 @@ object VariantIndex {
 
         val nearests = Distance(vidx, conf,
           conf.variantIndex.tssDistance,
-          GeneIndex.allExceptPseudo)(ss).table
+          GeneIndex.BioTypes.ApprovedBioTypes)(ss).table
 
         val nearestGenes = nearests
           .as[VIRow]
@@ -78,9 +86,7 @@ object VariantIndex {
         // just prot coding genes
         val nearestsPC = Distance(vidx, conf,
           conf.variantIndex.tssDistance,
-          GeneIndex.allExceptProtCoding)(ss).table
-
-        // protein_coding
+          GeneIndex.BioTypes.ProteinCoding)(ss).table
 
         val nearestPCGenes = nearestsPC
           .as[VIRow]

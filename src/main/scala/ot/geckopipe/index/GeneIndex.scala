@@ -2,6 +2,7 @@ package ot.geckopipe.index
 
 import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SparkSession}
+import enumeratum._
 
 /** This class represents a full table of gene with its transcripts grch37 */
 class GeneIndex(val table: DataFrame) {
@@ -14,88 +15,36 @@ class GeneIndex(val table: DataFrame) {
 
 /** Companion object to build the GeneIndex class */
 object GeneIndex {
-  val allExceptProtCoding: Set[String] = Set(
-    "3prime_overlapping_ncrna",
-    "antisense",
-    "IG_C_gene",
-    "IG_C_pseudogene",
-    "IG_D_gene",
-    "IG_J_gene",
-    "IG_J_pseudogene",
-    "IG_V_gene",
-    "IG_V_pseudogene",
-    "lincRNA",
-    "miRNA",
-    "misc_RNA",
-    "Mt_rRNA",
-    "Mt_tRNA",
-    "polymorphic_pseudogene",
-    "processed_transcript",
-    "pseudogene",
-    "rRNA",
-    "sense_intronic",
-    "sense_overlapping",
-    "snoRNA",
-    "snRNA",
-    "TR_C_gene",
-    "TR_D_gene",
-    "TR_J_gene",
-    "TR_J_pseudogene",
-    "TR_V_gene",
-    "TR_V_pseudogene"
-  )
+  sealed abstract class BioTypes(override val entryName: String, val set: Set[String]) extends EnumEntry
 
-  val allBioTypes: Set[String] = Set(
-    "3prime_overlapping_ncrna",
-    "antisense",
-    "IG_C_gene",
-    "IG_C_pseudogene",
-    "IG_D_gene",
-    "IG_J_gene",
-    "IG_J_pseudogene",
-    "IG_V_gene",
-    "IG_V_pseudogene",
-    "lincRNA",
-    "miRNA",
-    "misc_RNA",
-    "Mt_rRNA",
-    "Mt_tRNA",
-    "polymorphic_pseudogene",
-    "processed_transcript",
-    "protein_coding",
-    "pseudogene",
-    "rRNA",
-    "sense_intronic",
-    "sense_overlapping",
-    "snoRNA",
-    "snRNA",
-    "TR_C_gene",
-    "TR_D_gene",
-    "TR_J_gene",
-    "TR_J_pseudogene",
-    "TR_V_gene",
-    "TR_V_pseudogene"
-  )
+  object BioTypes extends Enum[BioTypes] {
 
-  val allExceptPseudo: Set[String] = Set(
-    "IG_C_pseudogene",
-    "IG_J_pseudogene",
-    "IG_pseudogene",
-    "IG_V_pseudogene",
-    "polymorphic_pseudogene",
-    "processed_pseudogene",
-    "pseudogene",
-    "rRNA",
-    "rRNA_pseudogene",
-    "snoRNA",
-    "snRNA",
-    "transcribed_processed_pseudogene",
-    "transcribed_unitary_pseudogene",
-    "transcribed_unprocessed_pseudogene",
-    "TR_J_pseudogene",
-    "TR_V_pseudogene",
-    "unitary_pseudogene",
-    "unprocessed_pseudogene")
+    /*
+     `findValues` is a protected method that invokes a macro to find all `Greeting` object declarations inside an `Enum`
+
+     You use it to implement the `val values` member
+    */
+    val values = findValues
+
+    case object ProteinCoding extends BioTypes("protein_coding", Set("protein_coding"))
+    case object ApprovedBioTypes extends BioTypes("filtered_biotypes", approvedBioTypes)
+
+    val approvedBioTypes = Set(
+      "3prime_overlapping_ncRNA",
+      "antisense",
+      "bidirectional_promoter_lncRNA",
+      "IG_C_gene",
+      "IG_D_gene",
+      "IG_J_gene",
+      "IG_V_gene",
+      "lincRNA",
+      "macro_lncRNA",
+      "non_coding",
+      "protein_coding",
+      "sense_intronic",
+      "sense_overlapping"
+    )
+  }
 
   val chromosomes: Set[String] = Set("MT")
 
@@ -124,10 +73,10 @@ object GeneIndex {
     * @param ss implicit sparksession
     * @return the processed dataframe
     */
-  def apply(from: String, bioTypes: Set[String] = allExceptPseudo)(implicit ss: SparkSession): GeneIndex = {
+  def apply(from: String, bioTypes: BioTypes = BioTypes.ApprovedBioTypes)(implicit ss: SparkSession): GeneIndex = {
     val indexCols = indexColumns.map(c => col(c).asc)
     val genes = ss.read.json(from)
-      .where(!(col("biotype") isInCollection bioTypes) and
+      .where((col("biotype") isInCollection bioTypes.set) and
         !(col("chr") isInCollection chromosomes))
       .repartitionByRange(indexCols:_*)
 
