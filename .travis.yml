@@ -4,7 +4,7 @@ dist: xenial
 scala:
   - 2.11.12
 jdk:
-  - oraclejdk8
+  - openjdk8
 script:
   - sbt ++$TRAVIS_SCALA_VERSION clean compile
   - sbt ++$TRAVIS_SCALA_VERSION coverage test coverageReport
