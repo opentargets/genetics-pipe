@@ -5,16 +5,15 @@ import java.nio.file.Paths
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
-import ot.geckopipe.index._
-import ot.geckopipe.index.Indexable._
-import scopt.OptionParser
 import org.apache.spark.sql.functions._
-import pureconfig.generic.auto._
+import ot.geckopipe.index._
+import pureconfig.error.ConfigReaderFailures
+import scopt.OptionParser
 
 class Commands(val ss: SparkSession,
                val sampleFactor: Double,
                val c: Configuration)
-    extends LazyLogging {
+  extends LazyLogging {
   implicit val sSesion: SparkSession = ss
   implicit val sFactor: Double = sampleFactor
 
@@ -37,13 +36,13 @@ class Commands(val ss: SparkSession,
     val variantColumns = VariantIndex.columns.map(col)
     val vIdx = VariantIndex.builder(c)
       .load.table
-      .select(variantColumns:_*)
+      .select(variantColumns: _*)
 
     val geneColumns = (GeneIndex.indexColumns ++ GeneIndex.idColumns) map col
     val gIdx = GeneIndex(c.ensembl.lut)
       .sortByID
       .table
-      .select(geneColumns:_*)
+      .select(geneColumns: _*)
 
     val columnsToDrop = VariantIndex.columns ++ GeneIndex.indexColumns ++ GeneIndex.idColumns
 
@@ -58,7 +57,7 @@ class Commands(val ss: SparkSession,
         (col("right_pos") === col("position")) and
         (col("right_ref") === col("ref_allele")) and
         (col("right_alt") === col("alt_allele")))
-      .drop(columnsToDrop:_*)
+      .drop(columnsToDrop: _*)
 
     colocVariantFiltered.write.json(c.output.stripSuffix("/").concat("/v2d_coloc/"))
   }
@@ -104,7 +103,7 @@ class Commands(val ss: SparkSession,
         (col("position") === col("tag_pos")) and
         (col("ref_allele") === col("tag_ref")) and
         (col("alt_allele") === col("tag_alt")))
-      .drop(VariantIndex.columns:_*)
+      .drop(VariantIndex.columns: _*)
       .write.json(c.output.stripSuffix("/").concat("/d2v2g/"))
   }
 
@@ -169,83 +168,93 @@ object Main extends LazyLogging {
       |
     """.stripMargin
 
-  def run(config: CommandLineArgs): Unit = {
+  def run(clArgs: CommandLineArgs, configuration: Configuration)(implicit ss: SparkSession): Unit = {
     println(s"running $progName")
-    val conf = if (config.file.nonEmpty) {
-      logger.info(s"loading configuration from commandline as ${config.file}")
-      pureconfig.loadConfig[Configuration](Paths.get(config.file))
+
+    logger.debug(s"running with cli args $clArgs and with configuracion $configuration")
+
+    val cmds = new Commands(ss, configuration.sampleFactor, configuration)
+
+    logger.info("check command specified")
+    clArgs.command match {
+      case Some("variant-index") =>
+        cmds.variantIndex()
+
+      case Some("distance-nearest") =>
+        cmds.distanceNearest()
+
+      case Some("variant-disease-coloc") =>
+        cmds.variantDiseaseColoc()
+
+      case Some("variant-gene") =>
+        cmds.variantToGene()
+
+      case Some("variant-disease") =>
+        cmds.variantToDisease()
+
+      case Some("disease-variant-gene") =>
+        cmds.diseaseToVariantToGene()
+
+      case Some("dictionaries") =>
+        cmds.dictionaries()
+
+      case Some("build-all") =>
+        cmds.buildAll()
+
+      case _ =>
+        logger.error("failed to specify a command to run try --help")
+    }
+
+    println("closing app... done.")
+  }
+
+  private def getOrCreateSparkSession(sparkUri: String) = {
+    val sparkConf: SparkConf =
+      if (sparkUri.nonEmpty)
+        new SparkConf()
+          .setAppName(progName)
+          .setMaster(sparkUri)
+      else
+        new SparkConf()
+          .setAppName(progName)
+          .setMaster("local")
+
+    SparkSession.builder
+      .config(sparkConf)
+      .getOrCreate
+  }
+
+  private def readConfiguration(configFile: String): Either[ConfigReaderFailures, Configuration] = {
+    import pureconfig.generic.auto.exportReader //implicit reader used to read the config file
+
+    val conf = if (configFile.nonEmpty) {
+      logger.info(s"loading configuration from commandline as $configFile")
+      pureconfig.loadConfig[Configuration](Paths.get(configFile))
     } else {
       logger.info("load configuration from package resource")
       pureconfig.loadConfig[Configuration]
     }
-
-    conf match {
-      case Right(c) =>
-        logger.debug(
-          s"running with cli args $config and with default configuracion $c")
-        val logLevel = c.logLevel
-
-        val conf: SparkConf =
-          if (c.sparkUri.nonEmpty)
-            new SparkConf()
-              .setAppName(progName)
-              .setMaster(s"${c.sparkUri}")
-          else
-            new SparkConf()
-              .setAppName(progName)
-
-        implicit val ss: SparkSession = SparkSession.builder
-          .config(conf)
-          .getOrCreate
-
-        logger.debug("setting sparkcontext logging level to log-level")
-        ss.sparkContext.setLogLevel(logLevel)
-
-        val cmds = new Commands(ss, c.sampleFactor, c)
-
-        logger.info("check command specified")
-        config.command match {
-          case Some("variant-index") =>
-            cmds.variantIndex()
-
-          case Some("distance-nearest") =>
-            cmds.distanceNearest()
-
-          case Some("variant-disease-coloc") =>
-            cmds.variantDiseaseColoc()
-
-          case Some("variant-gene") =>
-            cmds.variantToGene()
-
-          case Some("variant-disease") =>
-            cmds.variantToDisease()
-
-          case Some("disease-variant-gene") =>
-            cmds.diseaseToVariantToGene()
-
-          case Some("dictionaries") =>
-            cmds.dictionaries()
-
-          case Some("build-all") =>
-            cmds.buildAll()
-
-          case _ =>
-            logger.error("failed to specify a command to run try --help")
-        }
-
-        ss.stop
-
-      case Left(failures) =>
-        println(s"configuration contains errors like ${failures.toString}")
-    }
-    println("closing app... done.")
+    conf
   }
 
   def main(args: Array[String]): Unit = {
     // parser.parse returns Option[C]
     parser.parse(args, CommandLineArgs()) match {
       case Some(config) =>
-        run(config)
+        readConfiguration(config.file) match {
+          case Right(configuration) => {
+            implicit val ss: SparkSession = getOrCreateSparkSession(configuration.sparkUri)
+            ss.sparkContext.setLogLevel(configuration.logLevel)
+            try {
+              run(config, configuration)
+            } finally {
+              ss.close()
+            }
+          }
+          case Left(failures) =>
+            println(s"configuration contains errors like ${failures.toString}")
+        }
+
       case None => println("problem parsing commandline args")
     }
   }
