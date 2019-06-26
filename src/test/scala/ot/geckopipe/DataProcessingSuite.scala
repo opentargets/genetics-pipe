@@ -14,6 +14,8 @@ object DataProcessingSuite extends SimpleTestSuite {
 
   import spark.implicits._
 
+  private val variant = Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", 10769L,
+    "ENSG00000223972", 10769L, "ENSG00000223972")
   Seq(
     RawVariant("1", 1000, "1", 1100, "A", "T", "rs123",
       Vep(most_severe_consequence = "severe consequence",
@@ -21,9 +23,10 @@ object DataProcessingSuite extends SimpleTestSuite {
           TranscriptConsequence(gene_id = "gene id", consequence_terms = Array("consequence term 1")))),
       Cadd(0.1, 0.2), Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
   ).toDF().write.parquet(configuration.variantIndex.raw)
-  Seq(
-    Gene("1", "ENSG00000223972", 11869, 11869, 14412, "protein_coding")
-  ).toDF().write.json(configuration.ensembl.lut)
+
+  private val gene = Gene("1", "ENSG00000223972", 11869, 11869, 14412, "protein_coding")
+  Seq(gene).toDF().write.json(configuration.ensembl.lut)
+
   Seq(
     VepConsequence(
       "http://purl.obolibrary.org/obo/SO_000163",
@@ -35,39 +38,44 @@ object DataProcessingSuite extends SimpleTestSuite {
       0.6
     )
   ).toDF().write.json(configuration.vep.homoSapiensConsScores)
+
   Seq(
     Qtl("1", 1100L, "A", "T", "ENSG00000223972", 0.1, 0.2, 0.3, "type 1", "src 1", "feature 1")
   ).toDF().write.parquet(configuration.qtl.path)
+
   Seq(
     IntervalDomain("1", 900L, 1200L, "ENSG00000223972", 0.1, "cell type 1", "feature 1")
   ).toDF().write.parquet(configuration.interval.path)
-  Seq(
-    Study("study1", Some("PMID:1"), Some("2012-01-03"), Some("journal 1"), Some("pub title 1"), Some("Pub Author"),
-      Some("trait reported 1"), Some(List("EFO_test")), Some(List("European=10")), Some(List("European=5")), Some(10L),
-      Some(5L), Some(1L), Some("trait category 1"), Some(2L))
-  ).toDF().write.parquet(configuration.variantDisease.studies)
+
+  private val study = Study("study1", Some("PMID:1"), Some("2012-01-03"), Some("journal 1"), Some("pub title 1"), Some("Pub Author"),
+    Some("trait reported 1"), Some(List("EFO_test")), Some(List("European=10")), Some(List("European=5")), Some(10L),
+    Some(5L), Some(1L), Some("trait category 1"), Some(2L))
+  Seq(study).toDF().write.parquet(configuration.variantDisease.studies)
+
   Seq(
     TopLoci("study1", "1", 1100L, "A", "T", Some("+"), Some(0.026), Some(0.021), Some(0.030), Some(0.11), Some(0.09),
       Some(0.12), Some(2.3), Some(-16))
   ).toDF().write.parquet(configuration.variantDisease.toploci)
+
   Seq(
     Ld("study1", "1", 1100L, "A", "T", "1", 1100L, "A", "T", Some(0.9), Some(0.1), Some(0.2), Some(0.3), Some(0.4),
       Some(0.5), Some(true))
   ).toDF().write.parquet(configuration.variantDisease.ld)
+
   Seq(
     FineMapping("study1", "1", 1100L, "A", "T", "1", 1100L, "A", "T", Some(28.9), Some(0.021))
   ).toDF().write.parquet(configuration.variantDisease.finemapping)
+
+  private val overlap = LocusOverlap("study1", "1", 1100L, "A", "T", "study2", "1", 1100L, "A", "T", Some(7), Some(3),
+    Some(5))
+  Seq(overlap).toDF().write.parquet(configuration.variantDisease.overlapping)
 
   test("calculate variant index") {
     Main.run(CommandLineArgs(command = Some("variant-index")), configuration)
 
     def variants = spark.read.parquet(configuration.variantIndex.path).as[Variant].collect().toList
 
-    assertEquals(variants, List(
-      Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", Cadd(0.1, 0.2),
-        Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0), 10769L, "ENSG00000223972",
-        10769L, "ENSG00000223972")
-    ))
+    assertEquals(variants, List(variant))
   }
 
   test("calculate distance nearest") {
@@ -177,7 +185,24 @@ object DataProcessingSuite extends SimpleTestSuite {
     Main.run(CommandLineArgs(command = Some("disease-variant-gene")), configuration)
 
     def d2v2gs = spark.read.json(configuration.output + "/d2v2g/").as[D2V2G].collect()
+
     assertEquals(d2v2gs.length, 3)
+  }
+
+  test("calculate dictionaries") {
+    Main.run(CommandLineArgs(command = Some("dictionaries")), configuration)
+
+    def genes = spark.read.json(configuration.output + "/lut/genes-index/").as[Gene].collect().toList
+    assertEquals(genes, List(gene))
+
+    def studies = spark.read.json(configuration.output + "/lut/study-index/").as[Study].collect().toList
+    assertEquals(studies, List(study))
+
+    def variants = spark.read.json(configuration.output + "/lut/variant-index/").as[Variant].collect().toList
+    assertEquals(variants, List(variant))
+
+    def overlaps = spark.read.json(configuration.output + "/lut/overlap-index/").as[LocusOverlap].collect().toList
+    assertEquals(overlaps, List(overlap))
   }
 
   private def createTestConfiguration(): Configuration = {

@@ -14,5 +14,4 @@ case class Study(study_id: String,
                  n_replication: Option[Long] = None,
                  n_cases: Option[Long] = None,
                  trait_category: Option[String] = None,
-                 num_assoc_loci: Option[Long] = None,
-                 has_sumstats: Option[Boolean] = None)
+                 num_assoc_loci: Option[Long] = None)
