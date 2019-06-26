@@ -41,6 +41,22 @@ object DataProcessingSuite extends SimpleTestSuite {
   Seq(
     IntervalDomain("1", 900L, 1200L, "ENSG00000223972", 0.1, "cell type 1", "feature 1")
   ).toDF().write.parquet(configuration.interval.path)
+  Seq(
+    Study("study1", Some("PMID:1"), Some("2012-01-03"), Some("journal 1"), Some("pub title 1"), Some("Pub Author"),
+      Some("trait reported 1"), Some(List("EFO_test")), Some(List("European=10")), Some(List("European=5")), Some(10L),
+      Some(5L), Some(1L), Some("trait category 1"), Some(2L))
+  ).toDF().write.parquet(configuration.variantDisease.studies)
+  Seq(
+    TopLoci("study1", "1", 1100L, "A", "T", Some("+"), Some(0.026), Some(0.021), Some(0.030), Some(0.11), Some(0.09),
+      Some(0.12), Some(2.3), Some(-16))
+  ).toDF().write.parquet(configuration.variantDisease.toploci)
+  Seq(
+    Ld("study1", "1", 1100L, "A", "T", "1", 1100L, "A", "T", Some(0.9), Some(0.1), Some(0.2), Some(0.3), Some(0.4),
+      Some(0.5), Some(true))
+  ).toDF().write.parquet(configuration.variantDisease.ld)
+  Seq(
+    FineMapping("study1", "1", 1100L, "A", "T", "1", 1100L, "A", "T", Some(28.9), Some(0.021))
+  ).toDF().write.parquet(configuration.variantDisease.finemapping)
 
   test("calculate variant index") {
     Main.run(CommandLineArgs(command = Some("variant-index")), configuration)
@@ -107,6 +123,53 @@ object DataProcessingSuite extends SimpleTestSuite {
     assertEquals(v2gsAsterisk.source_id, "*")
     assert(v2gsAsterisk.interval_score.get - 0.1 < error)
     assert(v2gsAsterisk.interval_score_q.get - 0.1 < error)
+  }
+
+  test("calculate variant to disease") {
+    Main.run(CommandLineArgs(command = Some("variant-disease")), configuration)
+
+    def v2d = spark.read.json(configuration.variantDisease.path).as[V2D].head()
+
+    assertEquals(v2d.study_id, "study1")
+    assertEquals(v2d.pmid, Some("PMID:1"))
+    assertEquals(v2d.pub_date, Some("2012-01-03"))
+    assertEquals(v2d.pub_journal, Some("journal 1"))
+    assertEquals(v2d.pub_author, Some("Pub Author"))
+    assertEquals(v2d.trait_reported, Some("trait reported 1"))
+    assertEquals(v2d.trait_efos, Some(List("EFO_test")))
+    assertEquals(v2d.ancestry_initial, Some(List("European=10")))
+    assertEquals(v2d.ancestry_replication, Some(List("European=5")))
+    assertEquals(v2d.n_initial, Some(10))
+    assertEquals(v2d.n_replication, Some(5))
+    assertEquals(v2d.n_cases, Some(1))
+    assertEquals(v2d.trait_category, Some("trait category 1"))
+    assertEquals(v2d.num_assoc_loci, Some(2))
+    assertEquals(v2d.lead_chrom, "1")
+    assertEquals(v2d.lead_pos, 1100L)
+    assertEquals(v2d.lead_ref, "A")
+    assertEquals(v2d.lead_alt, "T")
+    assertEquals(v2d.tag_chrom, "1")
+    assertEquals(v2d.tag_pos, 1100L)
+    assertEquals(v2d.tag_ref, "A")
+    assertEquals(v2d.tag_alt, "T")
+    assert(v2d.overall_r2.get - 0.9 < error)
+    assert(v2d.AFR_1000G_prop.get - 0.1 < error)
+    assert(v2d.AMR_1000G_prop.get - 0.2 < error)
+    assert(v2d.EAS_1000G_prop.get - 0.3 < error)
+    assert(v2d.EUR_1000G_prop.get - 0.4 < error)
+    assert(v2d.SAS_1000G_prop.get - 0.5 < error)
+    assert(v2d.log10_ABF.get - 28.9 < error)
+    assert(v2d.posterior_prob.get - 0.021 < error)
+    assert(v2d.odds_ratio.get - 0.11 < error)
+    assert(v2d.oddsr_ci_lower.get - 0.09 < error)
+    assert(v2d.oddsr_ci_upper.get - 0.12 < error)
+    assertEquals(v2d.direction, Some("+"))
+    assert(v2d.beta.get - 0.026 < error)
+    assert(v2d.beta_ci_lower.get - 0.021 < error)
+    assert(v2d.beta_ci_upper.get - 0.03 < error)
+    assert(v2d.pval_mantissa.get - 2.3 < error)
+    assertEquals(v2d.pval_exponent, Some(-16))
+    assert(v2d.pval.get - 2.3 - 16 < 1E-19)
   }
 
   private def createTestConfiguration(): Configuration = {
