@@ -19,7 +19,7 @@ object DataProcessingSuite extends SimpleTestSuite {
       Vep(most_severe_consequence = "severe consequence",
         transcript_consequences = Array(
           TranscriptConsequence(gene_id = "gene id", consequence_terms = Array("consequence term 1")))),
-      "cadd 1", "af 1")
+      Cadd(0.1, 0.2), Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
   ).toDF().write.parquet(configuration.variantIndex.raw)
   Seq(
     Gene("1", "ENSG00000223972", 11869, 11869, 14412, "protein_coding")
@@ -64,7 +64,8 @@ object DataProcessingSuite extends SimpleTestSuite {
     def variants = spark.read.parquet(configuration.variantIndex.path).as[Variant].collect().toList
 
     assertEquals(variants, List(
-      Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", "cadd 1", "af 1", 10769L, "ENSG00000223972",
+      Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", Cadd(0.1, 0.2),
+        Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0), 10769L, "ENSG00000223972",
         10769L, "ENSG00000223972")
     ))
   }

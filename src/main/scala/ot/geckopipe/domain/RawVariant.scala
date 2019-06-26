@@ -12,5 +12,5 @@ case class RawVariant(chrom_b37: String,
                       alt: String,
                       rsId: String,
                       vep: Vep,
-                      cadd: String,
-                      af: String)
+                      cadd: Cadd,
+                      af: Gnomad)
