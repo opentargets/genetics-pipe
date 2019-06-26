@@ -172,6 +172,13 @@ object DataProcessingSuite extends SimpleTestSuite {
     assert(v2d.pval.get - 2.3 - 16 < 1E-19)
   }
 
+  test("calculate disease to variant to gene") {
+    Main.run(CommandLineArgs(command = Some("disease-variant-gene")), configuration)
+
+    def d2v2gs = spark.read.json(configuration.output + "/d2v2g/").as[D2V2G].collect()
+    assertEquals(d2v2gs.length, 3)
+  }
+
   private def createTestConfiguration(): Configuration = {
     val uuid = UUID.randomUUID().toString
 
