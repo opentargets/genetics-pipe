@@ -20,11 +20,5 @@ deploy:
     repo: opentargets/genetics-pipe
 #    tags: true
   skip_cleanup: true
-notifications:
-  email:
-    recipients:
-    - ops@opentargets.org
-    on_success: never
-    on_failure: always
 after_success:
   - bash <(curl -s https://codecov.io/bash)
