@@ -151,10 +151,10 @@ object DataProcessingSuite extends SimpleTestSuite {
     assertEquals(v2d.pub_date, Some("2012-01-03"))
     assertEquals(v2d.pub_journal, Some("journal 1"))
     assertEquals(v2d.pub_author, Some("Pub Author"))
-    assertEquals(v2d.trait_reported, Some("trait reported 1"))
-    assertEquals(v2d.trait_efos, Some(List("EFO_test")))
-    assertEquals(v2d.ancestry_initial, Some(List("European=10")))
-    assertEquals(v2d.ancestry_replication, Some(List("European=5")))
+    assertEquals(v2d.trait_reported, "trait reported 1")
+    assertEquals(v2d.trait_efos, List("EFO_test"))
+    assertEquals(v2d.ancestry_initial, List("European=10"))
+    assertEquals(v2d.ancestry_replication, List("European=5"))
     assertEquals(v2d.n_initial, Some(10))
     assertEquals(v2d.n_replication, Some(5))
     assertEquals(v2d.n_cases, Some(1))
@@ -183,9 +183,9 @@ object DataProcessingSuite extends SimpleTestSuite {
     assert(v2d.beta.get - 0.026 < error)
     assert(v2d.beta_ci_lower.get - 0.021 < error)
     assert(v2d.beta_ci_upper.get - 0.03 < error)
-    assert(v2d.pval_mantissa.get - 2.3 < error)
-    assertEquals(v2d.pval_exponent, Some(-16))
-    assert(v2d.pval.get - 2.3 - 16 < 1E-19)
+    assert(v2d.pval_mantissa - 2.3 < error)
+    assertEquals(v2d.pval_exponent, -16)
+    assert(v2d.pval - 2.3 - 16 < 1E-19)
   }
 
   test("calculate disease to variant to gene") {
