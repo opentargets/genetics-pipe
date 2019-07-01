@@ -2,13 +2,10 @@ package ot.geckopipe.domain
 
 case class Variant(chr_id: String,
                    position: Long,
-                   chr_id_b37: String,
-                   position_b37: Long,
                    ref_allele: String,
                    alt_allele: String,
-                   rs_id: String,
-                   most_severe_consequence: String,
-                  /*TODO How to make them nullable? AnalysisException: cannot resolve '`raw`' given input columns:
+                   rs_id: Option[String] = None,
+                   most_severe_consequence: Option[String] = None,
                    raw: Option[Double] = None,
                    phred: Option[Double] = None,
                    gnomad_afr: Option[Double] = None,
@@ -21,8 +18,7 @@ case class Variant(chr_id: String,
                    gnomad_nfe_nwe: Option[Double] = None,
                    gnomad_nfe_onf: Option[Double] = None,
                    gnomad_oth: Option[Double] = None,
-                   */
-                   gene_id_any_distance: Long,
-                   gene_id_any: String,
-                   gene_id_prot_coding_distance: Long,
-                   gene_id_prot_coding: String)
+                   gene_id_any_distance: Option[Long] = None,
+                   gene_id_any: Option[String] = None,
+                   gene_id_prot_coding_distance: Option[Long] = None,
+                   gene_id_prot_coding: Option[String] = None)

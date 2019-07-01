@@ -5,9 +5,9 @@ case class TranscriptConsequence(gene_id: String, consequence_terms: Array[Strin
 case class Vep(most_severe_consequence: String, transcript_consequences: Array[TranscriptConsequence])
 
 case class RawVariant(chrom_b37: String,
-                      pos_b37: Int,
+                      pos_b37: Long,
                       chrom_b38: String,
-                      pos_b38: Int,
+                      pos_b38: Long,
                       ref: String,
                       alt: String,
                       rsId: String,

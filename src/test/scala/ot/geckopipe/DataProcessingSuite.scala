@@ -3,7 +3,7 @@ package ot.geckopipe
 import java.util.UUID
 
 import minitest.SimpleTestSuite
-import org.apache.spark.sql.SparkSession
+import org.apache.spark.sql.{Encoders, SparkSession}
 import ot.geckopipe.domain._
 
 object DataProcessingSuite extends SimpleTestSuite {
@@ -14,8 +14,9 @@ object DataProcessingSuite extends SimpleTestSuite {
 
   import spark.implicits._
 
-  private val variant = Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", 10769L,
-    "ENSG00000223972", 10769L, "ENSG00000223972")
+  private val variant = Variant("1", 1100L, "A", "T", Some("rs123"), Some("severe consequence"), Some(0.1),
+    Some(0.2), Some(0.1), Some(0.2), Some(0.3), Some(0.4), Some(0.5), Some(0.6), Some(0.7), Some(0.8), Some(0.9),
+    Some(1.0), Some(10769L), Some("ENSG00000223972"), Some(10769L), Some("ENSG00000223972"))
   Seq(
     RawVariant("1", 1000, "1", 1100, "A", "T", "rs123",
       Vep(most_severe_consequence = "severe consequence",
@@ -74,9 +75,14 @@ object DataProcessingSuite extends SimpleTestSuite {
   test("calculate variant index") {
     Main.run(CommandLineArgs(command = Some("variant-index")), configuration)
 
-    def variants = spark.read.parquet(configuration.variantIndex.path).as[Variant].collect().toList
+    def variants = spark.read.schema(Encoders.product[Variant].schema).
+      parquet(configuration.variantIndex.path).as[Variant].collect().toList
 
-    assertEquals(variants, List(variant))
+    assertEquals(variants, List(Variant("1", 1100L, "A", "T", Some("rs123"), Some("severe consequence"),
+      gene_id_any_distance = Some(10769L),
+      gene_id_any = Some("ENSG00000223972"),
+      gene_id_prot_coding_distance = Some(10769L),
+      gene_id_prot_coding = Some("ENSG00000223972"))))
   }
 
   test("calculate distance nearest") {
