@@ -17,4 +17,8 @@ case class V2G(chr_id: String,
                qtl_se: Option[Double] = None,
                qtl_pval: Option[Double] = None,
                qtl_score: Option[Double] = None,
-               qtl_score_q: Option[Double] = None)
+               qtl_score_q: Option[Double] = None,
+               fpred_labels: List[String] = List(),
+               fpred_scores: List[Double] = List(),
+               fpred_max_label: Option[String] = None,
+               fpred_max_score: Option[Double] = None)
