@@ -24,7 +24,9 @@ object DataProcessingSuite extends SimpleTestSuite {
       Cadd(0.1, 0.2), Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
   ).toDF().write.parquet(configuration.variantIndex.raw)
 
-  private val gene = Gene("1", "ENSG00000223972", 11869, 11869, 14412, "protein_coding")
+  private val gene = Gene("1", "ENSG00000223972", "DDX11L1",
+    "DEAD/H (Asp-Glu-Ala-Asp/His) box helicase 11 like 1 [Source:HGNC Symbol;Acc:37102]", fwdstrand = true,
+    exons = Seq(11869L, 12227L, 12613L, 12721L, 13221L, 14409L), 11869, 11869, 14412, "protein_coding")
   Seq(gene).toDF().write.json(configuration.ensembl.lut)
 
   Seq(
