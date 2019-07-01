@@ -192,7 +192,8 @@ object DataProcessingSuite extends SimpleTestSuite {
   test("calculate disease to variant to gene") {
     Main.run(CommandLineArgs(command = Some("disease-variant-gene")), configuration)
 
-    def d2v2gs = spark.read.json(configuration.output + "/d2v2g/").as[D2V2G].collect()
+    def d2v2gs = spark.read.schema(Encoders.product[D2V2G].schema).
+      json(configuration.output + "/d2v2g/").as[D2V2G].collect()
 
     assertEquals(d2v2gs.length, 3)
   }

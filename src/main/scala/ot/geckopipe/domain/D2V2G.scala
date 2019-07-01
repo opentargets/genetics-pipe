@@ -7,10 +7,10 @@ case class D2V2G( //V2D fields
                   pub_journal: Option[String] = None,
                   pub_title: Option[String] = None,
                   pub_author: Option[String] = None,
-                  trait_reported: Option[String] = None,
-                  trait_efos: Option[List[String]] = None,
-                  ancestry_initial: Option[List[String]] = None,
-                  ancestry_replication: Option[List[String]] = None,
+                  trait_reported: String,
+                  trait_efos: List[String],
+                  ancestry_initial: List[String],
+                  ancestry_replication: List[String],
                   n_initial: Option[Long] = None,
                   n_replication: Option[Long] = None,
                   n_cases: Option[Long] = None,
@@ -39,9 +39,9 @@ case class D2V2G( //V2D fields
                   beta: Option[Double] = None,
                   beta_ci_lower: Option[Double] = None,
                   beta_ci_upper: Option[Double] = None,
-                  pval_mantissa: Option[Double] = None,
-                  pval_exponent: Option[Long] = None,
-                  pval: Option[Double] = None,
+                  pval_mantissa: Double,
+                  pval_exponent: Long,
+                  pval: Double,
                   // V2G fields
                   gene_id: String,
                   feature: String,
@@ -56,5 +56,9 @@ case class D2V2G( //V2D fields
                   qtl_se: Option[Double] = None,
                   qtl_pval: Option[Double] = None,
                   qtl_score: Option[Double] = None,
-                  qtl_score_q: Option[Double] = None
+                  qtl_score_q: Option[Double] = None,
+                  fpred_labels: List[String] = List(),
+                  fpred_scores: List[Double] = List(),
+                  fpred_max_label: Option[String] = None,
+                  fpred_max_score: Option[Double] = None
                 )
