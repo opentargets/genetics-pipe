@@ -49,9 +49,9 @@ object DataProcessingSuite extends SimpleTestSuite {
     IntervalDomain("1", 900L, 1200L, "ENSG00000223972", 0.1, "cell type 1", "feature 1")
   ).toDF().write.parquet(configuration.interval.path)
 
-  private val study = Study("study1", Some("PMID:1"), Some("2012-01-03"), Some("journal 1"), Some("pub title 1"), Some("Pub Author"),
-    Some("trait reported 1"), Some(List("EFO_test")), Some(List("European=10")), Some(List("European=5")), Some(10L),
-    Some(5L), Some(1L), Some("trait category 1"), Some(2L))
+  private val study = Study("study1", "trait reported 1", List("EFO_test"), Some("PMID:1"), Some("2012-01-03"),
+    Some("journal 1"), Some("pub title 1"), Some("Pub Author"), List("European=10"), List("European=5"),
+    Some(10L), Some(5L), Some(1L), Some("trait category 1"), Some(2L))
   Seq(study).toDF().write.parquet(configuration.variantDisease.studies)
 
   Seq(
