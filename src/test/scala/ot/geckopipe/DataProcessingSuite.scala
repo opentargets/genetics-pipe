@@ -68,8 +68,7 @@ object DataProcessingSuite extends SimpleTestSuite {
     FineMapping("study1", "1", 1100L, "A", "T", "1", 1100L, "A", "T", Some(28.9), Some(0.021))
   ).toDF().write.parquet(configuration.variantDisease.finemapping)
 
-  private val overlap = LocusOverlap("study1", "1", 1100L, "A", "T", "study2", "1", 1100L, "A", "T", Some(7), Some(3),
-    Some(5))
+  private val overlap = LocusOverlap("study1", "1", 1100L, "A", "T", "study2", "1", 1100L, "A", "T", 7, 3, 5)
   Seq(overlap).toDF().write.parquet(configuration.variantDisease.overlapping)
 
   test("calculate variant index") {

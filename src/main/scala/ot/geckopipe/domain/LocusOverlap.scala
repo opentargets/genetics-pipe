@@ -10,6 +10,6 @@ case class LocusOverlap(A_study_id: String,
                         B_pos: Long,
                         B_ref: String,
                         B_alt: String,
-                        A_distinct: Option[Long] = None,
-                        AB_overlap: Option[Long] = None,
-                        B_distinct: Option[Long] = None)
+                        A_distinct: Long,
+                        AB_overlap: Long,
+                        B_distinct: Long)
