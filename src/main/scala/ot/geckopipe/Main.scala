@@ -220,7 +220,6 @@ object Main extends LazyLogging {
       else
         new SparkConf()
           .setAppName(progName)
-          .setMaster("local")
 
     SparkSession.builder
       .config(sparkConf)
