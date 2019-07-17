@@ -51,6 +51,7 @@ class Commands(val ss: SparkSession,
         col("right_gene_id") === col("gene_id"), "left_outer")
       .where(col("right_gene_id").isNull or
         col("right_gene_id") === col("gene_id"))
+      .filter(!isnan(col("coloc_h3")))
 
     val colocVariantFiltered = coloc.join(vIdx,
       (col("right_chrom") === col("chr_id")) and
@@ -224,8 +225,7 @@ object Main extends LazyLogging {
       .getOrCreate
   }
 
-  private def readConfiguration(configFile: String): Either[ConfigReaderFailures, Configuration] = {
-    import pureconfig.generic.auto.exportReader //implicit reader used to read the config file
+  private def readConfiguration(configFile: String): Either[ConfigReaderFailures, Configuration] = { //implicit reader used to read the config file
 
     val conf = if (configFile.nonEmpty) {
       logger.info(s"loading configuration from commandline as $configFile")
