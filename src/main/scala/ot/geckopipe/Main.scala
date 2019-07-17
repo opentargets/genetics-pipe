@@ -10,6 +10,8 @@ import ot.geckopipe.index._
 import pureconfig.error.ConfigReaderFailures
 import scopt.OptionParser
 
+import pureconfig.generic.auto._
+
 class Commands(val ss: SparkSession,
                val sampleFactor: Double,
                val c: Configuration)
