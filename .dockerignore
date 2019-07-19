@@ -1,0 +1,7 @@
+./.git/
+./target/
+.idea
+./project/target/
+./project/project/
+Dockerfile
+README.md
