@@ -6,21 +6,22 @@ import org.apache.spark.sql.SparkSession
 import ot.geckopipe.domain._
 
 object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
-  import sparkSession.implicits._
-
-  val configuration: Configuration = createTestConfiguration(sparkSession)
 
   test("calculate variant index") {
     withSpark { ss =>
+      val configuration = createTestConfiguration()
+      createRawVariantIndexParquet(configuration.variantIndex.raw)(ss)
+      createEnsemblLutJson(configuration.ensembl.lut)(ss)
 
-        val configuration = createTestConfiguration(ss)
+      Main.run(CommandLineArgs(command = Some("variant-index")), configuration)(ss)
 
-        Main.run(CommandLineArgs(command = Some("variant-index")), configuration)(ss)
-        val variants = ss.read.parquet(configuration.variantIndex.path).as[Variant].collect().toList
-        assertEquals(variants, List(
-          Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", "cadd 1", "af 1", 10769L, "ENSG00000223972",
-            10769L, "ENSG00000223972")
-        ))
+      import ss.implicits._
+      val variants = ss.read.parquet(configuration.variantIndex.path).as[Variant].collect().toList
+
+      assertEquals(variants, List(
+        Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", "cadd 1", "af 1", 10769L, "ENSG00000223972",
+          10769L, "ENSG00000223972")
+      ))
     }
   }
 
@@ -50,7 +51,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
 //    }
 //  }
 
-  private def createTestConfiguration(sparkSession: SparkSession): Configuration = {
+  private def createTestConfiguration(): Configuration = {
     val uuid = UUID.randomUUID().toString
 
     val testDataFolder = s"/tmp/tests-$uuid"
@@ -83,13 +84,25 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
           overlapping = s"$inputFolder/v2d/locus_overlap.parquet",
           coloc = s"$inputFolder/coloc/010101/"))
 
-    Seq(
-      ("1", 1000, "1", 1100, "A", "T", "rs123", Vep(most_severe_consequence = "severe consequence"), "cadd 1", "af 1")
-    ).map(RawVariant.tupled(_)).toDF().write.parquet(configuration.variantIndex.raw)
-    Seq(
-      ("1", "ENSG00000223972", 11869, 11869, 14412, "protein_coding")
-    ).map(Gene.tupled(_)).toDF().write.json(configuration.ensembl.lut)
+
 
     configuration
   }
+
+  private def createRawVariantIndexParquet(path: String)(implicit ss: SparkSession): Unit = {
+    import ss.implicits._
+
+    Seq(
+      RawVariant("1", 1000, "1", 1100, "A", "T", "rs123", Vep(most_severe_consequence = "severe consequence"), "cadd 1", "af 1")
+    ).toDF().write.parquet(path)
+  }
+
+  private def createEnsemblLutJson(path: String)(implicit ss: SparkSession): Unit = {
+    import ss.implicits._
+
+    Seq(
+      Gene("1", "ENSG00000223972", 11869, 11869, 14412, "protein_coding")
+    ).toDF().write.json(path)
+  }
+
 }
