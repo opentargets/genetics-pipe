@@ -7,22 +7,20 @@ import ot.geckopipe.domain._
 
 object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
 
-  test("calculate variant index") {
-    withSpark { ss =>
-      val configuration = createTestConfiguration()
-      createRawVariantIndexParquet(configuration.variantIndex.raw)(ss)
-      createEnsemblLutJson(configuration.ensembl.lut)(ss)
+  testWithSpark("calculate variant index") { ss =>
+    val configuration = createTestConfiguration()
+    createRawVariantIndexParquet(configuration.variantIndex.raw)(ss)
+    createEnsemblLutJson(configuration.ensembl.lut)(ss)
 
-      Main.run(CommandLineArgs(command = Some("variant-index")), configuration)(ss)
+    Main.run(CommandLineArgs(command = Some("variant-index")), configuration)(ss)
 
-      import ss.implicits._
-      val variants = ss.read.parquet(configuration.variantIndex.path).as[Variant].collect().toList
+    import ss.implicits._
+    val variants = ss.read.parquet(configuration.variantIndex.path).as[Variant].collect().toList
 
-      assertEquals(variants, List(
-        Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", "cadd 1", "af 1", 10769L, "ENSG00000223972",
-          10769L, "ENSG00000223972")
-      ))
-    }
+    assertEquals(variants, List(
+      Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", "cadd 1", "af 1", 10769L, "ENSG00000223972",
+        10769L, "ENSG00000223972")
+    ))
   }
 
 //  test("calculate distance nearest") {

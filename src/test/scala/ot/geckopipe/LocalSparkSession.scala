@@ -6,16 +6,20 @@ import org.apache.spark.sql.SparkSession
 
 class LocalSparkSessionSuite(sessionName: String, config: SparkConf = new SparkConf) extends SimpleTestSuite {
 
-  def withSpark[T](f: SparkSession => T): T = {
-    val sparkSession: SparkSession = SparkSession.builder()
-      .appName(sessionName)
-      .config(config)
-      .master("local[*]").getOrCreate()
+  def testWithSpark[T](name: String)(f: SparkSession => Unit) {
+    def withSpark(tf: SparkSession => Unit) {
+      val sparkSession: SparkSession = SparkSession.builder()
+        .appName(sessionName)
+        .config(config)
+        .master("local[*]").getOrCreate()
 
-    try {
-      f(sparkSession)
-    } finally {
-      sparkSession.close()
+      try {
+        tf(sparkSession)
+      } finally {
+        sparkSession.close()
+      }
     }
+
+    super.test(name)(withSpark(f))
   }
 }
