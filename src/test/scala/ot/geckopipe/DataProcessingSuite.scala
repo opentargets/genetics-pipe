@@ -23,31 +23,33 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     ))
   }
 
-//  test("calculate distance nearest") {
-//    withSpark { ss =>
-//        Main.run(CommandLineArgs(command = Some("distance-nearest")), configuration)(ss)
-//
-//        val firstNearest = ss.read.json(configuration.nearest.path).as[Nearest].collect.toList.headOption
-//        assertEquals(firstNearest.isDefined, true)
-//
-//        // there is one so apply when there is one
-//        firstNearest.foreach {
-//          case nearest =>
-//            assertEquals(nearest.chr_id, "1")
-//            assertEquals(nearest.position, 1100L)
-//            assertEquals(nearest.ref_allele, "A")
-//            assertEquals(nearest.alt_allele, "T")
-//            assertEquals(nearest.gene_id, "ENSG00000223972")
-//            assertEquals(nearest.d, 10769L)
-//            val error = 0.001
-//            assert(nearest.distance_score - 9.285 < error)
-//            assert(nearest.distance_score_q - 0.1 < error)
-//            assertEquals(nearest.type_id, "distance")
-//            assertEquals(nearest.source_id, "canonical_tss")
-//            assertEquals(nearest.feature, "unspecified")
-//        }
-//    }
-//  }
+  testWithSpark("calculate distance nearest") { ss =>
+    val configuration = createTestConfiguration()
+    createVariantIndexParquet(configuration.variantIndex.path)(ss)
+    createEnsemblLutJson(configuration.ensembl.lut)(ss)
+
+    Main.run(CommandLineArgs(command = Some("distance-nearest")), configuration)(ss)
+
+    import ss.implicits._
+    val firstNearest = ss.read.json(configuration.nearest.path).as[Nearest].collect.toList.headOption
+    assertEquals(firstNearest.isDefined, true)
+
+    // there is one so apply when there is one
+    firstNearest.foreach { nearest =>
+        assertEquals(nearest.chr_id, "1")
+        assertEquals(nearest.position, 1100L)
+        assertEquals(nearest.ref_allele, "A")
+        assertEquals(nearest.alt_allele, "T")
+        assertEquals(nearest.gene_id, "ENSG00000223972")
+        assertEquals(nearest.d, 10769L)
+        val error = 0.001
+        assert(nearest.distance_score - 9.285 < error)
+        assert(nearest.distance_score_q - 0.1 < error)
+        assertEquals(nearest.type_id, "distance")
+        assertEquals(nearest.source_id, "canonical_tss")
+        assertEquals(nearest.feature, "unspecified")
+    }
+  }
 
   private def createTestConfiguration(): Configuration = {
     val uuid = UUID.randomUUID().toString
@@ -91,7 +93,17 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     import ss.implicits._
 
     Seq(
-      RawVariant("1", 1000, "1", 1100, "A", "T", "rs123", Vep(most_severe_consequence = "severe consequence"), "cadd 1", "af 1")
+      RawVariant("1", 1000, "1", 1100, "A", "T", "rs123", Vep(most_severe_consequence = "severe consequence"), "cadd 1",
+        "af 1")
+    ).toDF().write.parquet(path)
+  }
+
+  private def createVariantIndexParquet(path: String)(implicit ss: SparkSession): Unit = {
+    import ss.implicits._
+
+    Seq(
+      Variant("1", 1100, "1", 1000, "A", "T", "rs123", "severe consequence", "cadd 1", "af 1", 10769L,
+        "ENSG00000223972", 10769L, "ENSG00000223972")
     ).toDF().write.parquet(path)
   }
 
