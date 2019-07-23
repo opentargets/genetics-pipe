@@ -198,7 +198,25 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     assertEquals(overlaps, List(overlap))
   }
 
-  //TODO Add tests for v2d_coloc and v2d_credset
+  testWithSpark("calculate variant to disease colocation") { ss =>
+    val configuration = createTestConfiguration()
+    createVariantIndexParquet(configuration.variantIndex.path)(ss)
+    createEnsemblLutJson(configuration.ensembl.lut)(ss)
+    createV2DColocParquet(configuration.variantDisease.coloc)(ss)
+
+    Main.run(CommandLineArgs(command = Some("variant-disease-coloc")), configuration)(ss)
+
+
+    import ss.implicits._
+
+    val v2dcolocs =  ss.read.schema(Encoders.product[V2DColoc].schema)
+      .json(configuration.output + "/v2d_coloc/").as[V2DColoc].collect().toList
+
+    assertEquals(v2dcolocs.length, 1)
+
+    val v2dc = v2dcolocs.head
+    assertEquals(v2dc, v2dColoc)
+}
 
   private def createTestConfiguration(): Configuration = {
     val uuid = UUID.randomUUID().toString
@@ -403,5 +421,27 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     import ss.implicits._
 
     Seq(v2d).toDF().write.json(path)
+  }
+
+  private val v2dColoc = V2DColoc(
+    left_study = "study2",
+    left_chrom = "1",
+    left_pos = 1100L,
+    left_ref = "A",
+    left_alt = "T",
+    left_type = "gwas",
+    right_study = "study1",
+    right_chrom = "1",
+    right_pos = 1100L,
+    right_ref = "A",
+    right_alt = "T",
+    right_type = "gwas",
+    right_gene_id = "ENSG00000223972",
+    coloc_h3=Some(0.1))
+
+  private def createV2DColocParquet(path: String)(implicit ss: SparkSession): Unit = {
+    import ss.implicits._
+
+    Seq(v2dColoc).toDF().write.parquet(path)
   }
 }
