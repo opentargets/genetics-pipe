@@ -1,6 +1,5 @@
 package ot.geckopipe
 
-import java.io.File
 import java.nio.file.Files
 import java.util.UUID
 
@@ -63,7 +62,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Main.run(CommandLineArgs(command = Some("variant-gene")), configuration)(ss)
 
     import ss.implicits._
-    def v2gs = ss.read.schema(Encoders.product[V2G].schema).
+    val v2gs = ss.read.schema(Encoders.product[V2G].schema).
       json(configuration.variantGene.path).as[V2G].collect()
 
     assertEquals(v2gs.length, 3)
@@ -108,7 +107,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Main.run(CommandLineArgs(command = Some("variant-disease")), configuration)(ss)
 
     import ss.implicits._
-    def v2d = ss.read.schema(Encoders.product[V2D].schema)
+    val v2d = ss.read.schema(Encoders.product[V2D].schema)
       .json(configuration.variantDisease.path).as[V2D].head()
 
     assertEquals(v2d.study_id, "study1")
@@ -161,7 +160,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Main.run(CommandLineArgs(command = Some("disease-variant-gene")), configuration)(ss)
 
     import ss.implicits._
-    def d2v2gs = ss.read.schema(Encoders.product[D2V2G].schema).
+    val d2v2gs = ss.read.schema(Encoders.product[D2V2G].schema).
       json(configuration.output + "/d2v2g/").as[D2V2G].collect()
 
     assertEquals(d2v2gs.length, 1)
@@ -178,22 +177,22 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
 
     import ss.implicits._
 
-    def genes = ss.read.schema(Encoders.product[Gene].schema)
+    val genes = ss.read.schema(Encoders.product[Gene].schema)
       .json(configuration.output + "/lut/genes-index/").as[Gene].collect().toList
 
     assertEquals(genes, List(gene))
 
-    def studies = ss.read.schema(Encoders.product[Study].schema)
+    val studies = ss.read.schema(Encoders.product[Study].schema)
       .json(configuration.output + "/lut/study-index/").as[Study].collect().toList
 
     assertEquals(studies, List(study))
 
-    def variants = ss.read.schema(Encoders.product[Variant3].schema)
+    val variants = ss.read.schema(Encoders.product[Variant3].schema)
       .json(configuration.output + "/lut/variant-index/").as[Variant3].collect().toList
 
     assertEquals(variants, List(variant3))
 
-    def overlaps = ss.read.schema(Encoders.product[LocusOverlap].schema)
+    val overlaps = ss.read.schema(Encoders.product[LocusOverlap].schema)
       .json(configuration.output + "/lut/overlap-index/").as[LocusOverlap].collect().toList
 
     assertEquals(overlaps, List(overlap))
