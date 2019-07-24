@@ -2,7 +2,11 @@ package ot.geckopipe.domain
 
 case class Gene(chr: String,
                 gene_id: String,
-                tss: Int,
-                start: Int,
-                end: Int,
+                gene_name: String,
+                description: String,
+                fwdstrand: Boolean,
+                exons: Seq[Long],
+                tss: Long,
+                start: Long,
+                end: Long,
                 biotype: String)
