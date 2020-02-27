@@ -6,8 +6,9 @@ import org.apache.spark.sql.functions._
 import ot.geckopipe.functions
 
 object Indexable {
+
   implicit class DataFrameIndexable(df: DataFrame) {
-    def selectBy(from: Seq[String]): DataFrame = df.select(from.head, from.tail:_*)
+    def selectBy(from: Seq[String]): DataFrame = df.select(from.head, from.tail: _*)
 
     /** select the data from table using fromSelect columns grouped by cols
       *
@@ -19,11 +20,11 @@ object Indexable {
       * @return a select grouped and aggregated by fromSelect diff cols columns
       */
     def aggBy(cols: Seq[String], fromSelect: Seq[String]): DataFrame = {
-      val aggCols = fromSelect diff cols map(el => first(el).as(el))
+      val aggCols = fromSelect diff cols map (el => first(el).as(el))
 
       selectBy(fromSelect)
-        .groupBy(cols.head, cols.tail:_*)
-        .agg(aggCols.head, aggCols.tail:_*)
+        .groupBy(cols.head, cols.tail: _*)
+        .agg(aggCols.head, aggCols.tail: _*)
     }
 
     /** save the dataframe as tsv file using filename as a output path */
@@ -32,4 +33,5 @@ object Indexable {
     /** save the dataframe as tsv file using filename as a output path */
     def saveToJSON(to: String)(implicit sampleFactor: Double = 0d): Unit = functions.saveToJSON(df, to)
   }
+
 }

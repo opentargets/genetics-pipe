@@ -8,7 +8,7 @@ case class Qtl(chrom: String,
                beta: Double,
                se: Double,
                pval: Double,
-              //TODO These fields don't seem to be in the schema
+               //TODO These fields don't seem to be in the schema
                `type`: String,
                source: String,
                feature: String)

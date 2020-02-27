@@ -15,18 +15,20 @@ import ot.geckopipe.{Configuration, Distance}
   */
 class VariantIndex(val table: DataFrame) {
   def schema: StructType = table.schema
+
   def flatten: VariantIndex =
     new VariantIndex(table.select(col("*"), col("cadd.*"), col("af.*")).drop("cadd", "af"))
 }
 
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
 object VariantIndex {
+
   case class VIRow(chr_id: String, position: Long, ref_allele: String, alt_allele: String,
                    d: Long, gene_id: String)
 
   val rawColumnsWithAliases: Seq[(String, String)] =
     Seq(("chrom_b37", "chr_id_b37"), ("pos_b37", "position_b37"),
-      ("chrom_b38","chr_id"), ("pos_b38", "position"),
+      ("chrom_b38", "chr_id"), ("pos_b38", "position"),
       ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
       ("vep.most_severe_consequence", "most_severe_consequence"),
       ("cadd", "cadd"), ("af", "af"))
@@ -45,7 +47,7 @@ object VariantIndex {
   val sortColumns: Seq[String] = Seq("chr_id", "position")
 
   /** this class build based on the Configuration it creates a VariantIndex */
-  class Builder (val conf: Configuration, val ss: SparkSession) extends LazyLogging {
+  class Builder(val conf: Configuration, val ss: SparkSession) extends LazyLogging {
     def load: VariantIndex = {
       logger.info("loading variant index as specified in the configuration")
       val vIdx = ss.read.parquet(conf.variantIndex.path).persist(StorageLevels.DISK_ONLY)
@@ -59,9 +61,9 @@ object VariantIndex {
       val inputCols = columnsWithAliases.map(s => col(s._1).as(s._2))
       val raw = loadFromParquet(conf.variantIndex.raw)(ss)
 
-      raw.select(inputCols:_*)
-        .repartitionByRange(indexCols:_*)
-        .sortWithinPartitions(sortCols:_*)
+      raw.select(inputCols: _*)
+        .repartitionByRange(indexCols: _*)
+        .sortWithinPartitions(sortCols: _*)
         .where(col("chr_id").isNotNull && col("position").isNotNull)
     }
 

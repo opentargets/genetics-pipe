@@ -33,11 +33,11 @@ object QTL extends LazyLogging {
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val qtls = load(conf.qtl.path)
-      .withColumn("qtl_score", - log(10, col("qtl_pval")))
+      .withColumn("qtl_score", -log(10, col("qtl_pval")))
       .repartitionByRange(col("chr_id"), col("position"))
       .sortWithinPartitions(col("chr_id"), col("position"))
 
-    val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
+    val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail: _*)
     val qtlTable = qtls.join(vIdxS, VariantIndex.columns)
 
     // get a table to compute deciles

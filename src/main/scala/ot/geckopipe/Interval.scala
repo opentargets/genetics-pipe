@@ -46,9 +46,9 @@ object Interval extends LazyLogging {
       .repartitionByRange(col("chr_id").asc, col("position").asc)
       .sortWithinPartitions(col("chr_id").asc, col("position").asc)
 
-    val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail:_*)
+    val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail: _*)
 
-    val inTable = interval.join(vIdxS,VariantIndex.indexColumns)
+    val inTable = interval.join(vIdxS, VariantIndex.indexColumns)
 
     // get a table to compute deciles
     inTable.createOrReplaceTempView("interval_table")

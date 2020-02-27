@@ -23,11 +23,11 @@ object functions extends LazyLogging {
 
   /** split two columns by ; each column and then zip and map to an array */
   val splitAndZip = udf((codes: String, labels: String) => codes.split(";")
-    .zipAll(labels.split(";"),"", "")
+    .zipAll(labels.split(";"), "", "")
     .filter(_._1 != "")
-    .map(t => Array(t._1,t._2)))
+    .map(t => Array(t._1, t._2)))
 
-  val arrayToString = udf((xs: Array[String]) => xs.mkString("[",",","]"))
+  val arrayToString = udf((xs: Array[String]) => xs.mkString("[", ",", "]"))
 
   /** convert a seq to a stringify array */
   val stringifyColumnString = udf((ls: Seq[String]) => ls.mkString("['", "','", "']"))
@@ -37,7 +37,7 @@ object functions extends LazyLogging {
   /** convert a seq to a stringify array */
   val stringifyDouble = udf((vs: Seq[String]) => vs match {
     case null => null
-    case _    => s"""[${vs.mkString(",")}]"""
+    case _ => s"""[${vs.mkString(",")}]"""
   })
 
   /** save the dataframe as tsv file using filename as a output path */
@@ -72,7 +72,7 @@ object functions extends LazyLogging {
   }
 
   def loadFromJSON(uri: String, withSchema: StructType)
-                 (implicit ss: SparkSession): DataFrame = ss.read
+                  (implicit ss: SparkSession): DataFrame = ss.read
     .format("json")
     .schema(withSchema)
     .load(uri)
@@ -83,7 +83,7 @@ object functions extends LazyLogging {
                  (implicit ss: SparkSession): DataFrame = ss.read
     .format("csv")
     .option("header", andHeader.toString)
-    .option("delimiter","\t")
+    .option("delimiter", "\t")
     .schema(withSchema)
     .load(uri)
 
@@ -105,7 +105,7 @@ object functions extends LazyLogging {
       // get each item from 0 up to las element
       val tmpDF = df.withColumn(tmpCol.toString, split(variantID, "_"))
 
-      val modDF = intoColNames.zipWithIndex.foldLeft(tmpDF)( (df, pair) => {
+      val modDF = intoColNames.zipWithIndex.foldLeft(tmpDF)((df, pair) => {
         df.withColumn(prefix + pair._1, tmpCol.getItem(pair._2).cast(withColTypes(pair._2)))
       }).drop(tmpCol)
 
@@ -137,11 +137,12 @@ object functions extends LazyLogging {
   }
 
   val decileList: Seq[Double] = (10 to 100 by 10).map(_ / 100D)
+
   /** it maps source_id -> feature -> Seq[(quantile value, quantile number)]
     * gtex_v5 -> whole_blood -> [(0.356, 0.2)]
     */
   /** it needs df contains 3 first columns datasource feature and the vector of doubles */
-  def fromQ2Map(df :DataFrame, qs: Seq[Double] = decileList): Map[String, Map[String, Seq[(Double, Double)]]] = {
+  def fromQ2Map(df: DataFrame, qs: Seq[Double] = decileList): Map[String, Map[String, Seq[(Double, Double)]]] = {
     var mapQ: Map[String, Map[String, Seq[(Double, Double)]]] = Map.empty
 
     val rows = df.collect.toList
@@ -195,11 +196,14 @@ object functions extends LazyLogging {
   }
 
   object Implicits {
+
     implicit class ImplicitDataFrameFunctions(df: DataFrame) {
       def withColumnListRenamed(columns: Seq[String], f: String => String): DataFrame = {
         val zippedCols = columns zip columns.map(f(_))
         zippedCols.foldLeft(df)((df, zippedCols) => df.withColumnRenamed(zippedCols._1, zippedCols._2))
       }
     }
+
   }
+
 }

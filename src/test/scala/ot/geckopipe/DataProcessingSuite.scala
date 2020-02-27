@@ -209,14 +209,14 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
 
     import ss.implicits._
 
-    val v2dcolocs =  ss.read.schema(Encoders.product[V2DColoc].schema)
+    val v2dcolocs = ss.read.schema(Encoders.product[V2DColoc].schema)
       .json(configuration.output + "/v2d_coloc/").as[V2DColoc].collect().toList
 
     assertEquals(v2dcolocs.length, 1)
 
     val v2dc = v2dcolocs.head
     assertEquals(v2dc, v2dColoc)
-}
+  }
 
   private def createTestConfiguration(): Configuration = {
     val uuid = UUID.randomUUID().toString
@@ -437,7 +437,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     right_alt = "T",
     right_type = "gwas",
     right_gene_id = "ENSG00000223972",
-    coloc_h3=Some(0.1))
+    coloc_h3 = Some(0.1))
 
   private def createV2DColocParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._

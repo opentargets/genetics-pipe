@@ -3,7 +3,7 @@ package ot.geckopipe
 import minitest.SimpleTestSuite
 
 object FunctionsSuite extends SimpleTestSuite {
-  val  groundtruth = Array("eqtl", "gtex_v7")
+  val groundtruth = Array("eqtl", "gtex_v7")
 
   test("function split and extract the path tokens correctly") {
     val path = "/foo/bar/qtl/eqtl/gtex_v7/bar/foo"
