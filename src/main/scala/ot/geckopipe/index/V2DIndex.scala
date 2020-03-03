@@ -8,7 +8,7 @@ import ot.geckopipe.Configuration
 
 case class V2DIndex(table: DataFrame)
 
-object V2DIndex extends LazyLogging  {
+object V2DIndex extends LazyLogging {
   val schema =
     StructType(
       StructField("study_id", StringType) ::
@@ -58,7 +58,8 @@ object V2DIndex extends LazyLogging  {
     val studies = buildStudiesIndex(conf.variantDisease.studies).cache()
     val topLoci = buildTopLociIndex(conf.variantDisease.toploci).cache()
     val ldLoci = buildLDIndex(conf.variantDisease.ld)
-      .drop("ld_available")
+      .drop("ld_available", "pics_mu", "pics_postprob", "pics_95perc_credset",
+        "pics_99perc_credset")
       .cache()
     val fmLoci = buildFMIndex(conf.variantDisease.finemapping).cache()
 
@@ -83,10 +84,10 @@ object V2DIndex extends LazyLogging  {
 
     V2DIndex(indexExpanded.join(vIdx.table.select("chr_id", "position", "ref_allele", "alt_allele"),
       col("chr_id") === col("tag_chrom") and
-      (col("position") === col("tag_pos") and
-        (col("ref_allele") === col("tag_ref") and
-          (col("alt_allele") === col("tag_alt")))), "inner")
-        .drop("chr_id", "position", "ref_allele", "alt_allele")
+        (col("position") === col("tag_pos") and
+          (col("ref_allele") === col("tag_ref") and
+            (col("alt_allele") === col("tag_alt")))), "inner")
+      .drop("chr_id", "position", "ref_allele", "alt_allele")
     )
   }
 
@@ -130,11 +131,11 @@ object V2DIndex extends LazyLogging  {
   def buildOverlapIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val aCols = Seq("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
     val bCols = Seq("B_study_id", "B_chrom", "B_pos", "B_ref", "B_alt", "A_distinct",
-    "AB_overlap", "B_distinct")
+      "AB_overlap", "B_distinct")
 
     val selectCols = (aCols ++ bCols).map(col)
     ss.read.parquet(path).drop("set_type")
-      .select(selectCols:_*)
+      .select(selectCols: _*)
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */

@@ -15,6 +15,7 @@ class GeneIndex(val table: DataFrame) {
 
 /** Companion object to build the GeneIndex class */
 object GeneIndex {
+
   sealed abstract class BioTypes(override val entryName: String, val set: Set[String]) extends EnumEntry
 
   object BioTypes extends Enum[BioTypes] {
@@ -27,6 +28,7 @@ object GeneIndex {
     val values = findValues
 
     case object ProteinCoding extends BioTypes("protein_coding", Set("protein_coding"))
+
     case object ApprovedBioTypes extends BioTypes("filtered_biotypes", approvedBioTypes)
 
     val approvedBioTypes = Set(
@@ -78,7 +80,7 @@ object GeneIndex {
     val genes = ss.read.json(from)
       .where((col("biotype") isInCollection bioTypes.set) and
         !(col("chr") isInCollection chromosomes))
-      .repartitionByRange(indexCols:_*)
+      .repartitionByRange(indexCols: _*)
 
     new GeneIndex(genes)
   }
