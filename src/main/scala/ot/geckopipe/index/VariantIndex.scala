@@ -23,23 +23,37 @@ class VariantIndex(val table: DataFrame) {
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
 object VariantIndex {
 
-  case class VIRow(chr_id: String, position: Long, ref_allele: String, alt_allele: String,
-                   d: Long, gene_id: String)
+  case class VIRow(chr_id: String,
+                   position: Long,
+                   ref_allele: String,
+                   alt_allele: String,
+                   d: Long,
+                   gene_id: String)
 
   val rawColumnsWithAliases: Seq[(String, String)] =
-    Seq(("chrom_b37", "chr_id_b37"), ("pos_b37", "position_b37"),
-      ("chrom_b38", "chr_id"), ("pos_b38", "position"),
-      ("ref", "ref_allele"), ("alt", "alt_allele"), ("rsid", "rs_id"),
+    Seq(
+      ("chrom_b37", "chr_id_b37"),
+      ("pos_b37", "position_b37"),
+      ("chrom_b38", "chr_id"),
+      ("pos_b38", "position"),
+      ("ref", "ref_allele"),
+      ("alt", "alt_allele"),
+      ("rsid", "rs_id"),
       ("vep.most_severe_consequence", "most_severe_consequence"),
-      ("cadd", "cadd"), ("af", "af"))
+      ("cadd", "cadd"),
+      ("af", "af")
+    )
 
   val rawColumnsWithAliasesMinimal: Seq[(String, String)] =
-    Seq(("chrom_b38", "chr_id"), ("pos_b38", "position"),
-      ("ref", "ref_allele"), ("alt", "alt_allele"),
-      ("vep.transcript_consequences", "transcript_consequences"))
+    Seq(("chrom_b38", "chr_id"),
+        ("pos_b38", "position"),
+        ("ref", "ref_allele"),
+        ("alt", "alt_allele"),
+        ("vep.transcript_consequences", "transcript_consequences"))
 
   /** variant_id is represented as 1_123_T_C but split into columns 1 23456 T C */
   val columns: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
+
   /** types of the columns named in variantColumnNames */
   val columnsTypes: List[String] = List("String", "Long", "String", "String")
 
@@ -61,7 +75,8 @@ object VariantIndex {
       val inputCols = columnsWithAliases.map(s => col(s._1).as(s._2))
       val raw = loadFromParquet(conf.variantIndex.raw)(ss)
 
-      raw.select(inputCols: _*)
+      raw
+        .select(inputCols: _*)
         .repartitionByRange(indexCols: _*)
         .sortWithinPartitions(sortCols: _*)
         .where(col("chr_id").isNotNull && col("position").isNotNull)
@@ -73,22 +88,24 @@ object VariantIndex {
 
         val vidx = new VariantIndex(idx)
 
-        val nearests = Distance(vidx, conf,
-          conf.variantIndex.tssDistance,
-          GeneIndex.BioTypes.ApprovedBioTypes)(ss).table
+        val nearests =
+          Distance(vidx, conf, conf.variantIndex.tssDistance, GeneIndex.BioTypes.ApprovedBioTypes)(
+            ss).table
 
         val nearestGenes = nearests
           .as[VIRow]
           .groupByKey(r => (r.chr_id, r.position, r.ref_allele, r.alt_allele))
           .reduceGroups((r1, r2) => if (r1.d < r2.d) r1 else r2)
           .map(_._2)
-          .toDF.withColumnRenamed("d", "gene_id_any_distance")
+          .toDF
+          .withColumnRenamed("d", "gene_id_any_distance")
           .withColumnRenamed("gene_id", "gene_id_any")
 
         // just prot coding genes
-        val nearestsPC = Distance(vidx, conf,
-          conf.variantIndex.tssDistance,
-          GeneIndex.BioTypes.ProteinCoding)(ss).table
+        val nearestsPC = Distance(vidx,
+                                  conf,
+                                  conf.variantIndex.tssDistance,
+                                  GeneIndex.BioTypes.ProteinCoding)(ss).table
 
         val nearestPCGenes = nearestsPC
           .as[VIRow]

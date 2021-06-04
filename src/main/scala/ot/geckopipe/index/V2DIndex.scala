@@ -58,8 +58,11 @@ object V2DIndex extends LazyLogging {
     val studies = buildStudiesIndex(conf.variantDisease.studies).cache()
     val topLoci = buildTopLociIndex(conf.variantDisease.toploci).cache()
     val ldLoci = buildLDIndex(conf.variantDisease.ld)
-      .drop("ld_available", "pics_mu", "pics_postprob", "pics_95perc_credset",
-        "pics_99perc_credset")
+      .drop("ld_available",
+            "pics_mu",
+            "pics_postprob",
+            "pics_95perc_credset",
+            "pics_99perc_credset")
       .cache()
     val fmLoci = buildFMIndex(conf.variantDisease.finemapping).cache()
 
@@ -72,23 +75,34 @@ object V2DIndex extends LazyLogging {
 
     // ED WILL FIX THIS PROBLEMATIC ISSUE ABOUT TOPLOCI -> EXPANDED ONE
     // EACH TOPLOCI MUST BE IN THE EXPANDED TABLE
-    val joinCols = Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt",
-      "tag_chrom", "tag_pos", "tag_ref", "tag_alt")
+    val joinCols = Seq("study_id",
+                       "lead_chrom",
+                       "lead_pos",
+                       "lead_ref",
+                       "lead_alt",
+                       "tag_chrom",
+                       "tag_pos",
+                       "tag_ref",
+                       "tag_alt")
     val ldAndFm = ldLoci.join(fmLoci, joinCols, "full_outer")
-    val indexExpanded = svPairs.join(ldAndFm,
-      Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt"))
+    val indexExpanded =
+      svPairs.join(ldAndFm, Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt"))
 
     logger.whenDebugEnabled {
       indexExpanded.where(col("pval").isNull).show(false)
     }
 
-    V2DIndex(indexExpanded.join(vIdx.table.select("chr_id", "position", "ref_allele", "alt_allele"),
-      col("chr_id") === col("tag_chrom") and
-        (col("position") === col("tag_pos") and
-          (col("ref_allele") === col("tag_ref") and
-            (col("alt_allele") === col("tag_alt")))), "inner")
-      .drop("chr_id", "position", "ref_allele", "alt_allele")
-    )
+    V2DIndex(
+      indexExpanded
+        .join(
+          vIdx.table.select("chr_id", "position", "ref_allele", "alt_allele"),
+          col("chr_id") === col("tag_chrom") and
+            (col("position") === col("tag_pos") and
+              (col("ref_allele") === col("tag_ref") and
+                (col("alt_allele") === col("tag_alt")))),
+          "inner"
+        )
+        .drop("chr_id", "position", "ref_allele", "alt_allele"))
   }
 
   def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame =
@@ -100,13 +114,14 @@ object V2DIndex extends LazyLogging {
       result match {
         case Double.PositiveInfinity => Double.MaxValue
         case Double.NegativeInfinity => Double.MinValue
-        case 0.0 => Double.MinPositiveValue
-        case -0.0 => -Double.MinPositiveValue
-        case _ => result
+        case 0.0                     => Double.MinPositiveValue
+        case -0.0                    => -Double.MinPositiveValue
+        case _                       => result
       }
     })
 
-    ss.read.parquet(path)
+    ss.read
+      .parquet(path)
       .withColumn("pval", toDouble(col("pval_mantissa"), col("pval_exponent")))
       .withColumnRenamed("chrom", "lead_chrom")
       .withColumnRenamed("pos", "lead_pos")
@@ -119,22 +134,32 @@ object V2DIndex extends LazyLogging {
   }
 
   def buildLDIndex(path: String)(implicit ss: SparkSession): DataFrame =
-    ss.read.parquet(path)
+    ss.read
+      .parquet(path)
       .repartitionByRange(col("lead_chrom"))
       .sortWithinPartitions(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
 
   def buildFMIndex(path: String)(implicit ss: SparkSession): DataFrame =
-    ss.read.parquet(path)
+    ss.read
+      .parquet(path)
       .repartitionByRange(col("lead_chrom"))
       .sortWithinPartitions(col("lead_chrom"), col("lead_pos"), col("lead_ref"), col("lead_alt"))
 
   def buildOverlapIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val aCols = Seq("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
-    val bCols = Seq("B_study_id", "B_chrom", "B_pos", "B_ref", "B_alt", "A_distinct",
-      "AB_overlap", "B_distinct")
+    val bCols = Seq("B_study_id",
+                    "B_chrom",
+                    "B_pos",
+                    "B_ref",
+                    "B_alt",
+                    "A_distinct",
+                    "AB_overlap",
+                    "B_distinct")
 
     val selectCols = (aCols ++ bCols).map(col)
-    ss.read.parquet(path).drop("set_type")
+    ss.read
+      .parquet(path)
+      .drop("set_type")
       .select(selectCols: _*)
   }
 
