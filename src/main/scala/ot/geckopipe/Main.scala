@@ -12,10 +12,8 @@ import scopt.OptionParser
 
 import pureconfig.generic.auto._
 
-class Commands(val ss: SparkSession,
-               val sampleFactor: Double,
-               val c: Configuration)
-  extends LazyLogging {
+class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configuration)
+    extends LazyLogging {
   implicit val sSesion: SparkSession = ss
   implicit val sFactor: Double = sampleFactor
 
@@ -36,30 +34,36 @@ class Commands(val ss: SparkSession,
   def variantDiseaseColoc(): Unit = {
     logger.info("exec distance-nearest command")
     val variantColumns = VariantIndex.columns.map(col)
-    val vIdx = VariantIndex.builder(c)
-      .load.table
+    val vIdx = VariantIndex
+      .builder(c)
+      .load
+      .table
       .select(variantColumns: _*)
 
-    val geneColumns = (GeneIndex.indexColumns ++ GeneIndex.idColumns) map col
-    val gIdx = GeneIndex(c.ensembl.lut)
-      .sortByID
-      .table
+    val geneColumns = (GeneIndex.indexColumns :+ GeneIndex.idColumn) map col
+    val gIdx = GeneIndex(c.ensembl.lut).sortByID.table
       .select(geneColumns: _*)
 
-    val columnsToDrop = VariantIndex.columns ++ GeneIndex.indexColumns ++ GeneIndex.idColumns
+    val columnsToDrop = VariantIndex.columns ++ GeneIndex.indexColumns :+ GeneIndex.idColumn
 
-    val coloc = ss.read.parquet(c.variantDisease.coloc)
-      .join(broadcast(gIdx), col("left_chrom") === col("chr") and
-        col("right_gene_id") === col("gene_id"), "left_outer")
+    val coloc = ss.read
+      .parquet(c.variantDisease.coloc)
+      .join(broadcast(gIdx),
+            col("left_chrom") === col("chr") and
+              col("right_gene_id") === col("gene_id"),
+            "left_outer")
       .where(col("right_gene_id").isNull or
         col("right_gene_id") === col("gene_id"))
       .filter(!isnan(col("coloc_h3")))
 
-    val colocVariantFiltered = coloc.join(vIdx,
-      (col("right_chrom") === col("chr_id")) and
-        (col("right_pos") === col("position")) and
-        (col("right_ref") === col("ref_allele")) and
-        (col("right_alt") === col("alt_allele")))
+    val colocVariantFiltered = coloc
+      .join(
+        vIdx,
+        (col("right_chrom") === col("chr_id")) and
+          (col("right_pos") === col("position")) and
+          (col("right_ref") === col("ref_allele")) and
+          (col("right_alt") === col("alt_allele"))
+      )
       .drop(columnsToDrop: _*)
 
     colocVariantFiltered.write.json(c.output.stripSuffix("/").concat("/v2d_coloc/"))
@@ -79,7 +83,7 @@ class Commands(val ss: SparkSession,
     val intervalDt = Interval(vIdx, c)
 
     val dtSeq = Seq(vepDts, nearestDts, positionalDts, intervalDt)
-    val v2g = V2GIndex.build(dtSeq, vIdx, c)
+    val v2g = V2GIndex.build(dtSeq, c)
 
     v2g.table.write.json(c.output.stripSuffix("/").concat("/v2g/"))
   }
@@ -102,12 +106,16 @@ class Commands(val ss: SparkSession,
     // v2d also contains rows with both null and we dont want those to be included
     val _ = v2d.table
       .where(col("overall_r2").isNotNull or col("posterior_prob").isNotNull)
-      .join(v2g.table, col("chr_id") === col("tag_chrom") and
-        (col("position") === col("tag_pos")) and
-        (col("ref_allele") === col("tag_ref")) and
-        (col("alt_allele") === col("tag_alt")))
+      .join(
+        v2g.table,
+        col("chr_id") === col("tag_chrom") and
+          (col("position") === col("tag_pos")) and
+          (col("ref_allele") === col("tag_ref")) and
+          (col("alt_allele") === col("tag_alt"))
+      )
       .drop(VariantIndex.columns: _*)
-      .write.json(c.output.stripSuffix("/").concat("/d2v2g/"))
+      .write
+      .json(c.output.stripSuffix("/").concat("/d2v2g/"))
   }
 
   def dictionaries(): Unit = {
@@ -135,10 +143,7 @@ class Commands(val ss: SparkSession,
       .write
       .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
 
-    GeneIndex(c.ensembl.lut)
-      .sortByID
-      .table
-      .write
+    GeneIndex(c.ensembl.lut).sortByID.table.write
       .json(c.output.stripSuffix("/").concat("/lut/genes-index/"))
   }
 
@@ -171,7 +176,8 @@ object Main extends LazyLogging {
       |
     """.stripMargin
 
-  def run(clArgs: CommandLineArgs, configuration: Configuration)(implicit ss: SparkSession): Unit = {
+  def run(clArgs: CommandLineArgs, configuration: Configuration)(
+      implicit ss: SparkSession): Unit = {
     println(s"running $progName")
 
     logger.debug(s"running with cli args $clArgs and with configuracion $configuration")

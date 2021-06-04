@@ -11,7 +11,8 @@ import ot.geckopipe.index.VariantIndex
 import scala.collection.mutable
 
 object VEP extends LazyLogging {
-  val features: Seq[String] = Seq("fpred_labels", "fpred_scores", "fpred_max_label", "fpred_max_score")
+  val features: Seq[String] =
+    Seq("fpred_labels", "fpred_scores", "fpred_max_label", "fpred_max_score")
   val columns: Seq[String] =
     Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
@@ -74,12 +75,10 @@ object VEP extends LazyLogging {
 
     // return the max pair with label and score from the two lists of labels with scores
     val getMaxCsqLabel = udf((labels: Seq[String], scores: Seq[Double]) =>
-      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._1
-    )
+      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._1)
 
     val getMaxCsqScore = udf((labels: Seq[String], scores: Seq[Double]) =>
-      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._2
-    )
+      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._2)
 
     logger.info("load VEP table from raw variant index")
     val raw = VariantIndex
@@ -88,7 +87,8 @@ object VEP extends LazyLogging {
       .persist(StorageLevels.DISK_ONLY)
 
     val groupingCols = VariantIndex.columns :+ "gene_id"
-    val veps = raw.where(col("transcript_consequences").isNotNull)
+    val veps = raw
+      .where(col("transcript_consequences").isNotNull)
       .withColumn("_vep", explode(col("transcript_consequences")))
       .withColumn("gene_id", col("_vep.gene_id"))
       .withColumn("consequence", col("_vep.consequence_terms").getItem(0))
@@ -105,6 +105,7 @@ object VEP extends LazyLogging {
       .where(col("fpred_max_score") > 0F)
 
     new Component {
+
       /** unique column name list per component */
       override val features: Seq[String] = VEP.features
       override val table: DataFrame = veps
