@@ -33,7 +33,7 @@ case class VariantDiseaseSection(path: String,
 /** Main configuration case class */
 case class Configuration(output: String,
                          sampleFactor: Double,
-                         sparkUri: String,
+                         sparkUri: Option[String],
                          logLevel: String,
                          ensembl: EnsemblSection,
                          vep: VEPSection,

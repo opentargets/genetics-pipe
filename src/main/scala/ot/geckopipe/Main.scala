@@ -217,18 +217,22 @@ object Main extends LazyLogging {
     println("closing app... done.")
   }
 
-  private def getOrCreateSparkSession(sparkUri: String) = {
-    val sparkConf: SparkConf =
-      if (sparkUri.nonEmpty)
-        new SparkConf()
-          .setAppName(progName)
-          .setMaster(sparkUri)
-      else
-        new SparkConf()
-          .setAppName(progName)
+  private def getOrCreateSparkSession(sparkUri: Option[String]) = {
+    logger.info(s"create spark session with uri:'${sparkUri.toString}'")
+    val sparkConf: SparkConf = new SparkConf()
+      .setAppName(progName)
+      .set("spark.driver.maxResultSize", "0")
+      .set("spark.debug.maxToStringFields", "2000")
+
+    // if some uri then setmaster must be set otherwise
+    // it tries to get from env if any yarn running
+    val conf = sparkUri match {
+      case Some(uri) if uri.nonEmpty => sparkConf.setMaster(uri)
+      case _                         => sparkConf
+    }
 
     SparkSession.builder
-      .config(sparkConf)
+      .config(conf)
       .getOrCreate
   }
 
