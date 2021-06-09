@@ -6,17 +6,18 @@ import enumeratum._
 
 /** This class represents a full table of gene with its transcripts grch37 */
 class GeneIndex(val table: DataFrame) {
-  def sortByTSS: GeneIndex = new GeneIndex(
-    table.sortWithinPartitions(col("chr").asc, col("tss").asc))
+  def sortByTSS: GeneIndex =
+    new GeneIndex(table.sortWithinPartitions(col("chr").asc, col("tss").asc))
 
-  def sortByID: GeneIndex = new GeneIndex(
-    table.sortWithinPartitions(col("chr").asc, col("gene_id").asc))
+  def sortByID: GeneIndex =
+    new GeneIndex(table.sortWithinPartitions(col("chr").asc, col(GeneIndex.idColumn).asc))
 }
 
 /** Companion object to build the GeneIndex class */
 object GeneIndex {
 
-  sealed abstract class BioTypes(override val entryName: String, val set: Set[String]) extends EnumEntry
+  sealed abstract class BioTypes(override val entryName: String, val set: Set[String])
+      extends EnumEntry
 
   object BioTypes extends Enum[BioTypes] {
 
@@ -24,7 +25,7 @@ object GeneIndex {
      `findValues` is a protected method that invokes a macro to find all `Greeting` object declarations inside an `Enum`
 
      You use it to implement the `val values` member
-    */
+     */
     val values = findValues
 
     case object ProteinCoding extends BioTypes("protein_coding", Set("protein_coding"))
@@ -67,7 +68,7 @@ object GeneIndex {
     */
   val columns: Seq[String] = Seq("chr", "gene_id", "tss", "start", "end", "biotype")
   val indexColumns: Seq[String] = Seq("chr")
-  val idColumns: Seq[String] = Seq("gene_id")
+  val idColumn: String = "gene_id"
 
   /** load and transform lut gene from ensembl
     *
@@ -75,9 +76,11 @@ object GeneIndex {
     * @param ss implicit sparksession
     * @return the processed dataframe
     */
-  def apply(from: String, bioTypes: BioTypes = BioTypes.ApprovedBioTypes)(implicit ss: SparkSession): GeneIndex = {
+  def apply(from: String, bioTypes: BioTypes = BioTypes.ApprovedBioTypes)(
+      implicit ss: SparkSession): GeneIndex = {
     val indexCols = indexColumns.map(c => col(c).asc)
-    val genes = ss.read.json(from)
+    val genes = ss.read
+      .json(from)
       .where((col("biotype") isInCollection bioTypes.set) and
         !(col("chr") isInCollection chromosomes))
       .repartitionByRange(indexCols: _*)
@@ -85,7 +88,3 @@ object GeneIndex {
     new GeneIndex(genes)
   }
 }
-
-
-
-

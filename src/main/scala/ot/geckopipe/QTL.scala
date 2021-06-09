@@ -29,7 +29,8 @@ object QTL extends LazyLogging {
 
   /** union all intervals and interpolate variants from intervals */
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
-    val extractValidTokensFromPathUDF = udf((path: String) => extractValidTokensFromPath(path, "/qtl/"))
+    val extractValidTokensFromPathUDF = udf(
+      (path: String) => extractValidTokensFromPath(path, "/qtl/"))
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val qtls = load(conf.qtl.path)
@@ -45,6 +46,7 @@ object QTL extends LazyLogging {
     val qtlWP = computePercentile(qtlTable, "qtl_table", "qtl_score", "qtl_score_q")
 
     new Component {
+
       /** unique column name list per component */
       override val features: Seq[String] = QTL.features
       override val table: DataFrame = qtlWP

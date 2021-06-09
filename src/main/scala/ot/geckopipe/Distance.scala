@@ -19,12 +19,13 @@ object Distance extends LazyLogging {
     Distance(vIdx, conf, conf.nearest.tssDistance, GeneIndex.BioTypes.ApprovedBioTypes)
   }
 
-  def apply(vIdx: VariantIndex, conf: Configuration, tssDistance: Long, biotypes: GeneIndex.BioTypes)
-           (implicit ss: SparkSession): Component = {
+  def apply(vIdx: VariantIndex,
+            conf: Configuration,
+            tssDistance: Long,
+            biotypes: GeneIndex.BioTypes)(implicit ss: SparkSession): Component = {
 
-    val genes = GeneIndex(conf.ensembl.lut, biotypes)
-      .sortByTSS
-      .table.selectBy(GeneIndex.columns)
+    val genes = GeneIndex(conf.ensembl.lut, biotypes).sortByTSS.table
+      .selectBy(GeneIndex.columns)
       .cache()
 
     logger.info("generate nearest dataset from variant annotated index")
@@ -35,17 +36,21 @@ object Distance extends LazyLogging {
       .withColumn("feature", lit("unspecified"))
 
     val selectCols = columns ++ Seq("type_id", "source_id", "feature")
-    val nearestPairs = nearests.join(genes, (col("chr_id") === col("chr")) and
-      (abs(col("position") - col("tss")) <= tssDistance))
+    val nearestPairs = nearests
+      .join(genes,
+            (col("chr_id") === col("chr")) and
+              (abs(col("position") - col("tss")) <= tssDistance))
       .withColumn("d", abs(col("position") - col("tss")))
       .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d")).otherwise(1.0))
 
     // get a table to compute deciles
     nearestPairs.createOrReplaceTempView("nearest_table")
-    val intWP = computePercentile(nearestPairs, "nearest_table", "distance_score", "distance_score_q")
-      .select(selectCols.head, selectCols.tail: _*)
+    val intWP =
+      computePercentile(nearestPairs, "nearest_table", "distance_score", "distance_score_q")
+        .select(selectCols.head, selectCols.tail: _*)
 
     new Component {
+
       /** unique column name list per component */
       override val features: Seq[String] = Distance.features
       override val table: DataFrame = intWP

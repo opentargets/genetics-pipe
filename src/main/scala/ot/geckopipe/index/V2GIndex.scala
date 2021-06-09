@@ -14,6 +14,7 @@ import ot.geckopipe.index.Indexable._
   * this table is persisted and sorted by (chr_id, position) by default
   */
 class V2GIndex(val table: DataFrame) extends LazyLogging {
+
   /** compute stats with this resulted table but only when info enabled */
   def computeStats(implicit ss: SparkSession): Seq[Long] = {
     import ss.implicits._
@@ -29,6 +30,7 @@ class V2GIndex(val table: DataFrame) extends LazyLogging {
 object V2GIndex extends LazyLogging {
 
   trait Component {
+
     /** unique column name list per component */
     val features: Seq[String]
     val table: DataFrame
@@ -73,36 +75,33 @@ object V2GIndex extends LazyLogging {
 
   /** columns to index the dataset */
   val indexColumns: Seq[String] = Seq("chr_id", "position")
+
   /** the whole list of columns this dataset will be outputing */
-  val columns: Seq[String] = (VariantIndex.columns ++ GeneIndex.idColumns ++ features).distinct
+  val columns: Seq[String] = (VariantIndex.columns ++ features :+ GeneIndex.idColumn).distinct
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
-  def build(datasets: Seq[Component], vIdx: VariantIndex, conf: Configuration)
-           (implicit ss: SparkSession): V2GIndex = {
+  def build(datasets: Seq[Component], conf: Configuration)(implicit ss: SparkSession): V2GIndex = {
 
     logger.info("generate a set of genes resulting from bio exclusion and chromosome lists")
-    val geneIDs = GeneIndex(conf.ensembl.lut)
-      .sortByID
-      .table.selectBy(GeneIndex.idColumns)
-      .collect()
-      .map(_.getString(0))
-      .toSet
-
-    // df.select("id").map(_.getString(0)).collect.toList
-    val geneIDsBc = ss.sparkContext.broadcast(geneIDs)
+    val geneIDs = broadcast(
+      GeneIndex(conf.ensembl.lut).table
+        .selectBy(GeneIndex.idColumn :: Nil)
+        .orderBy(GeneIndex.idColumn))
 
     logger.info("build variant to gene dataset union the list of datasets")
 
     val allFeatures =
       datasets.foldLeft(Seq[String]())((agg, el) => agg ++ el.features).distinct
 
-    val processedDts = datasets.map(el =>
-      (allFeatures diff el.features)
-        .foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
-    )
+    val processedDts = datasets.map(
+      el =>
+        (allFeatures diff el.features)
+          .foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null))))
 
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
-      .filter(col("gene_id") isInCollection geneIDsBc.value)
+      .join(geneIDs, Seq(GeneIndex.idColumn), "left_semi")
+      .withColumn("fpred_labels", coalesce(col("fpred_labels"), typedLit(Array.empty[String])))
+      .withColumn("fpred_scores", coalesce(col("fpred_scores"), typedLit(Array.empty[Double])))
     new V2GIndex(allDts)
   }
 

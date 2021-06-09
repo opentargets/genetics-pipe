@@ -18,8 +18,12 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Main.run(CommandLineArgs(command = Some("variant-index")), configuration)(ss)
 
     import ss.implicits._
-    val variants = ss.read.schema(Encoders.product[Variant2].schema)
-      .parquet(configuration.variantIndex.path).as[Variant2].collect().toList
+    val variants = ss.read
+      .schema(Encoders.product[Variant2].schema)
+      .parquet(configuration.variantIndex.path)
+      .as[Variant2]
+      .collect()
+      .toList
 
     assertEquals(variants, List(variant2))
   }
@@ -32,11 +36,15 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Main.run(CommandLineArgs(command = Some("distance-nearest")), configuration)(ss)
 
     import ss.implicits._
-    val nearest = ss.read.schema(Encoders.product[Nearest].schema)
-      .json(configuration.nearest.path).as[Nearest].collect.toList
+    val nearest = ss.read
+      .schema(Encoders.product[Nearest].schema)
+      .json(configuration.nearest.path)
+      .as[Nearest]
+      .collect
+      .toList
 
     assertEquals(nearest.length, 1)
-    val firstNearest = nearest(0)
+    val firstNearest = nearest.head
     assertEquals(firstNearest.chr_id, "1")
     assertEquals(firstNearest.position, 1100L)
     assertEquals(firstNearest.ref_allele, "A")
@@ -62,8 +70,11 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Main.run(CommandLineArgs(command = Some("variant-gene")), configuration)(ss)
 
     import ss.implicits._
-    val v2gs = ss.read.schema(Encoders.product[V2G].schema).
-      json(configuration.variantGene.path).as[V2G].collect()
+    val v2gs = ss.read
+      .schema(Encoders.product[V2G].schema)
+      .json(configuration.variantGene.path)
+      .as[V2G]
+      .collect()
 
     assertEquals(v2gs.length, 3)
 
@@ -107,8 +118,11 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Main.run(CommandLineArgs(command = Some("variant-disease")), configuration)(ss)
 
     import ss.implicits._
-    val v2d = ss.read.schema(Encoders.product[V2D].schema)
-      .json(configuration.variantDisease.path).as[V2D].head()
+    val v2d = ss.read
+      .schema(Encoders.product[V2D].schema)
+      .json(configuration.variantDisease.path)
+      .as[V2D]
+      .head()
 
     assertEquals(v2d.study_id, "study1")
     assertEquals(v2d.pmid, Some("PMID:1"))
@@ -160,8 +174,11 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Main.run(CommandLineArgs(command = Some("disease-variant-gene")), configuration)(ss)
 
     import ss.implicits._
-    val d2v2gs = ss.read.schema(Encoders.product[D2V2G].schema).
-      json(configuration.output + "/d2v2g/").as[D2V2G].collect()
+    val d2v2gs = ss.read
+      .schema(Encoders.product[D2V2G].schema)
+      .json(configuration.output + "/d2v2g/")
+      .as[D2V2G]
+      .collect()
 
     assertEquals(d2v2gs.length, 1)
   }
@@ -177,23 +194,39 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
 
     import ss.implicits._
 
-    val genes = ss.read.schema(Encoders.product[Gene].schema)
-      .json(configuration.output + "/lut/genes-index/").as[Gene].collect().toList
+    val genes = ss.read
+      .schema(Encoders.product[Gene].schema)
+      .json(configuration.output + "/lut/genes-index/")
+      .as[Gene]
+      .collect()
+      .toList
 
     assertEquals(genes, List(gene))
 
-    val studies = ss.read.schema(Encoders.product[Study].schema)
-      .json(configuration.output + "/lut/study-index/").as[Study].collect().toList
+    val studies = ss.read
+      .schema(Encoders.product[Study].schema)
+      .json(configuration.output + "/lut/study-index/")
+      .as[Study]
+      .collect()
+      .toList
 
     assertEquals(studies, List(study))
 
-    val variants = ss.read.schema(Encoders.product[Variant3].schema)
-      .json(configuration.output + "/lut/variant-index/").as[Variant3].collect().toList
+    val variants = ss.read
+      .schema(Encoders.product[Variant3].schema)
+      .json(configuration.output + "/lut/variant-index/")
+      .as[Variant3]
+      .collect()
+      .toList
 
     assertEquals(variants, List(variant3))
 
-    val overlaps = ss.read.schema(Encoders.product[LocusOverlap].schema)
-      .json(configuration.output + "/lut/overlap-index/").as[LocusOverlap].collect().toList
+    val overlaps = ss.read
+      .schema(Encoders.product[LocusOverlap].schema)
+      .json(configuration.output + "/lut/overlap-index/")
+      .as[LocusOverlap]
+      .collect()
+      .toList
 
     assertEquals(overlaps, List(overlap))
   }
@@ -206,11 +239,14 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
 
     Main.run(CommandLineArgs(command = Some("variant-disease-coloc")), configuration)(ss)
 
-
     import ss.implicits._
 
-    val v2dcolocs = ss.read.schema(Encoders.product[V2DColoc].schema)
-      .json(configuration.output + "/v2d_coloc/").as[V2DColoc].collect().toList
+    val v2dcolocs = ss.read
+      .schema(Encoders.product[V2DColoc].schema)
+      .json(configuration.output + "/v2d_coloc/")
+      .as[V2DColoc]
+      .collect()
+      .toList
 
     assertEquals(v2dcolocs.length, 1)
 
@@ -235,57 +271,107 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
       vep = VEPSection(homoSapiensConsScores = s"$inputFolder/vep_consequences.tsv"),
       interval = IntervalSection(path = s"$inputFolder/v2g/interval/*/*/data.parquet/"),
       qtl = QTLSection(path = s"$inputFolder/v2g/qtl/*/*/data.parquet/"),
-      nearest = NearestSection(tssDistance = 500000, path = s"$outputFolder/distance/canonical_tss/"),
-      variantIndex =
-        VariantSection(
-          raw = s"$inputFolder/variant-annotation.parquet/",
-          path = s"$outputFolder/variant-index/",
-          tssDistance = 500000),
+      nearest =
+        NearestSection(tssDistance = 500000, path = s"$outputFolder/distance/canonical_tss/"),
+      variantIndex = VariantSection(raw = s"$inputFolder/variant-annotation.parquet/",
+                                    path = s"$outputFolder/variant-index/",
+                                    tssDistance = 500000),
       variantGene = VariantGeneSection(path = s"$outputFolder/v2g/"),
-      variantDisease =
-        VariantDiseaseSection(
-          path = s"$outputFolder/v2d/",
-          studies = s"$inputFolder/v2d/studies.parquet",
-          toploci = s"$inputFolder/v2d/toploci.parquet",
-          finemapping = s"$inputFolder/v2d/finemapping.parquet",
-          ld = s"$inputFolder/v2d/ld.parquet",
-          overlapping = s"$inputFolder/v2d/locus_overlap.parquet",
-          coloc = s"$inputFolder/coloc/010101/"))
-
+      variantDisease = VariantDiseaseSection(
+        path = s"$outputFolder/v2d/",
+        studies = s"$inputFolder/v2d/studies.parquet",
+        toploci = s"$inputFolder/v2d/toploci.parquet",
+        finemapping = s"$inputFolder/v2d/finemapping.parquet",
+        ld = s"$inputFolder/v2d/ld.parquet",
+        overlapping = s"$inputFolder/v2d/locus_overlap.parquet",
+        coloc = s"$inputFolder/coloc/010101/"
+      )
+    )
 
     configuration
   }
 
-  private var variant1 = Variant1("1", 1000, "1", 1100, "A", "T", "rs123",
-    Vep(most_severe_consequence = "severe consequence",
+  private var variant1 = Variant1(
+    "1",
+    1000,
+    "1",
+    1100,
+    "A",
+    "T",
+    "rs123",
+    Vep(
+      most_severe_consequence = "severe consequence",
       transcript_consequences = Array(
-        TranscriptConsequence(gene_id = "gene id", consequence_terms = Array("consequence term 1")))),
-    Cadd(0.1, 0.2), Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0))
-
+        TranscriptConsequence(gene_id = "gene id", consequence_terms = Array("consequence term 1")))
+    ),
+    Cadd(0.1, 0.2),
+    Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0)
+  )
 
   private def createRawVariantIndexParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
 
-    Seq(variant1).toDF().write.parquet(path)
+    List(variant1).toDS.write.parquet(path)
   }
 
-  private val variant2 = Variant2("1", 1100L, "A", "T", Some("rs123"), Some("severe consequence"),
-    Cadd(0.1, 0.2), Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0), Some(10769L), Some("ENSG00000223972"),
-    Some(10769L), Some("ENSG00000223972"))
+  private val variant2 = Variant2(
+    "1",
+    1100L,
+    "A",
+    "T",
+    Some("rs123"),
+    Some("severe consequence"),
+    Cadd(0.1, 0.2),
+    Gnomad(0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1.0),
+    Some(10769L),
+    Some("ENSG00000223972"),
+    Some(10769L),
+    Some("ENSG00000223972")
+  )
 
   private def createVariantIndexParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
 
-    Seq(variant2).toDF().write.parquet(path)
+    List(variant2).toDS.write.parquet(path)
   }
 
-  private val variant3 = Variant3("1", 1100L, "A", "T", Some("rs123"), Some("severe consequence"), Some(0.1),
-    Some(0.2), Some(0.1), Some(0.2), Some(0.3), Some(0.4), Some(0.5), Some(0.6), Some(0.7), Some(0.8), Some(0.9),
-    Some(1.0), Some(10769L), Some("ENSG00000223972"), Some(10769L), Some("ENSG00000223972"))
+  private val variant3 = Variant3(
+    "1",
+    1100L,
+    "A",
+    "T",
+    Some("rs123"),
+    Some("severe consequence"),
+    Some(0.1),
+    Some(0.2),
+    Some(0.1),
+    Some(0.2),
+    Some(0.3),
+    Some(0.4),
+    Some(0.5),
+    Some(0.6),
+    Some(0.7),
+    Some(0.8),
+    Some(0.9),
+    Some(1.0),
+    Some(10769L),
+    Some("ENSG00000223972"),
+    Some(10769L),
+    Some("ENSG00000223972")
+  )
 
-  private val gene = Gene("1", "ENSG00000223972", "DDX11L1",
-    "DEAD/H (Asp-Glu-Ala-Asp/His) box helicase 11 like 1 [Source:HGNC Symbol;Acc:37102]", fwdstrand = true,
-    exons = Seq(11869L, 12227L, 12613L, 12721L, 13221L, 14409L), 11869, 11869, 14412, "protein_coding")
+  private val gene = Gene(
+    "1",
+    "ENSG00000223972",
+    "DDX11L1",
+    "DEAD/H (Asp-Glu-Ala-Asp/His) box helicase 11 like 1 [Source:HGNC Symbol;Acc:37102]",
+    fwdstrand = true,
+    exons = Seq(11869L, 12227L, 12613L, 12721L, 13221L, 14409L),
+    11869,
+    11869,
+    14412,
+    "protein_coding"
+  )
 
   private def createEnsemblLutJson(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
@@ -325,9 +411,23 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     ).toDF().write.parquet(path)
   }
 
-  private val study = Study("study1", "trait reported 1", List("EFO_test"), Some("PMID:1"), Some("2012-01-03"),
-    Some("journal 1"), Some("pub title 1"), Some("Pub Author"), List("European=10"), List("European=5"),
-    Some(10L), Some(5L), Some(1L), Some("trait category 1"), Some(2L))
+  private val study = Study(
+    "study1",
+    "trait reported 1",
+    List("EFO_test"),
+    Some("PMID:1"),
+    Some("2012-01-03"),
+    Some("journal 1"),
+    Some("pub title 1"),
+    Some("Pub Author"),
+    List("European=10"),
+    List("European=5"),
+    Some(10L),
+    Some(5L),
+    Some(1L),
+    Some("trait category 1"),
+    Some(2L)
+  )
 
   private def createStudyParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
@@ -335,8 +435,20 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Seq(study).toDF().write.parquet(path)
   }
 
-  private val topLoci = TopLoci("study1", "1", 1100L, "A", "T", Some("+"), Some(0.026), Some(0.021), Some(0.030),
-    Some(0.11), Some(0.09), Some(0.12), Some(2.3), Some(-16))
+  private val topLoci = TopLoci("study1",
+                                "1",
+                                1100L,
+                                "A",
+                                "T",
+                                Some("+"),
+                                Some(0.026),
+                                Some(0.021),
+                                Some(0.030),
+                                Some(0.11),
+                                Some(0.09),
+                                Some(0.12),
+                                Some(2.3),
+                                Some(-16))
 
   private def createTopLociParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
@@ -348,8 +460,22 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     import ss.implicits._
 
     Seq(
-      Ld("study1", "1", 1100L, "A", "T", "1", 1100L, "A", "T", Some(0.9), Some(0.1), Some(0.2), Some(0.3), Some(0.4),
-        Some(0.5), Some(true))
+      Ld("study1",
+         "1",
+         1100L,
+         "A",
+         "T",
+         "1",
+         1100L,
+         "A",
+         "T",
+         Some(0.9),
+         Some(0.1),
+         Some(0.2),
+         Some(0.3),
+         Some(0.4),
+         Some(0.5),
+         Some(true))
     ).toDF().write.parquet(path)
   }
 
@@ -361,7 +487,8 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     ).toDF().write.parquet(path)
   }
 
-  private val overlap = LocusOverlap("study1", "1", 1100L, "A", "T", "study2", "1", 1100L, "A", "T", 7, 3, 5)
+  private val overlap =
+    LocusOverlap("study1", "1", 1100L, "A", "T", "study2", "1", 1100L, "A", "T", 7, 3, 5)
 
   private def createOverlapParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
@@ -380,7 +507,8 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     source_id = "canonical_tss",
     d = Some(10769L),
     distance_score = Some(9.2),
-    distance_score_q = Some(0.1))
+    distance_score_q = Some(0.1)
+  )
 
   private def createV2GJson(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
@@ -415,7 +543,8 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     posterior_prob = Some(0.021),
     pval = 1.1,
     pval_mantissa = 2.3,
-    pval_exponent = -16)
+    pval_exponent = -16
+  )
 
   private def createV2DJson(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
@@ -437,7 +566,8 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     right_alt = "T",
     right_type = "gwas",
     right_gene_id = "ENSG00000223972",
-    coloc_h3 = Some(0.1))
+    coloc_h3 = Some(0.1)
+  )
 
   private def createV2DColocParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
