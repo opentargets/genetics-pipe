@@ -265,7 +265,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     val configuration = Configuration(
       output = outputFolder,
       sampleFactor = 0, //disabled
-      sparkUri = "", //empty string for local
+      sparkUri = Some("local[*]"), //empty string for local
       logLevel = "INFO",
       ensembl = EnsemblSection(lut = s"$inputFolder/hg38.json"),
       vep = VEPSection(homoSapiensConsScores = s"$inputFolder/vep_consequences.tsv"),
@@ -414,6 +414,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
   private val study = Study(
     "study1",
     "trait reported 1",
+    None,
     List("EFO_test"),
     Some("PMID:1"),
     Some("2012-01-03"),

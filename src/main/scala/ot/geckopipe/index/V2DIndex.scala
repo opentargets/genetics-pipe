@@ -105,8 +105,32 @@ object V2DIndex extends LazyLogging {
         .drop("chr_id", "position", "ref_allele", "alt_allele"))
   }
 
-  def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame =
-    ss.read.parquet(path).orderBy(col("study_id").asc)
+  def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
+    val pattern = """^([a-Az-Z]+)(.*)"""
+    val studies = ss.read
+      .parquet(path)
+      .withColumn("pmid", when(length($"pmid") > 0, $"pmid"))
+      .withColumn("pub_date", when(length($"pub_date") > 0, $"pub_date"))
+      .withColumn("pub_journal", when(length($"pub_journal") > 0, $"pub_journal"))
+      .withColumn("pub_title", when(length($"pub_title") > 0, $"pub_title"))
+      .withColumn("pub_author", when(length($"pub_author") > 0, $"pub_author"))
+      .withColumn("trait_reported", when(length($"trait_reported") > 0, $"trait_reported"))
+      .withColumn("trait_category", when(length($"trait_category") > 0, $"trait_category"))
+      .withColumn("ancestry_replication",
+                  filter(coalesce(col("ancestry_replication"), typedLit(Array.empty[String])),
+                         c => length(c) > 0))
+      .withColumn("ancestry_initial",
+                  filter(coalesce(col("ancestry_initial"), typedLit(Array.empty[String])),
+                         c => length(c) > 0))
+      .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
+      .withColumn("source", regexp_extract(col("study_id"), pattern, 1))
+      .orderBy(col("study_id").asc)
+
+    // TODO join the irenes DF from GCS bucket
+    studies
+  }
 
   def buildTopLociIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val toDouble = udf((mantissa: Double, exponent: Double) => {
