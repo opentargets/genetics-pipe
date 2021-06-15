@@ -1,15 +1,13 @@
 package ot.geckopipe
 
-import java.nio.file.Paths
-
 import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
 import ot.geckopipe.index._
+import pureconfig.ConfigSource
 import pureconfig.error.ConfigReaderFailures
 import scopt.OptionParser
-
 import pureconfig.generic.auto._
 
 class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configuration)
@@ -240,10 +238,10 @@ object Main extends LazyLogging {
 
     val conf = if (configFile.nonEmpty) {
       logger.info(s"loading configuration from commandline as $configFile")
-      pureconfig.loadConfig[Configuration](Paths.get(configFile))
+      ConfigSource.default(ConfigSource.file(configFile)).load[Configuration]
     } else {
       logger.info("load configuration from package resource")
-      pureconfig.loadConfig[Configuration]
+      ConfigSource.default.load[Configuration]
     }
     conf
   }
@@ -253,7 +251,7 @@ object Main extends LazyLogging {
     parser.parse(args, CommandLineArgs()) match {
       case Some(config) =>
         readConfiguration(config.file) match {
-          case Right(configuration) => {
+          case Right(configuration) =>
             implicit val ss: SparkSession = getOrCreateSparkSession(configuration.sparkUri)
             ss.sparkContext.setLogLevel(configuration.logLevel)
             try {
@@ -261,7 +259,6 @@ object Main extends LazyLogging {
             } finally {
               ss.close()
             }
-          }
           case Left(failures) =>
             println(s"configuration contains errors like ${failures.toString}")
         }

@@ -136,10 +136,10 @@ object V2DIndex extends LazyLogging {
                   filter(coalesce(col("ancestry_initial"), typedLit(Array.empty[String])),
                          c => length(c) > 0))
       .withColumn("source", regexp_extract(col("study_id"), pattern, 1))
-      .orderBy(col("study_id").asc)
       .drop(efoColumns.tail: _*)
       .join(efoDF, Seq(efoColumns.head), "left_outer")
       .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
+      .orderBy(col("study_id").asc)
 
     studies
   }
