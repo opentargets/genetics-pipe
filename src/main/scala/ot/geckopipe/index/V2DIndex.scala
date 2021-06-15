@@ -119,7 +119,7 @@ object V2DIndex extends LazyLogging {
       .select(efoColumns.head, efoColumns.tail: _*)
       .orderBy(efoColumns.head)
 
-    val pattern = """^([a-Az-Z]+)(.*)"""
+    val pattern = """^([a-zA-Z]+)(.*)"""
     val studies = ss.read
       .parquet(path)
       .withColumn("pmid", when(length($"pmid") > 0, $"pmid"))

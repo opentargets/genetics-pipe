@@ -111,6 +111,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     val configuration = createTestConfiguration()
     createVariantIndexParquet(configuration.variantIndex.path)(ss)
     createStudyParquet(configuration.variantDisease.studies)(ss)
+    createEfoTraitParquet(configuration.variantDisease.efos)(ss)
     createTopLociParquet(configuration.variantDisease.toploci)(ss)
     createLdParquet(configuration.variantDisease.ld)(ss)
     createFineMappingParquet(configuration.variantDisease.finemapping)(ss)
@@ -124,19 +125,19 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
       .as[V2D]
       .head()
 
-    assertEquals(v2d.study_id, "study1")
+    assertEquals(v2d.study_id, "FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK")
     assertEquals(v2d.pmid, Some("PMID:1"))
     assertEquals(v2d.pub_date, Some("2012-01-03"))
     assertEquals(v2d.pub_journal, Some("journal 1"))
     assertEquals(v2d.pub_author, Some("Pub Author"))
     assertEquals(v2d.trait_reported, "trait reported 1")
-    assertEquals(v2d.trait_efos, List("EFO_test"))
+    assertEquals(v2d.trait_efos, List("EFO_0000389"))
     assertEquals(v2d.ancestry_initial, List("European=10"))
     assertEquals(v2d.ancestry_replication, List("European=5"))
     assertEquals(v2d.n_initial, Some(10))
     assertEquals(v2d.n_replication, Some(5))
     assertEquals(v2d.n_cases, Some(1))
-    assertEquals(v2d.trait_category, Some("trait category 1"))
+    assertEquals(v2d.trait_category, Some("cell proliferation disorder"))
     assertEquals(v2d.num_assoc_loci, Some(2))
     assertEquals(v2d.lead_chrom, "1")
     assertEquals(v2d.lead_pos, 1100L)
@@ -187,6 +188,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     val configuration = createTestConfiguration()
     createVariantIndexParquet(configuration.variantIndex.path)(ss)
     createStudyParquet(configuration.variantDisease.studies)(ss)
+    createEfoTraitParquet(configuration.variantDisease.efos)(ss)
     createOverlapParquet(configuration.variantDisease.overlapping)(ss)
     createEnsemblLutJson(configuration.ensembl.lut)(ss)
 
@@ -284,7 +286,8 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
         finemapping = s"$inputFolder/v2d/finemapping.parquet",
         ld = s"$inputFolder/v2d/ld.parquet",
         overlapping = s"$inputFolder/v2d/locus_overlap.parquet",
-        coloc = s"$inputFolder/coloc/010101/"
+        coloc = s"$inputFolder/coloc/010101/",
+        efos = s"$inputFolder/v2d/trait_efo.parquet"
       )
     )
 
@@ -411,11 +414,15 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     ).toDF().write.parquet(path)
   }
 
+  //   private val traitEfo = TraitEfo("FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
+  //                                  "Melanoma in situ of trunk",
+  //                                  List("EFO_0000389"),
+  //                                  Some("cell proliferation disorder"))
   private val study = Study(
-    "study1",
+    "FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
     "trait reported 1",
-    None,
-    List("EFO_test"),
+    Some("FINNGEN"),
+    List("EFO_0000389"),
     Some("PMID:1"),
     Some("2012-01-03"),
     Some("journal 1"),
@@ -426,7 +433,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Some(10L),
     Some(5L),
     Some(1L),
-    Some("trait category 1"),
+    Some("cell proliferation disorder"),
     Some(2L)
   )
 
@@ -436,20 +443,38 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     Seq(study).toDF().write.parquet(path)
   }
 
-  private val topLoci = TopLoci("study1",
-                                "1",
-                                1100L,
-                                "A",
-                                "T",
-                                Some("+"),
-                                Some(0.026),
-                                Some(0.021),
-                                Some(0.030),
-                                Some(0.11),
-                                Some(0.09),
-                                Some(0.12),
-                                Some(2.3),
-                                Some(-16))
+  private case class TraitEfo(study_id: String,
+                              trait_reported: String,
+                              trait_efos: List[String],
+                              trait_category: Option[String])
+
+  private val traitEfo = TraitEfo("FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
+                                  "Melanoma in situ of trunk",
+                                  List("EFO_0000389"),
+                                  Some("cell proliferation disorder"))
+
+  private def createEfoTraitParquet(path: String)(implicit ss: SparkSession): Unit = {
+    import ss.implicits._
+
+    Seq(traitEfo).toDF().write.parquet(path)
+  }
+
+  private val topLoci = TopLoci(
+    "FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
+    "1",
+    1100L,
+    "A",
+    "T",
+    Some("+"),
+    Some(0.026),
+    Some(0.021),
+    Some(0.030),
+    Some(0.11),
+    Some(0.09),
+    Some(0.12),
+    Some(2.3),
+    Some(-16)
+  )
 
   private def createTopLociParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
@@ -461,7 +486,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     import ss.implicits._
 
     Seq(
-      Ld("study1",
+      Ld("FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
          "1",
          1100L,
          "A",
@@ -484,12 +509,34 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     import ss.implicits._
 
     Seq(
-      FineMapping("study1", "1", 1100L, "A", "T", "1", 1100L, "A", "T", Some(28.9), Some(0.021))
+      FineMapping("FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
+                  "1",
+                  1100L,
+                  "A",
+                  "T",
+                  "1",
+                  1100L,
+                  "A",
+                  "T",
+                  Some(28.9),
+                  Some(0.021))
     ).toDF().write.parquet(path)
   }
 
   private val overlap =
-    LocusOverlap("study1", "1", 1100L, "A", "T", "study2", "1", 1100L, "A", "T", 7, 3, 5)
+    LocusOverlap("FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
+                 "1",
+                 1100L,
+                 "A",
+                 "T",
+                 "study2",
+                 "1",
+                 1100L,
+                 "A",
+                 "T",
+                 7,
+                 3,
+                 5)
 
   private def createOverlapParquet(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
@@ -518,13 +565,13 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
   }
 
   private val v2d = V2D(
-    study_id = "study1",
+    study_id = "FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
     pmid = Some("PMID:1"),
     pub_date = Some("2012-01-03"),
     pub_journal = Some("journal 1"),
     pub_author = Some("Pub Author"),
     trait_reported = "trait reported 1",
-    trait_efos = List("EFO_test"),
+    trait_efos = List("EFO_0000389"),
     ancestry_initial = List("European=10"),
     ancestry_replication = List("European=5"),
     n_initial = Some(10),
