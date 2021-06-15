@@ -28,7 +28,8 @@ case class VariantDiseaseSection(path: String,
                                  finemapping: String,
                                  ld: String,
                                  overlapping: String,
-                                 coloc: String)
+                                 coloc: String,
+                                 efos: String)
 
 /** Main configuration case class */
 case class Configuration(output: String,

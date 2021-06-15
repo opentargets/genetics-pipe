@@ -55,7 +55,7 @@ object V2DIndex extends LazyLogging {
         StructField("pval", DoubleType) :: Nil)
 
   def build(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
-    val studies = buildStudiesIndex(conf.variantDisease.studies).cache()
+    val studies = buildStudiesIndex(conf.variantDisease.studies, conf.variantDisease.efos).cache()
     val topLoci = buildTopLociIndex(conf.variantDisease.toploci).cache()
     val ldLoci = buildLDIndex(conf.variantDisease.ld)
       .drop("ld_available",
@@ -105,8 +105,19 @@ object V2DIndex extends LazyLogging {
         .drop("chr_id", "position", "ref_allele", "alt_allele"))
   }
 
-  def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame = {
+  def buildStudiesIndex(path: String, efos: String)(implicit ss: SparkSession): DataFrame = {
     import ss.implicits._
+
+    val efoColumns = List(
+      "study_id",
+      "trait_efos",
+      "trait_category"
+    )
+
+    val efoDF = ss.read
+      .parquet(efos)
+      .select(efoColumns.head, efoColumns.tail: _*)
+      .orderBy(efoColumns.head)
 
     val pattern = """^([a-Az-Z]+)(.*)"""
     val studies = ss.read
@@ -124,11 +135,12 @@ object V2DIndex extends LazyLogging {
       .withColumn("ancestry_initial",
                   filter(coalesce(col("ancestry_initial"), typedLit(Array.empty[String])),
                          c => length(c) > 0))
-      .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
       .withColumn("source", regexp_extract(col("study_id"), pattern, 1))
       .orderBy(col("study_id").asc)
+      .drop(efoColumns.tail: _*)
+      .join(efoDF, Seq(efoColumns.head), "left_outer")
+      .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
 
-    // TODO join the irenes DF from GCS bucket
     studies
   }
 
