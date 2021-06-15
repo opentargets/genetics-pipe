@@ -133,7 +133,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     logger.info("generate lut for studies")
 
     V2DIndex
-      .buildStudiesIndex(c.variantDisease.studies)
+      .buildStudiesIndex(c.variantDisease.studies, c.variantDisease.efos)
       .write
       .json(c.output.stripSuffix("/").concat("/lut/study-index/"))
 
