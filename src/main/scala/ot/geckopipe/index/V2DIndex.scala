@@ -55,7 +55,7 @@ object V2DIndex extends LazyLogging {
         StructField("pval", DoubleType) :: Nil)
 
   def build(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
-    val studies = buildStudiesIndex(conf.variantDisease.studies).cache()
+    val studies = buildStudiesIndex(conf.variantDisease.studies, conf.variantDisease.efos).cache()
     val topLoci = buildTopLociIndex(conf.variantDisease.toploci).cache()
     val ldLoci = buildLDIndex(conf.variantDisease.ld)
       .drop("ld_available",
@@ -105,8 +105,46 @@ object V2DIndex extends LazyLogging {
         .drop("chr_id", "position", "ref_allele", "alt_allele"))
   }
 
-  def buildStudiesIndex(path: String)(implicit ss: SparkSession): DataFrame =
-    ss.read.parquet(path).orderBy(col("study_id").asc)
+  def buildStudiesIndex(path: String, efos: String)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
+    val efoColumns = List(
+      "study_id",
+      "trait_efos",
+      "trait_category"
+    )
+
+    val efoDF = ss.read
+      .parquet(efos)
+      .select(efoColumns.head, efoColumns.tail: _*)
+      .orderBy(efoColumns.head)
+
+    val pattern = """^([a-zA-Z]+)(.*)"""
+    val studies = ss.read
+      .parquet(path)
+      .withColumn("pmid", when(length($"pmid") > 0, $"pmid"))
+      .withColumn("pub_date", when(length($"pub_date") > 0, $"pub_date"))
+      .withColumn("pub_journal", when(length($"pub_journal") > 0, $"pub_journal"))
+      .withColumn("pub_title", when(length($"pub_title") > 0, $"pub_title"))
+      .withColumn("pub_author", when(length($"pub_author") > 0, $"pub_author"))
+      .withColumn("trait_reported", when(length($"trait_reported") > 0, $"trait_reported"))
+      .withColumn("ancestry_replication",
+                  filter(coalesce(col("ancestry_replication"), typedLit(Array.empty[String])),
+                         c => length(c) > 0))
+      .withColumn("ancestry_initial",
+                  filter(coalesce(col("ancestry_initial"), typedLit(Array.empty[String])),
+                         c => length(c) > 0))
+      .withColumn("source", regexp_extract(col("study_id"), pattern, 1))
+      .drop(efoColumns.tail: _*)
+      .join(efoDF, Seq(efoColumns.head), "left_outer")
+      .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
+      .withColumn(
+        "trait_category",
+        coalesce(when(length($"trait_category") > 0, $"trait_category"), lit("Uncategorised")))
+      .orderBy(col("study_id").asc)
+
+    studies
+  }
 
   def buildTopLociIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val toDouble = udf((mantissa: Double, exponent: Double) => {

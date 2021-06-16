@@ -2,6 +2,7 @@ package ot.geckopipe.domain
 
 case class Study(study_id: String,
                  trait_reported: String,
+                 source: Option[String],
                  trait_efos: List[String],
                  pmid: Option[String] = None,
                  pub_date: Option[String] = None,
