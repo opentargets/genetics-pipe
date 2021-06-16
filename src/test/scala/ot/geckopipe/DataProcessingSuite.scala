@@ -267,7 +267,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     val configuration = Configuration(
       output = outputFolder,
       sampleFactor = 0, //disabled
-      sparkUri = Some("local[*]"), //empty string for local
+      sparkUri = Some("local[*]"),
       logLevel = "INFO",
       ensembl = EnsemblSection(lut = s"$inputFolder/hg38.json"),
       vep = VEPSection(homoSapiensConsScores = s"$inputFolder/vep_consequences.tsv"),
@@ -414,10 +414,6 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     ).toDF().write.parquet(path)
   }
 
-  //   private val traitEfo = TraitEfo("FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
-  //                                  "Melanoma in situ of trunk",
-  //                                  List("EFO_0000389"),
-  //                                  Some("cell proliferation disorder"))
   private val study = Study(
     "FINNGEN_R5_CD2_INSITU_MELANOMA_TRUNK",
     "trait reported 1",
