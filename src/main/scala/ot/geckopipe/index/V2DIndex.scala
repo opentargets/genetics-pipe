@@ -128,7 +128,6 @@ object V2DIndex extends LazyLogging {
       .withColumn("pub_title", when(length($"pub_title") > 0, $"pub_title"))
       .withColumn("pub_author", when(length($"pub_author") > 0, $"pub_author"))
       .withColumn("trait_reported", when(length($"trait_reported") > 0, $"trait_reported"))
-      .withColumn("trait_category", when(length($"trait_category") > 0, $"trait_category"))
       .withColumn("ancestry_replication",
                   filter(coalesce(col("ancestry_replication"), typedLit(Array.empty[String])),
                          c => length(c) > 0))
@@ -139,6 +138,9 @@ object V2DIndex extends LazyLogging {
       .drop(efoColumns.tail: _*)
       .join(efoDF, Seq(efoColumns.head), "left_outer")
       .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
+      .withColumn(
+        "trait_category",
+        coalesce(when(length($"trait_category") > 0, $"trait_category"), lit("Uncategorised")))
       .orderBy(col("study_id").asc)
 
     studies
