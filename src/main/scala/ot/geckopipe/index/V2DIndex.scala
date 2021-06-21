@@ -138,9 +138,10 @@ object V2DIndex extends LazyLogging {
       .drop(efoColumns.tail: _*)
       .join(efoDF, Seq(efoColumns.head), "left_outer")
       .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
-      .withColumn(
-        "trait_category",
-        coalesce(when(length($"trait_category") > 0, $"trait_category"), lit("Uncategorised")))
+      .withColumn("trait_category",
+                  coalesce(when(length($"trait_category") > 0, $"trait_category"),
+                           lit("Uncategorised")))
+      .filter($"trait_reported".isNotNull)
       .orderBy(col("study_id").asc)
 
     studies
