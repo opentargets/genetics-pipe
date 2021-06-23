@@ -107,11 +107,15 @@ object V2GIndex extends LazyLogging {
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   def load(conf: Configuration)(implicit ss: SparkSession): V2GIndex = {
+    import ss.implicits._
 
     logger.info("load variant to gene dataset from built one")
     val v2g = ss.read
       .schema(schema)
       .json(conf.variantGene.path)
+      // TODO WARN this is a temporal hack until we fix the qtl dataset and properly capture 2230 smallest entries
+      .withColumn("qtl_pval",
+                  when($"qtl_pval" === 0d, lit(Double.MinPositiveValue)).otherwise($"qtl_pval"))
 
     new V2GIndex(v2g)
   }
