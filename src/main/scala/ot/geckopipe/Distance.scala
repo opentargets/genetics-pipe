@@ -43,11 +43,7 @@ object Distance extends LazyLogging {
       .withColumn("d", abs(col("position") - col("tss")))
       .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d")).otherwise(1.0))
 
-    // get a table to compute deciles
-    nearestPairs.createOrReplaceTempView("nearest_table")
-    val intWP =
-      computePercentile(nearestPairs, "nearest_table", "distance_score", "distance_score_q")
-        .select(selectCols.head, selectCols.tail: _*)
+    val intWP = nearestPairs.transform(computePercentiles(_, "distance_score", "distance_score_q"))
 
     new Component {
 

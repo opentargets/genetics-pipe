@@ -1,13 +1,14 @@
 package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{Column, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
 import ot.geckopipe.index.V2GIndex.logger
 import ot.geckopipe.index.VariantIndex
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 object functions extends LazyLogging {
 
@@ -185,37 +186,16 @@ object functions extends LazyLogging {
       .map(identity)
   }
 
-  def computePercentile(ds: DataFrame,
-                        tableName: String,
-                        scoreField: String,
-                        percentileField: String)(implicit ss: SparkSession): DataFrame = {
-    logger.info(s"compute quantiles for $scoreField")
+  def computePercentiles(ds: DataFrame, scoreField: String, percentileField: String)(
+      implicit ss: SparkSession): DataFrame = {
 
-    val quantilesDF = ss.sqlContext.sql(s"""
-                                           |select
-                                           | source_id,
-                                           | feature,
-                                           | percentile_approx(${scoreField}, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as ${percentileField}
-                                           |from ${tableName}
-                                           |group by source_id, feature
-                                           |order by source_id asc, feature asc
-      """.stripMargin)
+    val tmpCol = Random.alphanumeric.take(5).mkString
 
-    // build and broadcast qtl and interval maps for the
-    val quantiles = ss.sparkContext
-      .broadcast(fromQ2Map(quantilesDF))
+    val w = Window.partitionBy("source_id", "feature").orderBy(col(scoreField).asc)
 
-    val setQuantilesUDF = udf((source_id: String, feature: String, qtl_score: Double) => {
-      val qns = quantiles.value.apply(source_id).apply(feature)
-      qns.view.dropWhile(p => p._1 < qtl_score).head._2
-    })
-
-    val qdf = ds
-      .withColumn(percentileField,
-                  when(col(scoreField).isNotNull,
-                       setQuantilesUDF(col("source_id"), col("feature"), col(scoreField))))
-
-    qdf
+    ds.withColumn(tmpCol, round(percent_rank().over(w), 1))
+      .withColumn(percentileField, when(col(scoreField).isNotNull, col(tmpCol)))
+      .drop(tmpCol)
   }
 
   object Implicits {

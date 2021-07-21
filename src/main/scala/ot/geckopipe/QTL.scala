@@ -43,9 +43,7 @@ object QTL extends LazyLogging {
     val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail: _*)
     val qtlTable = qtls.join(vIdxS, VariantIndex.columns)
 
-    // get a table to compute deciles
-    qtlTable.createOrReplaceTempView("qtl_table")
-    val qtlWP = computePercentile(qtlTable, "qtl_table", "qtl_score", "qtl_score_q")
+    val qtlWP = qtlTable.transform(computePercentiles(_, "qtl_score", "qtl_score_q"))
 
     new Component {
 

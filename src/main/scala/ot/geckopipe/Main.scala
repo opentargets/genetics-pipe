@@ -64,7 +64,9 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       )
       .drop(columnsToDrop: _*)
 
-    colocVariantFiltered.write.json(c.output.stripSuffix("/").concat("/v2d_coloc/"))
+    colocVariantFiltered.write
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/v2d_coloc/"))
   }
 
   def variantToGene(): Unit = {
@@ -83,7 +85,19 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val dtSeq = Seq(vepDts, nearestDts, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, c)
 
-    v2g.table.write.json(c.output.stripSuffix("/").concat("/v2g/"))
+    v2g.table.write.format(c.format).save(c.variantGene.path)
+  }
+
+  def variantGeneScored(): Unit = {
+    logger.info("exec variant-gene-scored command")
+
+    val v2g = V2GIndex.load(c)
+
+    v2g
+      .computeScores(c)
+      .write
+      .format(c.format)
+      .save(c.variantGene.pathScored)
   }
 
   def variantToDisease(): Unit = {
@@ -92,11 +106,12 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
     val v2d = V2DIndex.build(vIdx, c)
 
-    v2d.table.write.json(c.output.stripSuffix("/").concat("/v2d/"))
+    v2d.table.write.format(c.format).save(c.variantDisease.path)
   }
 
+  // TODO FINISH SCORED d2v2g
   def diseaseToVariantToGene(): Unit = {
-    logger.info("exec variant-disease command")
+    logger.info("exec disease-variant-gene command")
 
     val v2g = V2GIndex.load(c)
     val v2d = V2DIndex.load(c)
@@ -113,7 +128,8 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       )
       .drop(VariantIndex.columns: _*)
       .write
-      .json(c.output.stripSuffix("/").concat("/d2v2g/"))
+      .format(c.format)
+      .save(c.diseaseVariantGeneSection.path)
   }
 
   def dictionaries(): Unit = {
@@ -126,23 +142,27 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       .flatten
       .table
       .write
-      .json(c.output.stripSuffix("/").concat("/lut/variant-index/"))
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/lut/variant-index/"))
 
     logger.info("generate lut for studies")
 
     V2DIndex
       .buildStudiesIndex(c.variantDisease.studies, c.variantDisease.efos)
       .write
-      .json(c.output.stripSuffix("/").concat("/lut/study-index/"))
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/lut/study-index/"))
 
     logger.info("generate lut for overlapping index")
     V2DIndex
       .buildOverlapIndex(c.variantDisease.overlapping)
       .write
-      .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
 
     GeneIndex(c.ensembl.lut).sortByID.table.write
-      .json(c.output.stripSuffix("/").concat("/lut/genes-index/"))
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/lut/genes-index/"))
   }
 
   def buildAll(): Unit = {
@@ -151,6 +171,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     variantDiseaseColoc()
     variantToDisease()
     variantToGene()
+    variantGeneScored()
     diseaseToVariantToGene()
   }
 }
@@ -195,6 +216,9 @@ object Main extends LazyLogging {
 
       case Some("variant-gene") =>
         cmds.variantToGene()
+
+      case Some("variant-gene-scored") =>
+        cmds.variantGeneScored()
 
       case Some("variant-disease") =>
         cmds.variantToDisease()
