@@ -14,6 +14,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     val configuration = createTestConfiguration()
     createRawVariantIndexParquet(configuration.variantIndex.raw)(ss)
     createEnsemblLutJson(configuration.ensembl.lut)(ss)
+    createV2GWeights(configuration.variantGene.weights)(ss)
 
     Main.run(CommandLineArgs(command = Some("variant-index")), configuration)(ss)
 
@@ -177,7 +178,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     import ss.implicits._
     val d2v2gs = ss.read
       .schema(Encoders.product[D2V2G].schema)
-      .json(configuration.output + "/d2v2g/")
+      .json(configuration.diseaseVariantGeneSection.path)
       .as[D2V2G]
       .collect()
 
@@ -266,7 +267,8 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
 
     val configuration = Configuration(
       output = outputFolder,
-      sampleFactor = 0, //disabled
+      sampleFactor = 0, //disabled,
+      format = "json",
       sparkUri = Some("local[*]"),
       logLevel = "INFO",
       ensembl = EnsemblSection(lut = s"$inputFolder/hg38.json"),
@@ -278,7 +280,9 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
       variantIndex = VariantSection(raw = s"$inputFolder/variant-annotation.parquet/",
                                     path = s"$outputFolder/variant-index/",
                                     tssDistance = 500000),
-      variantGene = VariantGeneSection(path = s"$outputFolder/v2g/"),
+      variantGene = VariantGeneSection(path = s"$outputFolder/v2g/",
+                                       pathScored = s"$outputFolder/v2g_scored/",
+                                       weights = s"$inputFolder/v2g_weights/"),
       variantDisease = VariantDiseaseSection(
         path = s"$outputFolder/v2d/",
         studies = s"$inputFolder/v2d/studies.parquet",
@@ -288,7 +292,10 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
         overlapping = s"$inputFolder/v2d/locus_overlap.parquet",
         coloc = s"$inputFolder/coloc/010101/",
         efos = s"$inputFolder/v2d/trait_efo.parquet"
-      )
+      ),
+      diseaseVariantGeneSection = DiseaseVariantGeneSection(path = s"$outputFolder/d2v2g/",
+                                                            pathScored =
+                                                              s"$outputFolder/d2v2g_scored/")
     )
 
     configuration
@@ -375,6 +382,24 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     14412,
     "protein_coding"
   )
+
+  case class V2GWeight(source_id: String, weight: Double)
+
+  private def createV2GWeights(path: String)(implicit ss: SparkSession): Unit = {
+    import ss.implicits._
+
+    val w = Seq(
+      V2GWeight("vep", 1.0),
+      V2GWeight("eqtl", 0.66),
+      V2GWeight("pqtl", 0.66),
+      V2GWeight("javierre2016", 0.33),
+      V2GWeight("andersson2014", 0.33),
+      V2GWeight("thurman2012", 0.33),
+      V2GWeight("canonical_tss", 0.33)
+    )
+
+    w.toDF().write.json(path)
+  }
 
   private def createEnsemblLutJson(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._
