@@ -188,7 +188,7 @@ object functions extends LazyLogging {
 
   def computePercentiles(ds: DataFrame, scoreField: String, percentileField: String)(
       implicit ss: SparkSession): DataFrame = {
-
+    logger.info(s"compute percentiles for dataframe")
     val tmpCol = Random.alphanumeric.take(5).mkString
 
     val w = Window.partitionBy("source_id", "feature").orderBy(col(scoreField).asc)

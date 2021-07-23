@@ -178,7 +178,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     import ss.implicits._
     val d2v2gs = ss.read
       .schema(Encoders.product[D2V2G].schema)
-      .json(configuration.diseaseVariantGeneSection.path)
+      .json(configuration.diseaseVariantGene.path)
       .as[D2V2G]
       .collect()
 
@@ -293,9 +293,8 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
         coloc = s"$inputFolder/coloc/010101/",
         efos = s"$inputFolder/v2d/trait_efo.parquet"
       ),
-      diseaseVariantGeneSection = DiseaseVariantGeneSection(path = s"$outputFolder/d2v2g/",
-                                                            pathScored =
-                                                              s"$outputFolder/d2v2g_scored/")
+      diseaseVariantGene = DiseaseVariantGeneSection(path = s"$outputFolder/d2v2g/",
+                                                     pathScored = s"$outputFolder/d2v2g_scored/")
     )
 
     configuration

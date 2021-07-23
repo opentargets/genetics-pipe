@@ -47,7 +47,7 @@ class V2GIndex(val table: DataFrame) extends LazyLogging {
       .agg(
         max(coalesce($"qtl_score_q", lit(0d))).as("max_qtl"),
         max(coalesce($"interval_score_q", lit(0d))).as("max_int"),
-        max(coalesce($"fpred_score_q", lit(0d))).as("max_fpred"),
+        max(coalesce($"fpred_max_score", lit(0d))).as("max_fpred"),
         max(coalesce($"distance_score_q", lit(0d))).as("max_distance")
       )
       .withColumn("source_score", $"max_qtl" + $"max_int" + $"max_fpred" + $"max_distance")
@@ -94,9 +94,6 @@ object V2GIndex extends LazyLogging {
         StructField("interval_score", DoubleType) ::
         StructField("qtl_score_q", DoubleType) ::
         StructField("interval_score_q", DoubleType) ::
-        StructField("max_qtl", DoubleType) ::
-        StructField("max_int", DoubleType) ::
-        StructField("max_fpred", DoubleType) ::
         StructField("d", LongType) ::
         StructField("distance_score", DoubleType) ::
         StructField("distance_score_q", DoubleType) :: Nil)
@@ -128,15 +125,19 @@ object V2GIndex extends LazyLogging {
     val allFeatures =
       datasets.foldLeft(Seq[String]())((agg, el) => agg ++ el.features).distinct
 
+    logger.info(s"compose the list of features to include: ${allFeatures.mkString("[", ", ", "]")}")
+    logger.info(s"and filter by columns: ${schema.fieldNames.mkString("[", ", ", "]")}")
     val processedDts = datasets.map(
       el =>
         (allFeatures diff el.features)
           .foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null))))
 
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
-      .join(geneIDs, Seq(GeneIndex.idColumn), "left_semi")
       .withColumn("fpred_labels", coalesce(col("fpred_labels"), typedLit(Array.empty[String])))
       .withColumn("fpred_scores", coalesce(col("fpred_scores"), typedLit(Array.empty[Double])))
+      .join(geneIDs, Seq(GeneIndex.idColumn), "left_semi")
+      .select(schema.fieldNames.head, schema.fieldNames.tail: _*)
+
     new V2GIndex(allDts)
   }
 

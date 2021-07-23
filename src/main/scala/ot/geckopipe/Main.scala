@@ -73,8 +73,9 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     logger.info("exec variant-gene command")
 
     val vIdx = VariantIndex.builder(c).load
+    vIdx.table.cache()
 
-    val vepDts = VEP(vIdx, c)
+    val vepDts = VEP(c)
 
     val nearestDts = Distance(vIdx, c)
 
@@ -129,7 +130,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       .drop(VariantIndex.columns: _*)
       .write
       .format(c.format)
-      .save(c.diseaseVariantGeneSection.path)
+      .save(c.diseaseVariantGene.path)
   }
 
   def dictionaries(): Unit = {
@@ -245,6 +246,7 @@ object Main extends LazyLogging {
       .setAppName(progName)
       .set("spark.driver.maxResultSize", "0")
       .set("spark.debug.maxToStringFields", "2000")
+      .set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
     // if some uri then setmaster must be set otherwise
     // it tries to get from env if any yarn running
@@ -321,6 +323,10 @@ object Main extends LazyLogging {
       cmd("variant-gene")
         .action((_, c) => c.copy(command = Some("variant-gene")))
         .text("generate variant to gene table")
+
+      cmd("variant-gene-scored")
+        .action((_, c) => c.copy(command = Some("variant-gene-scored")))
+        .text("generate variant to gene scored table")
 
       cmd("variant-disease")
         .action((_, c) => c.copy(command = Some("variant-disease")))

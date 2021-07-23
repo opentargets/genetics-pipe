@@ -46,7 +46,7 @@ case class Configuration(output: String,
                          variantIndex: VariantSection,
                          variantGene: VariantGeneSection,
                          variantDisease: VariantDiseaseSection,
-                         diseaseVariantGeneSection: DiseaseVariantGeneSection)
+                         diseaseVariantGene: DiseaseVariantGeneSection)
 
 object Configuration {
   // companion object but nothing at the moment
