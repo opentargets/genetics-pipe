@@ -5,7 +5,7 @@
 [![codecov](https://codecov.io/gh/opentargets/genetics-pipe/branch/master/graph/badge.svg)](https://codecov.io/gh/opentargets/genetics-pipe)
 [![Build Status](https://travis-ci.com/opentargets/genetics-pipe.svg?branch=master)](https://travis-ci.com/opentargets/genetics-pipe)
 
-**Everything is grch37 based**. ETL pipeline used to integrate and generate the following tables: 
+**Everything is grch38 based**. ETL pipeline used to integrate and generate the following tables: 
 
 - gene to variant
 - disease to variant, and
