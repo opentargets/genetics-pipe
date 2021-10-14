@@ -56,7 +56,7 @@ class V2GIndex(val table: DataFrame) extends LazyLogging {
       .groupBy(cols.drop(1).map(col): _*)
       .agg(
         collect_list(struct($"source_id", $"source_score")).as("ss_list"),
-        (sum($"source_score_weighted") / sum(lit(weightSum))).as("overall_score")
+        (sum($"source_score_weighted") / lit(weightSum)).as("overall_score")
       )
       .withColumn("source_list", $"ss_list.source_id")
       .withColumn("source_score_list", $"ss_list.source_score")
