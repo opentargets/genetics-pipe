@@ -23,6 +23,7 @@ object QTL extends LazyLogging {
       .withColumnRenamed("ensembl_id", "gene_id")
       .withColumnRenamed("type", "type_id")
       .withColumnRenamed("source", "source_id")
+      .withColumnRenamed("bio_feature", "feature")
 
     qtl
   }
