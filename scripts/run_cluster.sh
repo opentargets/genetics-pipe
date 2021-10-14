@@ -1,5 +1,7 @@
 #!/bin/bash
 
+release="21.10"
+
 # --single-node
 gcloud beta dataproc clusters create \
         etl-cluster-genetics-mk-96 \
@@ -18,7 +20,7 @@ gcloud dataproc jobs submit spark \
      --project=open-targets-genetics-dev \
      --region=europe-west1 \
      --async \
-     --jar=gs://genetics-portal-dev-data/21.06/ot-geckopipe-assembly-latest.jar \
+     --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
      -- "variant-index"
 
 gcloud dataproc jobs submit spark \
@@ -26,7 +28,7 @@ gcloud dataproc jobs submit spark \
      --project=open-targets-genetics-dev \
      --region=europe-west1 \
      --async \
-     --jar=gs://genetics-portal-dev-data/21.06/ot-geckopipe-assembly-latest.jar \
+     --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
      -- "dictionaries"
 
 gcloud dataproc jobs submit spark \
@@ -34,7 +36,7 @@ gcloud dataproc jobs submit spark \
      --project=open-targets-genetics-dev \
      --region=europe-west1 \
      --async \
-     --jar=gs://genetics-portal-dev-data/21.06/ot-geckopipe-assembly-latest.jar \
+     --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
      -- "variant-disease-coloc"
 
 gcloud dataproc jobs submit spark \
@@ -42,7 +44,7 @@ gcloud dataproc jobs submit spark \
      --project=open-targets-genetics-dev \
      --region=europe-west1 \
      --async \
-     --jar=gs://genetics-portal-dev-data/21.06/ot-geckopipe-assembly-latest.jar \
+     --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
      -- "variant-disease"
 
 gcloud dataproc jobs submit spark \
@@ -51,7 +53,7 @@ gcloud dataproc jobs submit spark \
      --project=open-targets-genetics-dev \
      --region=europe-west1 \
      --async \
-     --jar=gs://genetics-portal-dev-data/21.06/ot-geckopipe-assembly-latest.jar \
+     --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
      -- "variant-gene"
 
 gcloud dataproc jobs submit spark \
@@ -59,7 +61,7 @@ gcloud dataproc jobs submit spark \
      --project=open-targets-genetics-dev \
      --region=europe-west1 \
      --async \
-     --jar=gs://genetics-portal-dev-data/21.06/ot-geckopipe-assembly-latest.jar \
+     --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
      -- "variant-gene-scored"
 
 gcloud dataproc jobs submit spark \
@@ -67,5 +69,5 @@ gcloud dataproc jobs submit spark \
      --project=open-targets-genetics-dev \
      --region=europe-west1 \
      --async \
-     --jar=gs://genetics-portal-dev-data/21.06/ot-geckopipe-assembly-latest.jar \
+     --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
      -- "disease-variant-gene"
