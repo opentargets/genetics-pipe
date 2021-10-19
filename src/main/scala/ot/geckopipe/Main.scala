@@ -92,29 +92,43 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
   def scoredDatasets(): Unit = {
     logger.info("exec variant-gene-scored command")
 
-    val cols = List("tag_chrom", "tag_pos", "tag_ref", "tag_alt", "gene_id")
+    // chr_id, position, ref_allele, alt_allele, gene_id,
+    val cols = List("chr_id" -> "tag_chrom",
+                    "position" -> "tag_pos",
+                    "ref_allele" -> "tag_ref",
+                    "alt_allele" -> "tag_alt",
+                    "gene_id" -> "gene_id")
     val v2g = V2GIndex.load(c)
     val d2v2g = ss.read.format(c.format).load(c.diseaseVariantGene.path)
     val v2gScores = v2g.computeScores(c).persist()
 
+    val selectC = cols.init.map(p => col(p._1).as(p._2)) :+ col(cols.last._2)
     val d2v2gScores = v2gScores
-      .join(d2v2g.select(cols.map(col): _*).distinct.orderBy(cols.take(2).map(col): _*),
-            cols,
-            "left_semi")
+      .select(selectC: _*)
+      .join(
+        d2v2g
+          .select(cols.map(p => col(p._2)): _*)
+          .distinct
+          .orderBy(cols.take(2).map(p => col(p._2)): _*),
+        cols.map(_._2),
+        "left_semi"
+      )
 
-    val d2v2gScored = d2v2g.join(v2gScores, cols)
+    val d2v2gScored = d2v2g
+      .join(v2gScores.select(selectC: _*), cols.map(_._2))
+      .drop()
 
     v2gScores.write
       .format(c.format)
-      .save(c.scoredDatasets.v2gByOverall)
+      .save(c.scoredDatasets.variantGeneByOverall)
 
     d2v2gScores.write
       .format(c.format)
-      .save(c.scoredDatasets.d2v2gByOverall)
+      .save(c.scoredDatasets.diseaseVariantGeneByOverall)
 
     d2v2gScored.write
       .format(c.format)
-      .save(c.scoredDatasets.d2v2gScored)
+      .save(c.scoredDatasets.diseaseVariantGeneScored)
 
   }
 

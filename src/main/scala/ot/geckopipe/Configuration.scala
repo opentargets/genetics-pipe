@@ -20,7 +20,9 @@ case class NearestSection(tssDistance: Long, path: String)
 
 case class VariantSection(raw: String, path: String, tssDistance: Long)
 
-case class ScoredDatasetsSection(v2gByOverall: String, d2v2gByOverall: String, d2v2gScored: String)
+case class ScoredDatasetsSection(variantGeneByOverall: String,
+                                 diseaseVariantGeneByOverall: String,
+                                 diseaseVariantGeneScored: String)
 
 case class VariantGeneSection(path: String, weights: String)
 case class DiseaseVariantGeneSection(path: String)
