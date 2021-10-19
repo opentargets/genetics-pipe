@@ -20,8 +20,10 @@ case class NearestSection(tssDistance: Long, path: String)
 
 case class VariantSection(raw: String, path: String, tssDistance: Long)
 
-case class VariantGeneSection(path: String, pathScored: String, weights: String)
-case class DiseaseVariantGeneSection(path: String, pathScored: String)
+case class ScoredDatasetsSection(v2gByOverall: String, d2v2gByOverall: String, d2v2gScored: String)
+
+case class VariantGeneSection(path: String, weights: String)
+case class DiseaseVariantGeneSection(path: String)
 
 case class VariantDiseaseSection(path: String,
                                  studies: String,
@@ -46,7 +48,8 @@ case class Configuration(output: String,
                          variantIndex: VariantSection,
                          variantGene: VariantGeneSection,
                          variantDisease: VariantDiseaseSection,
-                         diseaseVariantGene: DiseaseVariantGeneSection)
+                         diseaseVariantGene: DiseaseVariantGeneSection,
+                         scoredDatasets: ScoredDatasetsSection)
 
 object Configuration {
   // companion object but nothing at the moment

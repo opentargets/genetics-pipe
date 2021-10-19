@@ -89,16 +89,33 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     v2g.table.write.format(c.format).save(c.variantGene.path)
   }
 
-  def variantGeneScored(): Unit = {
+  def scoredDatasets(): Unit = {
     logger.info("exec variant-gene-scored command")
 
+    val cols = List("tag_chrom", "tag_pos", "tag_ref", "tag_alt", "gene_id")
     val v2g = V2GIndex.load(c)
+    val d2v2g = ss.read.format(c.format).load(c.diseaseVariantGene.path)
+    val v2gScores = v2g.computeScores(c).persist()
 
-    v2g
-      .computeScores(c)
-      .write
+    val d2v2gScores = v2gScores
+      .join(d2v2g.select(cols.map(col): _*).distinct.orderBy(cols.take(2).map(col): _*),
+            cols,
+            "left_semi")
+
+    val d2v2gScored = d2v2g.join(v2gScores, cols)
+
+    v2gScores.write
       .format(c.format)
-      .save(c.variantGene.pathScored)
+      .save(c.scoredDatasets.v2gByOverall)
+
+    d2v2gScores.write
+      .format(c.format)
+      .save(c.scoredDatasets.d2v2gByOverall)
+
+    d2v2gScored.write
+      .format(c.format)
+      .save(c.scoredDatasets.d2v2gScored)
+
   }
 
   def variantToDisease(): Unit = {
@@ -110,7 +127,6 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     v2d.table.write.format(c.format).save(c.variantDisease.path)
   }
 
-  // TODO FINISH SCORED d2v2g
   def diseaseToVariantToGene(): Unit = {
     logger.info("exec disease-variant-gene command")
 
@@ -172,8 +188,8 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     variantDiseaseColoc()
     variantToDisease()
     variantToGene()
-    variantGeneScored()
     diseaseToVariantToGene()
+    scoredDatasets()
   }
 }
 
@@ -218,8 +234,8 @@ object Main extends LazyLogging {
       case Some("variant-gene") =>
         cmds.variantToGene()
 
-      case Some("variant-gene-scored") =>
-        cmds.variantGeneScored()
+      case Some("scored-datasets") =>
+        cmds.scoredDatasets()
 
       case Some("variant-disease") =>
         cmds.variantToDisease()
@@ -324,9 +340,9 @@ object Main extends LazyLogging {
         .action((_, c) => c.copy(command = Some("variant-gene")))
         .text("generate variant to gene table")
 
-      cmd("variant-gene-scored")
-        .action((_, c) => c.copy(command = Some("variant-gene-scored")))
-        .text("generate variant to gene scored table")
+      cmd("scored-datasets")
+        .action((_, c) => c.copy(command = Some("scored-datasets")))
+        .text("generate scored tables from v2g and d2v2g")
 
       cmd("variant-disease")
         .action((_, c) => c.copy(command = Some("variant-disease")))

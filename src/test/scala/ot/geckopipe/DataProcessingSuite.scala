@@ -280,9 +280,8 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
       variantIndex = VariantSection(raw = s"$inputFolder/variant-annotation.parquet/",
                                     path = s"$outputFolder/variant-index/",
                                     tssDistance = 500000),
-      variantGene = VariantGeneSection(path = s"$outputFolder/v2g/",
-                                       pathScored = s"$outputFolder/v2g_scored/",
-                                       weights = s"$inputFolder/v2g_weights/"),
+      variantGene =
+        VariantGeneSection(path = s"$outputFolder/v2g/", weights = s"$inputFolder/v2g_weights/"),
       variantDisease = VariantDiseaseSection(
         path = s"$outputFolder/v2d/",
         studies = s"$inputFolder/v2d/studies.parquet",
@@ -293,8 +292,12 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
         coloc = s"$inputFolder/coloc/010101/",
         efos = s"$inputFolder/v2d/trait_efo.parquet"
       ),
-      diseaseVariantGene = DiseaseVariantGeneSection(path = s"$outputFolder/d2v2g/",
-                                                     pathScored = s"$outputFolder/d2v2g_scored/")
+      diseaseVariantGene = DiseaseVariantGeneSection(path = s"$outputFolder/d2v2g/"),
+      scoredDatasets = ScoredDatasetsSection(
+        v2gByOverall = s"$outputFolder/v2g_by_overall/",
+        d2v2gByOverall = s"$outputFolder/d2v2g_by_overall/",
+        d2v2gScored = s"$outputFolder/d2v2g_scored/"
+      )
     )
 
     configuration
