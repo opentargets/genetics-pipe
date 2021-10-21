@@ -295,6 +295,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
       diseaseVariantGene = DiseaseVariantGeneSection(path = s"$outputFolder/d2v2g/"),
       scoredDatasets = ScoredDatasetsSection(
         variantGeneByOverall = s"$outputFolder/v2g_by_overall/",
+        variantGeneScored = s"$outputFolder/v2g_scored/",
         diseaseVariantGeneByOverall = s"$outputFolder/d2v2g_by_overall/",
         diseaseVariantGeneScored = s"$outputFolder/d2v2g_scored/"
       )
