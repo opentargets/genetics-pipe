@@ -122,9 +122,11 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       .format(c.format)
       .save(c.scoredDatasets.variantGeneByOverall)
 
-    d2v2gScores.write
+    // TODO GENERATE THE V2GSCORED DATASET
+    val v2gScored = v2g.table.join(v2gScores, cols.map(_._1))
+    v2gScored.write
       .format(c.format)
-      .save(c.scoredDatasets.diseaseVariantGeneByOverall)
+      .save(c.scoredDatasets.variantGeneScored)
 
     d2v2gScored.write
       .format(c.format)
