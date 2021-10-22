@@ -158,34 +158,6 @@ object functions extends LazyLogging {
 
   val decileList: Seq[Double] = (10 to 100 by 10).map(_ / 100D)
 
-  /** it maps source_id -> feature -> Seq[(quantile value, quantile number)]
-    * gtex_v5 -> whole_blood -> [(0.356, 0.2)]
-    */
-  /** it needs df contains 3 first columns datasource feature and the vector of doubles */
-  def fromQ2Map(df: DataFrame,
-                qs: Seq[Double] = decileList): Map[String, Map[String, Seq[(Double, Double)]]] = {
-    var mapQ: Map[String, Map[String, Seq[(Double, Double)]]] = Map.empty
-
-    val rows = df.collect.toList
-    val assocs = for (r <- rows) yield {
-      val sourceId = r.getAs[String](0)
-      val feature = r.getAs[String](1)
-      val qs = r.getAs[Seq[Double]](2)
-      val qsm: Seq[(Double, Double)] = qs zip decileList
-      sourceId -> (feature -> qsm)
-    }
-
-    // bizarre reduction to a proper map of maps of lists
-    assocs
-      .groupBy(_._1)
-      .mapValues(
-        _.map(_._2)
-          .groupBy(_._1)
-          .mapValues(_.flatMap(_._2))
-          .map(identity))
-      .map(identity)
-  }
-
   def computePercentiles(ds: DataFrame, scoreField: String, percentileField: String)(
       implicit ss: SparkSession): DataFrame = {
     logger.info(s"compute percentiles for dataframe")

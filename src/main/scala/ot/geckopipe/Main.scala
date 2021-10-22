@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import ot.geckopipe.domain.Manhattan
 import ot.geckopipe.index._
 import pureconfig.ConfigSource
 import pureconfig.error.ConfigReaderFailures
@@ -117,6 +118,10 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
 
   }
 
+  def manhattan(): Unit = {
+    Manhattan(c).write.format(c.format).save(c.manhattan.path)
+  }
+
   def variantToDisease(): Unit = {
     logger.info("exec variant-disease command")
 
@@ -189,6 +194,7 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     variantToGene()
     diseaseToVariantToGene()
     scoredDatasets()
+    manhattan()
   }
 }
 
@@ -244,6 +250,9 @@ object Main extends LazyLogging {
 
       case Some("dictionaries") =>
         cmds.dictionaries()
+
+      case Some("manhattan") =>
+        cmds.manhattan()
 
       case Some("build-all") =>
         cmds.buildAll()
@@ -354,6 +363,10 @@ object Main extends LazyLogging {
       cmd("dictionaries")
         .action((_, c) => c.copy(command = Some("dictionaries")))
         .text("generate variant to gene lookup tables")
+
+      cmd("manhattan")
+        .action((_, c) => c.copy(command = Some("manhattan")))
+        .text("generate manhattan table with top N from various datasets (raw, coloc and l2g)")
 
       cmd("build-all")
         .action((_, c) => c.copy(command = Some("build-all")))

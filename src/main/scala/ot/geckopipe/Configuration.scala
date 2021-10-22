@@ -37,7 +37,12 @@ case class VariantDiseaseSection(path: String,
                                  coloc: String,
                                  efos: String)
 
-/** Main configuration case class */
+case class ManhattanSection(locusGene: String,
+                            diseaseVariantGeneScored: String,
+                            variantDiseaseColoc: String,
+                            variantDisease: String,
+                            path: String)
+
 case class Configuration(output: String,
                          format: String,
                          sampleFactor: Double,
@@ -52,7 +57,8 @@ case class Configuration(output: String,
                          variantGene: VariantGeneSection,
                          variantDisease: VariantDiseaseSection,
                          diseaseVariantGene: DiseaseVariantGeneSection,
-                         scoredDatasets: ScoredDatasetsSection)
+                         scoredDatasets: ScoredDatasetsSection,
+                         manhattan: ManhattanSection)
 
 object Configuration {
   // companion object but nothing at the moment

@@ -71,3 +71,11 @@ gcloud dataproc jobs submit spark \
      --async \
      --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
      -- "scored-datasets"
+
+gcloud dataproc jobs submit spark \
+     --cluster=etl-cluster-genetics-mk-96 \
+     --project=open-targets-genetics-dev \
+     --region=europe-west1 \
+     --async \
+     --jar=gs://genetics-portal-dev-data/${release}/ot-geckopipe-assembly-latest.jar \
+     -- "manhattan"

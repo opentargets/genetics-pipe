@@ -298,6 +298,13 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
         variantGeneScored = s"$outputFolder/v2g_scored/",
         diseaseVariantGeneByOverall = s"$outputFolder/d2v2g_by_overall/",
         diseaseVariantGeneScored = s"$outputFolder/d2v2g_scored/"
+      ),
+      manhattan = ManhattanSection(
+        locusGene = s"$outputFolder/l2g/",
+        diseaseVariantGeneScored = s"$outputFolder/d2v2g_scored/",
+        variantDiseaseColoc = s"$outputFolder/v2d_coloc/",
+        variantDisease = s"$outputFolder/v2d/",
+        path = s"$outputFolder/manhattan/"
       )
     )
 
