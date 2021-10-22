@@ -76,9 +76,9 @@ object Manhattan {
       .withColumnRenamed("left_pos", "pos")
       .withColumnRenamed("left_ref", "ref")
       .withColumnRenamed("left_alt", "alt")
-      .filter(round(col("coloc_h4"), 2) >= 0.95
-        and col("coloc_log2_h4_h3") >= log2(lit(5))
-        and col("right_type") !== "gwas")
+      .filter((round(col("coloc_h4"), 2) >= 0.95) and
+        (col("coloc_log2_h4_h3") >= log2(lit(5D))) and
+        !(col("right_type") === "gwas"))
       .transform(computeTopNGenes(cols, "right_gene_id", "coloc_h4", "top10_genes_coloc", 10))
   }
 
@@ -103,9 +103,9 @@ object Manhattan {
         first(col("beta")).as("beta"),
         first(col("beta_ci_lower")).as("beta_ci_lower"),
         first(col("beta_ci_upper")).as("beta_ci_upper"),
-        countDistinct(when(col("posterior_prob") > 0D, Some(randomC)).otherwise(lit(None)))
+        countDistinct(when(col("posterior_prob") > 0D, randomC).otherwise(lit(None)))
           .as("credibleSetSize"),
-        countDistinct(when(col("overall_r2") > 0D, Some(randomC)).otherwise(lit(None)))
+        countDistinct(when(col("overall_r2") > 0D, randomC).otherwise(lit(None)))
           .as("ldSetSize"),
         countDistinct(col(randomC)).as("uniq_variants")
       )
