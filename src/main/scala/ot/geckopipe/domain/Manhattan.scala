@@ -120,23 +120,28 @@ object Manhattan {
       .format("parquet")
       .load(conf.locusGene)
       .transform(makeL2G(cols))
+      .orderBy($"study", $"chrom")
 
     val d2v2g = sparkSession.read
       .format(configuration.format)
       .load(conf.diseaseVariantGeneScored)
       .transform(makeD2V2G(cols))
+      .orderBy($"study", $"chrom")
 
     val coloc = sparkSession.read
       .format(configuration.format)
       .load(conf.variantDiseaseColoc)
       .transform(makeD2VColoc(cols))
+      .orderBy($"study", $"chrom")
 
     val v2d = sparkSession.read
       .format(configuration.format)
       .load(conf.variantDisease)
       .transform(makeD2V(cols))
+      .orderBy($"study", $"chrom")
 
     v2d
+      .persist()
       .join(d2v2g, cols, "left_outer")
       .join(coloc, cols, "left_outer")
       .join(l2g, cols, "left_outer")
