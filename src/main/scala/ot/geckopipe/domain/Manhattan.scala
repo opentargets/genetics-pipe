@@ -49,8 +49,9 @@ object Manhattan {
     df.withColumn(tmpC, dense_rank().over(w.orderBy(col(geneScoreCol).desc)))
       .filter(col(tmpC) <= n)
       .withColumn(outputCol,
-                  collect_list(struct(col(geneScoreCol).as("score"), col(geneIdCol).as("id")))
-                    .over(w.orderBy(col(tmpC).asc)))
+                  array_distinct(
+                    collect_list(struct(col(geneScoreCol).as("score"), col(geneIdCol).as("id")))
+                      .over(w.orderBy(col(tmpC).asc))))
       .dropDuplicates(uniqCols)
       .selectExpr(outExpr: _*)
   }
