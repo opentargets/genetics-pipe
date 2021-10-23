@@ -96,16 +96,16 @@ object Manhattan {
         first(col("pval")).as("pval"),
         first(col("pval_mantissa")).as("pval_mantissa"),
         first(col("pval_exponent")).as("pval_exponent"),
-        first(col("odds_ratio")).as("odds_ratio"),
-        first(col("oddsr_ci_lower")).as("oddsr_ci_lower"),
-        first(col("oddsr_ci_upper")).as("oddsr_ci_upper"),
+        first(col("odds_ratio")).as("odds"),
+        first(col("oddsr_ci_lower")).as("oddsL"),
+        first(col("oddsr_ci_upper")).as("oddsU"),
         first(col("direction")).as("direction"),
         first(col("beta")).as("beta"),
-        first(col("beta_ci_lower")).as("beta_ci_lower"),
-        first(col("beta_ci_upper")).as("beta_ci_upper"),
-        countDistinct(when(col("posterior_prob") > 0D, randomC).otherwise(lit(None)))
+        first(col("beta_ci_lower")).as("betaL"),
+        first(col("beta_ci_upper")).as("betaU"),
+        countDistinct(when(col("posterior_prob") > 0D, randomC).otherwise(null))
           .as("credibleSetSize"),
-        countDistinct(when(col("overall_r2") > 0D, randomC).otherwise(lit(None)))
+        countDistinct(when(col("overall_r2") > 0D, randomC).otherwise(null))
           .as("ldSetSize"),
         countDistinct(col(randomC)).as("uniq_variants")
       )
@@ -115,7 +115,7 @@ object Manhattan {
     import sparkSession.implicits._
     val conf = configuration.manhattan
 
-    val cols = List("study", "pos", "ref", "alt")
+    val cols = List("study", "chrom", "pos", "ref", "alt")
     val l2g = sparkSession.read
       .format("parquet")
       .load(conf.locusGene)
