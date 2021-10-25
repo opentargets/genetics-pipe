@@ -44,9 +44,13 @@ object Manhattan {
       s"${outputCol}.score as ${outputCol}_score",
     )
 
+    val wAndG = Window.partitionBy((uniqCols :+ geneIdCol).map(col): _*)
     val w = Window.partitionBy(uniqCols.map(col): _*)
+    val tmpGC = Random.alphanumeric.take(6).mkString
     val tmpC = Random.alphanumeric.take(6).mkString
-    df.withColumn(tmpC, dense_rank().over(w.orderBy(col(geneScoreCol).desc)))
+    df.withColumn(tmpGC, dense_rank().over(wAndG.orderBy(col(geneScoreCol).desc)))
+      .filter(col(tmpGC) <= 1)
+      .withColumn(tmpC, dense_rank().over(w.orderBy(col(geneScoreCol).desc)))
       .filter(col(tmpC) <= n)
       .withColumn(outputCol,
                   array_distinct(
