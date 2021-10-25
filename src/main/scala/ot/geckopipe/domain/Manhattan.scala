@@ -85,13 +85,13 @@ object Manhattan {
 
   def makeD2V(cols: List[String])(df: DataFrame): DataFrame = {
     val tagVariantCols = List("tag_chrom", "tag_pos", "tag_ref", "tag_alt").map(col)
-    val randomC = Random.alphanumeric.take(6).mkString("", "_", "")
+    val randomC = Random.alphanumeric.take(6).mkString
     df.withColumnRenamed("study_id", "study")
       .withColumnRenamed("lead_chrom", "chrom")
       .withColumnRenamed("lead_pos", "pos")
       .withColumnRenamed("lead_ref", "ref")
       .withColumnRenamed("lead_alt", "alt")
-      .withColumn(randomC, concat(tagVariantCols: _*))
+      .withColumn(randomC, concat_ws("_", tagVariantCols: _*))
       .groupBy(cols.map(col): _*)
       .agg(
         first(col("pval")).as("pval"),
@@ -104,9 +104,9 @@ object Manhattan {
         first(col("beta")).as("beta"),
         first(col("beta_ci_lower")).as("betaL"),
         first(col("beta_ci_upper")).as("betaU"),
-        countDistinct(when(col("posterior_prob") > 0D, randomC).otherwise(null))
+        countDistinct(when(col("posterior_prob") > 0D, col(randomC)).otherwise(null))
           .as("credibleSetSize"),
-        countDistinct(when(col("overall_r2") > 0D, randomC).otherwise(null))
+        countDistinct(when(col("overall_r2") > 0D, col(randomC)).otherwise(null))
           .as("ldSetSize"),
         countDistinct(col(randomC)).as("uniq_variants")
       )
