@@ -49,7 +49,7 @@ object Manhattan {
     val tmpGC = Random.alphanumeric.take(6).mkString
     val tmpC = Random.alphanumeric.take(6).mkString
     df.withColumn(tmpGC, dense_rank().over(wAndG.orderBy(col(geneScoreCol).desc)))
-      .filter(col(tmpGC) <= n)
+      .filter(col(tmpGC) <= 1)
       .withColumn(tmpC, dense_rank().over(w.orderBy(col(geneScoreCol).desc)))
       .filter(col(tmpC) <= n)
       .groupBy(uniqCols.map(col): _*)
