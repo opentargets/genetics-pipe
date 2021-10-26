@@ -49,14 +49,16 @@ object Manhattan {
     val tmpGC = Random.alphanumeric.take(6).mkString
     val tmpC = Random.alphanumeric.take(6).mkString
     df.withColumn(tmpGC, dense_rank().over(wAndG.orderBy(col(geneScoreCol).desc)))
-      .filter(col(tmpGC) <= 1)
+      .filter(col(tmpGC) <= n)
       .withColumn(tmpC, dense_rank().over(w.orderBy(col(geneScoreCol).desc)))
       .filter(col(tmpC) <= n)
-      .withColumn(outputCol,
-                  array_distinct(
-                    collect_list(struct(col(geneScoreCol).as("score"), col(geneIdCol).as("id")))
-                      .over(w.orderBy(col(tmpC).asc))))
-      .dropDuplicates(uniqCols)
+      .groupBy(uniqCols.map(col): _*)
+      .agg(
+        sort_array(collect_set(
+                     struct(col(geneScoreCol).as("score"), col(geneIdCol).as("id"))
+                   ),
+                   asc = false).as(outputCol)
+      )
       .selectExpr(outExpr: _*)
   }
 
