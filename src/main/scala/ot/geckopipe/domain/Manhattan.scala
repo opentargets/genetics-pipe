@@ -44,6 +44,7 @@ object Manhattan {
       s"${outputCol}.score as ${outputCol}_score",
     )
 
+    // take top scored > 0 genes dense ranked filtered by 1 and take top N genes
     val wAndG = Window.partitionBy((uniqCols :+ geneIdCol).map(col): _*)
     val w = Window.partitionBy(uniqCols.map(col): _*)
     val tmpGC = Random.alphanumeric.take(6).mkString
