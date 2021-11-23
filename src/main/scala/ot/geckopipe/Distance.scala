@@ -12,8 +12,6 @@ object Distance extends LazyLogging {
 
   // val features: Seq[String] = Seq("d", "inv_d", "biotype")
   val features: Seq[String] = Seq("d", "distance_score", "distance_score_q")
-  val columns: Seq[String] =
-    Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
     Distance(vIdx, conf, conf.nearest.tssDistance, GeneIndex.BioTypes.ApprovedBioTypes)
@@ -34,20 +32,14 @@ object Distance extends LazyLogging {
       .withColumn("type_id", lit("distance"))
       .withColumn("source_id", lit("canonical_tss"))
       .withColumn("feature", lit("unspecified"))
-
-    val selectCols = columns ++ Seq("type_id", "source_id", "feature")
-    val nearestPairs = nearests
       .join(genes,
             (col("chr_id") === col("chr")) and
               (abs(col("position") - col("tss")) <= tssDistance))
       .withColumn("d", abs(col("position") - col("tss")))
       .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d")).otherwise(1.0))
 
-    // get a table to compute deciles
-    nearestPairs.createOrReplaceTempView("nearest_table")
-    val intWP =
-      computePercentile(nearestPairs, "nearest_table", "distance_score", "distance_score_q")
-        .select(selectCols.head, selectCols.tail: _*)
+    val intWP = nearests
+      .transform(computePercentiles(_, "distance_score", "distance_score_q"))
 
     new Component {
 

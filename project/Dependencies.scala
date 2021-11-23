@@ -24,7 +24,7 @@ object Dependencies {
 
   lazy val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.3"
 
-  lazy val sparkVersion = "3.1.1"
+  lazy val sparkVersion = "3.1.2"
   lazy val sparkDeps = Seq(
     "com.github.fommil.netlib" % "all" % "1.1.2" pomOnly (),
     "org.apache.spark" %% "spark-core" % sparkVersion,

@@ -9,9 +9,10 @@ import ot.geckopipe.Configuration
 case class V2DIndex(table: DataFrame)
 
 object V2DIndex extends LazyLogging {
-  val schema =
+  val schema: StructType =
     StructType(
       StructField("study_id", StringType) ::
+        StructField("source", StringType) ::
         StructField("pmid", StringType) ::
         StructField("pub_date", StringType) ::
         StructField("pub_journal", StringType) ::
@@ -207,7 +208,9 @@ object V2DIndex extends LazyLogging {
 
     logger.info("load variant to gene dataset from built one")
     val v2d = ss.read
-      .json(conf.variantDisease.path)
+      .schema(schema)
+      .format(conf.format)
+      .load(conf.variantDisease.path)
 
     V2DIndex(v2d)
   }

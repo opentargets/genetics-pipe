@@ -13,8 +13,6 @@ import scala.collection.mutable
 object VEP extends LazyLogging {
   val features: Seq[String] =
     Seq("fpred_labels", "fpred_scores", "fpred_max_label", "fpred_max_score")
-  val columns: Seq[String] =
-    Seq("chr_id", "position", "ref_allele", "alt_allele", "gene_id") ++ features
 
   /** load consequence table from file extracted from ensembl website
     *
@@ -56,7 +54,7 @@ object VEP extends LazyLogging {
       .filter(col("v2g_score").isNotNull)
   }
 
-  def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
+  def apply(conf: Configuration)(implicit ss: SparkSession): Component = {
     import ss.implicits._
 
     // from csqs table to a map to broadcast to all workers
@@ -84,7 +82,6 @@ object VEP extends LazyLogging {
     val raw = VariantIndex
       .builder(conf)
       .loadRawVariantIndex(VariantIndex.rawColumnsWithAliasesMinimal)
-      .persist(StorageLevels.DISK_ONLY)
 
     val groupingCols = VariantIndex.columns :+ "gene_id"
     val veps = raw

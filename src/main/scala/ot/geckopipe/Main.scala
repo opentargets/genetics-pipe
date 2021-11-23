@@ -4,6 +4,7 @@ import com.typesafe.scalalogging.LazyLogging
 import org.apache.spark.SparkConf
 import org.apache.spark.sql.SparkSession
 import org.apache.spark.sql.functions._
+import ot.geckopipe.domain.Manhattan
 import ot.geckopipe.index._
 import pureconfig.ConfigSource
 import pureconfig.error.ConfigReaderFailures
@@ -64,15 +65,18 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       )
       .drop(columnsToDrop: _*)
 
-    colocVariantFiltered.write.json(c.output.stripSuffix("/").concat("/v2d_coloc/"))
+    colocVariantFiltered.write
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/v2d_coloc/"))
   }
 
   def variantToGene(): Unit = {
     logger.info("exec variant-gene command")
 
     val vIdx = VariantIndex.builder(c).load
+    vIdx.table.cache()
 
-    val vepDts = VEP(vIdx, c)
+    val vepDts = VEP(c)
 
     val nearestDts = Distance(vIdx, c)
 
@@ -83,7 +87,39 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val dtSeq = Seq(vepDts, nearestDts, positionalDts, intervalDt)
     val v2g = V2GIndex.build(dtSeq, c)
 
-    v2g.table.write.json(c.output.stripSuffix("/").concat("/v2g/"))
+    v2g.table.write.format(c.format).save(c.variantGene.path)
+  }
+
+  def scoredDatasets(): Unit = {
+    logger.info("exec variant-gene-scored command")
+
+    // chr_id, position, ref_allele, alt_allele, gene_id,
+    val cols = List("chr_id" -> "tag_chrom",
+                    "position" -> "tag_pos",
+                    "ref_allele" -> "tag_ref",
+                    "alt_allele" -> "tag_alt",
+                    "gene_id" -> "gene_id")
+    val v2g = V2GIndex.load(c)
+    val d2v2g = ss.read.format(c.format).load(c.diseaseVariantGene.path)
+    val v2gScores = v2g.computeScores(c).orderBy(cols.take(2).map(x => col(x._1)): _*).persist()
+    val v2gScoresRenamed = cols.foldLeft(v2gScores)((B, a) => B.withColumnRenamed(a._1, a._2))
+
+    val d2v2gScored = d2v2g
+      .join(v2gScoresRenamed, cols.map(_._2))
+
+    val v2gScored = v2g.table.join(v2gScores, cols.map(_._1))
+    v2gScored.write
+      .format(c.format)
+      .save(c.scoredDatasets.variantGeneScored)
+
+    d2v2gScored.write
+      .format(c.format)
+      .save(c.scoredDatasets.diseaseVariantGeneScored)
+
+  }
+
+  def manhattan(): Unit = {
+    Manhattan(c).write.format(c.format).save(c.manhattan.path)
   }
 
   def variantToDisease(): Unit = {
@@ -92,11 +128,11 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     val vIdx = VariantIndex.builder(c).load
     val v2d = V2DIndex.build(vIdx, c)
 
-    v2d.table.write.json(c.output.stripSuffix("/").concat("/v2d/"))
+    v2d.table.write.format(c.format).save(c.variantDisease.path)
   }
 
   def diseaseToVariantToGene(): Unit = {
-    logger.info("exec variant-disease command")
+    logger.info("exec disease-variant-gene command")
 
     val v2g = V2GIndex.load(c)
     val v2d = V2DIndex.load(c)
@@ -113,7 +149,8 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       )
       .drop(VariantIndex.columns: _*)
       .write
-      .json(c.output.stripSuffix("/").concat("/d2v2g/"))
+      .format(c.format)
+      .save(c.diseaseVariantGene.path)
   }
 
   def dictionaries(): Unit = {
@@ -126,23 +163,27 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
       .flatten
       .table
       .write
-      .json(c.output.stripSuffix("/").concat("/lut/variant-index/"))
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/lut/variant-index/"))
 
     logger.info("generate lut for studies")
 
     V2DIndex
       .buildStudiesIndex(c.variantDisease.studies, c.variantDisease.efos)
       .write
-      .json(c.output.stripSuffix("/").concat("/lut/study-index/"))
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/lut/study-index/"))
 
     logger.info("generate lut for overlapping index")
     V2DIndex
       .buildOverlapIndex(c.variantDisease.overlapping)
       .write
-      .json(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/lut/overlap-index/"))
 
     GeneIndex(c.ensembl.lut).sortByID.table.write
-      .json(c.output.stripSuffix("/").concat("/lut/genes-index/"))
+      .format(c.format)
+      .save(c.output.stripSuffix("/").concat("/lut/genes-index/"))
   }
 
   def buildAll(): Unit = {
@@ -152,6 +193,8 @@ class Commands(val ss: SparkSession, val sampleFactor: Double, val c: Configurat
     variantToDisease()
     variantToGene()
     diseaseToVariantToGene()
+    scoredDatasets()
+    manhattan()
   }
 }
 
@@ -196,6 +239,9 @@ object Main extends LazyLogging {
       case Some("variant-gene") =>
         cmds.variantToGene()
 
+      case Some("scored-datasets") =>
+        cmds.scoredDatasets()
+
       case Some("variant-disease") =>
         cmds.variantToDisease()
 
@@ -204,6 +250,9 @@ object Main extends LazyLogging {
 
       case Some("dictionaries") =>
         cmds.dictionaries()
+
+      case Some("manhattan") =>
+        cmds.manhattan()
 
       case Some("build-all") =>
         cmds.buildAll()
@@ -221,6 +270,7 @@ object Main extends LazyLogging {
       .setAppName(progName)
       .set("spark.driver.maxResultSize", "0")
       .set("spark.debug.maxToStringFields", "2000")
+      .set("spark.sql.autoBroadcastJoinThreshold", "-1")
 
     // if some uri then setmaster must be set otherwise
     // it tries to get from env if any yarn running
@@ -298,6 +348,10 @@ object Main extends LazyLogging {
         .action((_, c) => c.copy(command = Some("variant-gene")))
         .text("generate variant to gene table")
 
+      cmd("scored-datasets")
+        .action((_, c) => c.copy(command = Some("scored-datasets")))
+        .text("generate scored tables from v2g and d2v2g")
+
       cmd("variant-disease")
         .action((_, c) => c.copy(command = Some("variant-disease")))
         .text("generate variant to disease table")
@@ -309,6 +363,10 @@ object Main extends LazyLogging {
       cmd("dictionaries")
         .action((_, c) => c.copy(command = Some("dictionaries")))
         .text("generate variant to gene lookup tables")
+
+      cmd("manhattan")
+        .action((_, c) => c.copy(command = Some("manhattan")))
+        .text("generate manhattan table with top N from various datasets (raw, coloc and l2g)")
 
       cmd("build-all")
         .action((_, c) => c.copy(command = Some("build-all")))

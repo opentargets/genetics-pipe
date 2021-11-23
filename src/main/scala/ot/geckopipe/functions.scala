@@ -1,13 +1,14 @@
 package ot.geckopipe
 
 import com.typesafe.scalalogging.LazyLogging
+import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.{Column, DataFrame, Row, SparkSession}
 import org.apache.spark.sql.functions._
 import org.apache.spark.sql.types.{LongType, StructType}
 import ot.geckopipe.index.V2GIndex.logger
 import ot.geckopipe.index.VariantIndex
 
-import scala.util.{Failure, Success, Try}
+import scala.util.{Failure, Random, Success, Try}
 
 object functions extends LazyLogging {
 
@@ -157,65 +158,16 @@ object functions extends LazyLogging {
 
   val decileList: Seq[Double] = (10 to 100 by 10).map(_ / 100D)
 
-  /** it maps source_id -> feature -> Seq[(quantile value, quantile number)]
-    * gtex_v5 -> whole_blood -> [(0.356, 0.2)]
-    */
-  /** it needs df contains 3 first columns datasource feature and the vector of doubles */
-  def fromQ2Map(df: DataFrame,
-                qs: Seq[Double] = decileList): Map[String, Map[String, Seq[(Double, Double)]]] = {
-    var mapQ: Map[String, Map[String, Seq[(Double, Double)]]] = Map.empty
+  def computePercentiles(ds: DataFrame, scoreField: String, percentileField: String)(
+      implicit ss: SparkSession): DataFrame = {
+    logger.info(s"compute percentiles for dataframe")
+    val tmpCol = Random.alphanumeric.take(5).mkString
 
-    val rows = df.collect.toList
-    val assocs = for (r <- rows) yield {
-      val sourceId = r.getAs[String](0)
-      val feature = r.getAs[String](1)
-      val qs = r.getAs[Seq[Double]](2)
-      val qsm: Seq[(Double, Double)] = qs zip decileList
-      sourceId -> (feature -> qsm)
-    }
+    val w = Window.partitionBy("source_id", "feature").orderBy(col(scoreField).asc)
 
-    // bizarre reduction to a proper map of maps of lists
-    assocs
-      .groupBy(_._1)
-      .mapValues(
-        _.map(_._2)
-          .groupBy(_._1)
-          .mapValues(_.flatMap(_._2))
-          .map(identity))
-      .map(identity)
-  }
-
-  def computePercentile(ds: DataFrame,
-                        tableName: String,
-                        scoreField: String,
-                        percentileField: String)(implicit ss: SparkSession): DataFrame = {
-    logger.info(s"compute quantiles for $scoreField")
-
-    val quantilesDF = ss.sqlContext.sql(s"""
-                                           |select
-                                           | source_id,
-                                           | feature,
-                                           | percentile_approx(${scoreField}, array(0.1,0.2,0.3,0.4,0.5,0.6,0.7,0.8,0.9,1.0)) as ${percentileField}
-                                           |from ${tableName}
-                                           |group by source_id, feature
-                                           |order by source_id asc, feature asc
-      """.stripMargin)
-
-    // build and broadcast qtl and interval maps for the
-    val quantiles = ss.sparkContext
-      .broadcast(fromQ2Map(quantilesDF))
-
-    val setQuantilesUDF = udf((source_id: String, feature: String, qtl_score: Double) => {
-      val qns = quantiles.value.apply(source_id).apply(feature)
-      qns.view.dropWhile(p => p._1 < qtl_score).head._2
-    })
-
-    val qdf = ds
-      .withColumn(percentileField,
-                  when(col(scoreField).isNotNull,
-                       setQuantilesUDF(col("source_id"), col("feature"), col(scoreField))))
-
-    qdf
+    ds.withColumn(tmpCol, round(percent_rank().over(w), 1))
+      .withColumn(percentileField, when(col(scoreField).isNotNull, col(tmpCol)))
+      .drop(tmpCol)
   }
 
   object Implicits {

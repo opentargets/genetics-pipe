@@ -20,7 +20,13 @@ case class NearestSection(tssDistance: Long, path: String)
 
 case class VariantSection(raw: String, path: String, tssDistance: Long)
 
-case class VariantGeneSection(path: String)
+case class ScoredDatasetsSection(variantGeneByOverall: String,
+                                 variantGeneScored: String,
+                                 diseaseVariantGeneByOverall: String,
+                                 diseaseVariantGeneScored: String)
+
+case class VariantGeneSection(path: String, weights: String)
+case class DiseaseVariantGeneSection(path: String)
 
 case class VariantDiseaseSection(path: String,
                                  studies: String,
@@ -31,8 +37,14 @@ case class VariantDiseaseSection(path: String,
                                  coloc: String,
                                  efos: String)
 
-/** Main configuration case class */
+case class ManhattanSection(locusGene: String,
+                            diseaseVariantGeneScored: String,
+                            variantDiseaseColoc: String,
+                            variantDisease: String,
+                            path: String)
+
 case class Configuration(output: String,
+                         format: String,
                          sampleFactor: Double,
                          sparkUri: Option[String],
                          logLevel: String,
@@ -43,7 +55,10 @@ case class Configuration(output: String,
                          nearest: NearestSection,
                          variantIndex: VariantSection,
                          variantGene: VariantGeneSection,
-                         variantDisease: VariantDiseaseSection)
+                         variantDisease: VariantDiseaseSection,
+                         diseaseVariantGene: DiseaseVariantGeneSection,
+                         scoredDatasets: ScoredDatasetsSection,
+                         manhattan: ManhattanSection)
 
 object Configuration {
   // companion object but nothing at the moment

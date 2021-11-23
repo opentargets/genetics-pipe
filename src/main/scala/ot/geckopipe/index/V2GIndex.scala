@@ -25,6 +25,43 @@ class V2GIndex(val table: DataFrame) extends LazyLogging {
     logger.info(s"count number of rows in chr range $inChrCount of a total $totalRows")
     Seq(inChrCount, totalRows)
   }
+
+  /** compute the scores per datasource and per overall */
+  def computeScores(configuration: Configuration)(implicit ss: SparkSession): DataFrame = {
+    import ss.implicits._
+
+    val cols = Seq(
+      "source_id",
+      "chr_id",
+      "position",
+      "ref_allele",
+      "alt_allele",
+      "gene_id"
+    )
+
+    val weights: DataFrame = ss.read.json(configuration.variantGene.weights)
+    val weightSum: Double = weights.select("weight").collect().map(_.getDouble(0)).sum
+
+    table
+      .groupBy(cols.map(col): _*)
+      .agg(
+        max(coalesce($"qtl_score_q", lit(0d))).as("max_qtl"),
+        max(coalesce($"interval_score_q", lit(0d))).as("max_int"),
+        max(coalesce($"fpred_max_score", lit(0d))).as("max_fpred"),
+        max(coalesce($"distance_score_q", lit(0d))).as("max_distance")
+      )
+      .withColumn("source_score", $"max_qtl" + $"max_int" + $"max_fpred" + $"max_distance")
+      .join(broadcast(weights.orderBy($"source_id")), Seq("source_id"))
+      .withColumn("source_score_weighted", $"weight" * $"source_score")
+      .groupBy(cols.drop(1).map(col): _*)
+      .agg(
+        collect_list(struct($"source_id", $"source_score")).as("ss_list"),
+        (sum($"source_score_weighted") / lit(weightSum)).as("overall_score")
+      )
+      .withColumn("source_list", $"ss_list.source_id")
+      .withColumn("source_score_list", $"ss_list.source_score")
+      .drop("ss_list")
+  }
 }
 
 object V2GIndex extends LazyLogging {
@@ -36,7 +73,7 @@ object V2GIndex extends LazyLogging {
     val table: DataFrame
   }
 
-  val schema =
+  val schema: StructType =
     StructType(
       StructField("chr_id", StringType) ::
         StructField("position", LongType) ::
@@ -57,14 +94,9 @@ object V2GIndex extends LazyLogging {
         StructField("interval_score", DoubleType) ::
         StructField("qtl_score_q", DoubleType) ::
         StructField("interval_score_q", DoubleType) ::
-        StructField("max_qtl", DoubleType) ::
-        StructField("max_int", DoubleType) ::
-        StructField("max_fpred", DoubleType) ::
         StructField("d", LongType) ::
         StructField("distance_score", DoubleType) ::
-        StructField("distance_score_q", DoubleType) ::
-        StructField("source_score", DoubleType) ::
-        StructField("overall_score", DoubleType) :: Nil)
+        StructField("distance_score_q", DoubleType) :: Nil)
 
   /** all data sources to incorporate needs to meet this format at the end
     *
@@ -93,26 +125,29 @@ object V2GIndex extends LazyLogging {
     val allFeatures =
       datasets.foldLeft(Seq[String]())((agg, el) => agg ++ el.features).distinct
 
+    logger.info(s"compose the list of features to include: ${allFeatures.mkString("[", ", ", "]")}")
+    logger.info(s"and filter by columns: ${schema.fieldNames.mkString("[", ", ", "]")}")
     val processedDts = datasets.map(
       el =>
         (allFeatures diff el.features)
           .foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null))))
 
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
-      .join(geneIDs, Seq(GeneIndex.idColumn), "left_semi")
       .withColumn("fpred_labels", coalesce(col("fpred_labels"), typedLit(Array.empty[String])))
       .withColumn("fpred_scores", coalesce(col("fpred_scores"), typedLit(Array.empty[Double])))
+      .join(geneIDs, Seq(GeneIndex.idColumn), "left_semi")
+      .select(schema.fieldNames.head, schema.fieldNames.tail: _*)
+
     new V2GIndex(allDts)
   }
 
   /** join built gtex and vep together and generate char pos alleles columns from variant_id */
   def load(conf: Configuration)(implicit ss: SparkSession): V2GIndex = {
-    import ss.implicits._
-
     logger.info("load variant to gene dataset from built one")
     val v2g = ss.read
       .schema(schema)
-      .json(conf.variantGene.path)
+      .format(conf.format)
+      .load(conf.variantGene.path)
 
     new V2GIndex(v2g)
   }

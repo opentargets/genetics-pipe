@@ -23,6 +23,7 @@ object QTL extends LazyLogging {
       .withColumnRenamed("ensembl_id", "gene_id")
       .withColumnRenamed("type", "type_id")
       .withColumnRenamed("source", "source_id")
+      .withColumnRenamed("bio_feature", "feature")
 
     qtl
   }
@@ -37,15 +38,12 @@ object QTL extends LazyLogging {
       .withColumn("qtl_pval",
                   when($"qtl_pval" === 0d, lit(Double.MinPositiveValue)).otherwise($"qtl_pval"))
       .withColumn("qtl_score", -log(10, col("qtl_pval")))
-      .repartitionByRange(col("chr_id"), col("position"))
-      .sortWithinPartitions(col("chr_id"), col("position"))
 
     val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail: _*)
-    val qtlTable = qtls.join(vIdxS, VariantIndex.columns)
+    val qtlTable = qtls.join(vIdxS, VariantIndex.columns, "left_semi")
 
-    // get a table to compute deciles
-    qtlTable.createOrReplaceTempView("qtl_table")
-    val qtlWP = computePercentile(qtlTable, "qtl_table", "qtl_score", "qtl_score_q")
+    val qtlWP = qtlTable
+      .transform(computePercentiles(_, "qtl_score", "qtl_score_q"))
 
     new Component {
 
