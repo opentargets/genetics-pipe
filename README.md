@@ -1,7 +1,6 @@
 # Genetics-pipe
 
 
-
 [![codecov](https://codecov.io/gh/opentargets/genetics-pipe/branch/master/graph/badge.svg)](https://codecov.io/gh/opentargets/genetics-pipe)
 [![Build Status](https://travis-ci.com/opentargets/genetics-pipe.svg?branch=master)](https://travis-ci.com/opentargets/genetics-pipe)
 
@@ -36,19 +35,32 @@ To use your own configuration you need to pass `-f where/file/application.conf` 
 
 ## Build a spark cluster on Google Cloud
 
-You need to have installed `terraform`. Then, go to `src/main/resources/terraform` and you will find a file
-there called `genetics-platform-dataproc.tf`. It will need a Google Cloud json service key configured in order
-to use your Google Cloud project.
+To run the jar using Google's dataproc consult the script in `./scripts/run_cluster.sh` which will start a cluster 
+and submit a separate job for each step.
 
-This section is important to change
-```
-// Configure the Google Cloud provider
-provider "google" "google-account" {
-  credentials = "${file("open-targets-genetics-63ea40a7fb68.json")}"
-  project     = "open-targets-genetics"
-  region      = "${var.region}"
-}
-```
+## Configuration
+
+The configuration is defined in `/src/main/resources/application.conf`. You can provide an external configuration 
+with a subset of keys overwritten, for instance, only overwriting the keys specifying inputs. 
+
+The following __inputs__ are required:
+
+- `variant-index.raw`
+- `ensembl.lut`
+- `vep.homo-sapiens-cons-scores`
+- `interval.path`
+- `qtl.path`
+- `variant-gene.weights`
+- `variant-disease.studies`
+- `variant-disease.toploci`
+- `variant-disease.finemapping`
+- `variant-disease.ld`
+- `variant-disease.overlapping`
+- `variant-disease.coloc`
+- `variant-disease.trait_efo`
+
+For running internally within Open Targets consult the [additional documentation](documentation/ot_genetics_deployment.md#Overview).
+
 
 ## Variant index generation
 
