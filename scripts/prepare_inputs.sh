@@ -43,7 +43,6 @@ $gscp $staging/lut/biofeature_labels/$b_lut/biofeature_labels.w_composites.json 
 "$lut/biofeature_lut_$b_lut.w_composites.json"
 
 echo "Add versioned v2d inputs"
-
 v2d_files=( 'studies.parquet' \
             'ld_analysis_input.tsv' \
             'locus_overlap.parquet' \
@@ -56,6 +55,7 @@ do
 	echo "Copy $i to $v2d"
     $gscp -r $staging/v2d/$v2d_version/$i $v2d/$i
 done
+
 echo "Add colocation files to v2d inputs"
 $gscp -r $staging/coloc/$coloc/coloc_processed_w_betas.parquet $v2d
 
