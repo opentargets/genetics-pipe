@@ -1,0 +1,34 @@
+@startuml
+skinparam interface {
+    backgroundColor<<input>> darkblue
+    backgroundColor<<output>> cyan
+}
+skinparam artifact {
+     backgroundColor<<noDependency>> orchid
+     backgroundColor<<dependencies>> darkturquoise
+ }
+' steps
+artifact vg as "variant-gene" <<noDependencies>>
+artifact vi as "variant-index" <<noDependencies>>
+artifact dictionaries <<dependencies>>
+artifact vd as "variant-disease" <<dependencies>>
+artifact vdc as "variant-disease-coloc" <<dependencies>>
+artifact dn as "distance-nearest" <<dependencies>>
+artifact dvg as "disease-variant-gene" <<dependencies>>
+artifact sd as "scored-datasets" <<dependencies>>
+artifact manhattan <<dependencies>>
+artifact l2g <<input>>
+
+vi --> dictionaries
+vi --> vd
+vi --> vdc
+vi --> dn
+vd --> dvg
+vg --> sd
+dvg --> sd
+l2g --> manhattan
+sd --> manhattan
+vdc --> manhattan
+
+
+@enduml

@@ -81,4 +81,14 @@ utilities to run a release.
 - [ ] set up environment: `conda activate backend-genetics`
 - [ ] update Ensembl version and run script: `python create_genes_dictionary.py -o "./" -z -n homo_sapiens_core_105_38`
 - [ ] add ensembl file to bucket `gsutil cp -n homo_sapiens* gs://genetics-portal-dev-data/22.01/inputs/lut/`
-- [ ] update variables in bash script in `/scripts/prepare_inputs.sh`
+- [ ] update variables in bash script in `/scripts/prepare_inputs.sh` (input script)
+- [ ] run input script in VM to move files from staging to dev buckets
+- [ ] create a configuration file for release in `config`:
+    - [ ] `cp src/main/resources/application.conf config/<release>.conf` and update as necessary.
+- [ ] update top level variables in `scripts/run_cluster.sh`: `release` and `config` should be the only changes 
+  necessary. 
+- [ ] run script `scripts/run_cluster.sh` from root directory. This script builds a jar file, pushes it to GS 
+  storage, starts a cluster and runs all steps. 
+  
+Once this is done, the genetics team needs to run the `l2g` ML pipeline to create the last input necessary for the 
+`manhattan` step.

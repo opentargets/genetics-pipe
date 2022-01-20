@@ -19,7 +19,7 @@ In order to use this pipeline the input data must follow an exact pattern descri
 
 ### Build the code
 
-You only need `sbt >= 1.1.5`
+You need `sbt >= 1.1.5`
  
 ```sh
 sbt compile
@@ -36,7 +36,8 @@ To use your own configuration you need to pass `-f where/file/application.conf` 
 ## Build a spark cluster on Google Cloud
 
 To run the jar using Google's dataproc consult the script in `./scripts/run_cluster.sh` which will start a cluster 
-and submit a separate job for each step.
+and submit a separate job for each step. The steps need to be executed in the correct order, so don't run 
+asynchronously or change the specified order of the steps.
 
 ## Configuration
 
@@ -61,6 +62,21 @@ The following __inputs__ are required:
 
 For running internally within Open Targets consult the [additional documentation](documentation/ot_genetics_deployment.md#Overview).
 
+### Running steps
+
+| Step name | Dependencies | Output |
+| --- | --- | --- |
+| `variant-gene` |  | `v2g` |
+| `variant-index` |  | `variant-index` |
+| `dictionaries` | `variant-index` | `lut` |
+| `variant-disease` | `variant-index` | `v2d` |
+| `variant-disease-coloc` | `variant-index` | `v2d_coloc` |
+| `distance-nearest` | `variant-index` | `distance/canonical_tss` |
+| `disease-variant-gene` |  `variant-disease` | `d2v2g` |
+| `scored-datasets` | `variant-gene`, `disease-variant-gene` | `v2g_by_overall`, `v2g_scored`, `d2v2g_by_overall`, `d2v2g_scored` |
+| `manhattan` | `l2g`, `scored-datasets`, `variant-disease-coloc` | `manhattan` |
+
+For a graphical representation of the dependencies see `./documentation/step_dependencies.puml`
 
 ## Variant index generation
 
