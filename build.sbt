@@ -14,7 +14,7 @@ lazy val root = (project in file("."))
       List(
         organization := "io.opentargets",
         scalaVersion := "2.12.12",
-        version := "latest"
+        version := "1.0.0"
       )),
     name := "ot-geckopipe",
     resolvers ++= buildResolvers,

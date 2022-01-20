@@ -1,7 +1,6 @@
 # Genetics-pipe
 
 
-
 [![codecov](https://codecov.io/gh/opentargets/genetics-pipe/branch/master/graph/badge.svg)](https://codecov.io/gh/opentargets/genetics-pipe)
 [![Build Status](https://travis-ci.com/opentargets/genetics-pipe.svg?branch=master)](https://travis-ci.com/opentargets/genetics-pipe)
 
@@ -20,7 +19,7 @@ In order to use this pipeline the input data must follow an exact pattern descri
 
 ### Build the code
 
-You only need `sbt >= 1.1.5`
+You need `sbt >= 1.1.5`
  
 ```sh
 sbt compile
@@ -36,19 +35,48 @@ To use your own configuration you need to pass `-f where/file/application.conf` 
 
 ## Build a spark cluster on Google Cloud
 
-You need to have installed `terraform`. Then, go to `src/main/resources/terraform` and you will find a file
-there called `genetics-platform-dataproc.tf`. It will need a Google Cloud json service key configured in order
-to use your Google Cloud project.
+To run the jar using Google's dataproc consult the script in `./scripts/run_cluster.sh` which will start a cluster 
+and submit a separate job for each step. The steps need to be executed in the correct order, so don't run 
+asynchronously or change the specified order of the steps.
 
-This section is important to change
-```
-// Configure the Google Cloud provider
-provider "google" "google-account" {
-  credentials = "${file("open-targets-genetics-63ea40a7fb68.json")}"
-  project     = "open-targets-genetics"
-  region      = "${var.region}"
-}
-```
+## Configuration
+
+The configuration is defined in `/src/main/resources/application.conf`. You can provide an external configuration 
+with a subset of keys overwritten, for instance, only overwriting the keys specifying inputs. 
+
+The following __inputs__ are required:
+
+- `variant-index.raw`
+- `ensembl.lut`
+- `vep.homo-sapiens-cons-scores`
+- `interval.path`
+- `qtl.path`
+- `variant-gene.weights`
+- `variant-disease.studies`
+- `variant-disease.toploci`
+- `variant-disease.finemapping`
+- `variant-disease.ld`
+- `variant-disease.overlapping`
+- `variant-disease.coloc`
+- `variant-disease.trait_efo`
+
+For running internally within Open Targets consult the [additional documentation](documentation/ot_genetics_deployment.md#Overview).
+
+### Running steps
+
+| Step name | Dependencies | Output |
+| --- | --- | --- |
+| `variant-gene` |  | `v2g` |
+| `variant-index` |  | `variant-index` |
+| `dictionaries` | `variant-index` | `lut` |
+| `variant-disease` | `variant-index` | `v2d` |
+| `variant-disease-coloc` | `variant-index` | `v2d_coloc` |
+| `distance-nearest` | `variant-index` | `distance/canonical_tss` |
+| `disease-variant-gene` |  `variant-disease` | `d2v2g` |
+| `scored-datasets` | `variant-gene`, `disease-variant-gene` | `v2g_by_overall`, `v2g_scored`, `d2v2g_by_overall`, `d2v2g_scored` |
+| `manhattan` | `l2g`, `scored-datasets`, `variant-disease-coloc` | `manhattan` |
+
+For a graphical representation of the dependencies see `./documentation/step_dependencies.puml`
 
 ## Variant index generation
 
