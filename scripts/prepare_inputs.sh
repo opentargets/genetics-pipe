@@ -69,6 +69,9 @@ echo "Add variant annotations from previous release"
 # so they are effectively static.
 $gscp -r $previous_inputs/variant-annotation/190129 $va
 
+
+echo "COPY STATIC INPUTS: SUMSTATS AND CREDSET"
+
 echo "Copy sumstats -- not used in pipeline"
 # genetics-portal-dev-sumstats are static files we don’t regenerate
 $gscp -r gs://genetics-portal-dev-sumstats/filtered/pvalue_0.05/** $sa
