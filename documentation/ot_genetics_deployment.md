@@ -72,7 +72,7 @@ cd genetics-backend && conda env create -f environment.yaml
 
 ```
 
-### Recipe: get all inputs
+### Recipe: get all inputs and run the ot-geckopipe
 
 Use the VM in the `open-target-genetics-dev` machine called `gp-deploy`. The VM is preconfigured with the necessary
 utilities to run a release.
@@ -90,7 +90,12 @@ utilities to run a release.
 - [ ] update top level variables in `scripts/run_cluster.sh`: `release` and `config` should be the only changes 
   necessary. 
 - [ ] run script `scripts/run_cluster.sh` from root directory. This script builds a jar file, pushes it to GS 
-  storage, starts a cluster and runs all steps. 
-  
-Once this is done, the genetics team needs to run the `l2g` ML pipeline to create the last input necessary for the 
-`manhattan` step.
+  storage, starts a cluster and runs all steps. Some of the jobs will fail because of missing dependencies. Consult 
+  `documentation/step_dependencies` for the correct order. 
+- [ ] inform genetics team that the outputs are ready, and they will run the ML pipeline to generate the `l2g` 
+  outputs. The file we need for the final step (`manhattan`) is typically found under 
+  `genetics-portal-dev-staging/l2g/<date>/predictions/l2g.full.220128.parquet` in the staging area. 
+- [ ] Copy L2G file from the staging area to the development area (updating dates as necessary): `gsutil -m cp -r 
+  gs://genetics-portal-dev-staging/l2g/220128/predictions/l2g.full.220128.parquet gs://genetics-portal-dev-data/22.01/outputs/l2g/`
+- [ ] Run the `manhattan` step.
+- [ ] Check all the expected output directories are present using the ammonite script `amm scripts/check_outputs.sc`.
