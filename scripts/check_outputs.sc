@@ -58,4 +58,5 @@ val pattern = "([^\\/]+)\\/?$".r
 val directoriesFound = blobsFound.flatMap(pattern.findFirstIn(_)).map(_.dropRight(1))
 
 val missing = expectedDirs diff directoriesFound
+if (missing.isEmpty) println("All expected directories found.") else
 println(s"Missing directories: $missing")
