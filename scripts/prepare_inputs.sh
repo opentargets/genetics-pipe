@@ -74,11 +74,11 @@ echo "COPY STATIC INPUTS: SUMSTATS AND CREDSET"
 
 echo "Copy sumstats -- not used in pipeline"
 # genetics-portal-dev-sumstats are static files we don’t regenerate
-$gscp -r gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005/** $sa
+$gscp -r gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005/* $sa
 
 echo "Copy credset -- not used in pipeline"
 $gscp -r $staging/finemapping/$finemapping/credset/* $outputs/v2d_credset/
 
 echo "Done downloading"
 
-echo $"gsutil ls -r $inputs"
+echo $"gsutil ls $inputs"
