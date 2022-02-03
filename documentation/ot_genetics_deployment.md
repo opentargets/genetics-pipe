@@ -114,7 +114,7 @@ utilities to run a release.
 
 ### Recipe to create infrastructure
 
-- [ ] Using the [infrastructure project](https://github.com/opentargets/infrastructure.git) start two VMs: one each 
+- [ ] Using the [genetics backend project](https://github.com/opentargets/genetics-backend.git) start two VMs: one each 
   for ES and Clickhouse using the helper scripts: `infrastructure/gcp/genetics/create-clickhouse-node.sh` and 
   `infrastructure/gcp/genetics/create-elasticsearch-node.sh`
 - [ ] export variables for the two created VMs:(bind the internal GCP IP address, this assumes you're in a GCP VM yourself.)
@@ -149,7 +149,7 @@ Using the [genetics terraform repository](ttps://github.com/opentargets/terrafor
     - `config_vm_clickhouse_image`: Image you baked earlier
     - `config_vm_api_image_version`: latest API. From the [API repository](https://github.com/opentargets/genetics-api) 
       run `git checkout master && git pull && git tag --list` to see options. It's typically the last one.
-    - `config_vm_webapp_release`
+    - `config_vm_webapp_release`: this will be the latest tagged version of the the [web app](https://github.com/opentargets/genetics-app)
     - `DEVOPS_CONTEXT_PLATFORM_APP_CONFIG_API_URL`: update URL to include `config_release_name`.
 - [ ] Activate `xyz` profile
   - `make tfactivate profile=xyz`
@@ -163,7 +163,6 @@ Using the [genetics terraform repository](ttps://github.com/opentargets/terrafor
   - `terraform state list`. If this is the first time running these commands nothing will be displayed. After you 
     have deployed the infrastructure running this command will show you what is currently available.
 - [ ] Inspect the plan: `make tfplan`. This will show you what Terraform plans to do
-- [ ] Execute the plan: `make tfapply`. Terraform will ask for confirmation of the changes. 
-
-`gcloud beta compute start "jb-release" --project "open-targets-genetics-dev`
-`gcloud beta compute ssh --zone "europe-west4-a" "jb-release"  --project "open-targets-genetics-dev"`
+- [ ] Execute the plan: `make tfapply`. Terraform will ask for confirmation of the changes.
+- [ ] Push your deployed changes to github so others can use them if necessary: `git add profiles/deployment_context.
+  devgen<release> && git commit -m "Deployment configuration for <release>" && git push`
