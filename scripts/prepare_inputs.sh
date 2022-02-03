@@ -7,6 +7,7 @@ staging='gs://genetics-portal-dev-staging'
 dev_data='gs://genetics-portal-dev-data'
 release='22.01'
 previous_inputs='gs://genetics-portal-dev-data/21.10/inputs'
+sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 
 # Some files are tagged with a date and we need to select the correct one. Right now we have to look at the available
 # files in the staging bucket and select the best one.
@@ -16,6 +17,9 @@ v2d_version='220113'
 coloc='220113_merged'
 finemapping='210923'
 qtl='220105'
+# listed under gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005/
+gwas='220113'
+molecular_trait='220105'
 
 # -n flag so as not to clobber existing.
 gscp='gsutil -m cp -n'
@@ -26,6 +30,8 @@ v2d=$inputs/v2d
 v2g=$inputs/v2g
 va=$inputs/variant-annotation
 sa=$outputs/sa
+sagwas=$sa/gwas
+samt=$sa/molecular_trait
 
 echo "copy static files from previous release"
 # copy static files from previous release
@@ -72,9 +78,9 @@ $gscp -r $previous_inputs/variant-annotation/190129 $va
 
 echo "COPY STATIC INPUTS: SUMSTATS AND CREDSET"
 
-echo "Copy sumstats -- not used in pipeline"
-# genetics-portal-dev-sumstats are static files we don’t regenerate
-$gscp -r gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005/* $sa
+echo "Copy sumstats -- not used in pipeline, only for clickhouse"
+$gscp -r $sumstats/gwas/$gwas $sagwas
+$gscp -r $sumstats/molecular_trait/$molecular_trait $samt
 
 echo "Copy credset -- not used in pipeline"
 $gscp -r $staging/finemapping/$finemapping/credset/* $outputs/v2d_credset/
