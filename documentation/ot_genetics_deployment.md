@@ -124,9 +124,6 @@ utilities to run a release.
 - [ ] run the script `loaders/clickhouse/create_and_load_everything_from_scratch.sh` in the `genetics-backend` 
   repository, providing a link to the input files. 
   - `./create_and_load_everything_from_scratch.sh gs://genetics-portal-dev-data/22.01.2/outputs`
-- [ ] run the script `loaders/clickhouse/create_and_load_everything_from_scratch_summary_stats.sh` in
-  `genetics-backend` to add the final two tables to Clickhouse.
-  - `./create_and_load_everything_from_scratch_summary_stats.sh gs://genetics-portal-dev-data/22.01.2/outputs/sa`
 - [ ] Once loading is complete, 'bake' the instances so that we can deploy the images using Terraform.
   - Find the latest running image: `gcloud compute instances list --project=open-targets-genetics-dev | grep -i run | 
     grep [elasticsearch|clickhouse] | awk '{ print $1 }' | tail -1`
@@ -154,6 +151,19 @@ Using the [genetics terraform repository](ttps://github.com/opentargets/terrafor
       run `git checkout master && git pull && git tag --list` to see options. It's typically the last one.
     - `config_vm_webapp_release`
     - `DEVOPS_CONTEXT_PLATFORM_APP_CONFIG_API_URL`: update URL to include `config_release_name`.
+- [ ] Activate `xyz` profile
+  - `make tfactivate profile=xyz`
+- [ ] Set remote backend (so multiple users can share state)
+  - `make tfbackendremote`
+- [ ] Activate the deployment context you configured earlier.
+  - `make depactivate profile=devgen<release>`
+- [ ] Download all dependencies
+  - `make tfinit`
+- [ ] Check for existing Terraform state (things that are already deployed)
+  - `terraform state list`. If this is the first time running these commands nothing will be displayed. After you 
+    have deployed the infrastructure running this command will show you what is currently available.
+- [ ] Inspect the plan: `make tfplan`. This will show you what Terraform plans to do
+- [ ] Execute the plan: `make tfapply`. Terraform will ask for confirmation of the changes. 
 
 `gcloud beta compute start "jb-release" --project "open-targets-genetics-dev`
 `gcloud beta compute ssh --zone "europe-west4-a" "jb-release"  --project "open-targets-genetics-dev"`
