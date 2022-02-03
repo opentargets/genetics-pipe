@@ -166,3 +166,12 @@ Using the [genetics terraform repository](ttps://github.com/opentargets/terrafor
 - [ ] Execute the plan: `make tfapply`. Terraform will ask for confirmation of the changes.
 - [ ] Push your deployed changes to github so others can use them if necessary: `git add profiles/deployment_context.
   devgen<release> && git commit -m "Deployment configuration for <release>" && git push`
+  
+### Recipe: Big Query
+
+This step assumes that you have generated/collected all of the data as specified in the "get all inputs and run the 
+ot-geckopipe" recipe. 
+
+- [ ] If you don't have it already, clone the [genetics output support repository](https://github.com/opentargets/genetics-output-support)
+- [ ] Update the variables under heading `Variables for sync data` in the `config.tfvars` file. 
+- [ ] Run the shell command `make bigquerydev`
