@@ -5,20 +5,20 @@ set -x
 echo "Preparing to copy genetics resources"
 staging='gs://genetics-portal-dev-staging'
 dev_data='gs://genetics-portal-dev-data'
-release='22.01'
+release='22.02.1'
 previous_inputs='gs://genetics-portal-dev-data/21.10/inputs'
 sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 
 # Some files are tagged with a date and we need to select the correct one. Right now we have to look at the available
 # files in the staging bucket and select the best one.
 b_lut='220105'
-trait_efo='2021-01-14'
-v2d_version='220113'
+trait_efo='2021-02-08'
+v2d_version='220208'
 coloc='220113_merged'
 finemapping='210923'
 qtl='220105'
 # listed under gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005/
-gwas='220113'
+gwas='220208'
 molecular_trait='220105'
 
 # -n flag so as not to clobber existing.
