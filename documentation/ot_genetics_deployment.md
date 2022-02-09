@@ -58,7 +58,8 @@ future releases.
 # install dependencies
 sudo apt install -y git \
 tmux tree wget \
-libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6
+libgl1-mesa-glx libegl1-mesa libxrandr2 libxrandr2 libxss1 libxcursor1 libxcomposite1 libasound2 libxi6 libxtst6 \
+apt-transport-https ca-certificates dirmngr
 
 wget https://repo.anaconda.com/miniconda/Miniconda3-latest-Linux-x86_64.sh -O ~/miniconda.sh
 bash ~/miniconda.sh -p $HOME/miniconda
@@ -66,13 +67,24 @@ source ~/.bashrc
 
 # get repositories
 git clone https://github.com/opentargets/genetics-backend.git
+git clone https://github.com/opentargets/genetics-pipe.git
+git clone https://github.com/opentargets/infrastructure.git
 
 # set up conda environments
 cd genetics-backend && conda env create -f environment.yaml
+# add elastic-search loader
+# https://github.com/moshe/elasticsearch_loader
+pip install elasticsearch-loader
+# install clickhouse client
+apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv E0C56BD4
+"deb https://repo.clickhouse.com/deb/stable/ main/" | sudo tee \
+    /etc/apt/sources.list.d/clickhouse.list
+apt-get update
+apt-get install -y clickhouse-client
 
 ```
 
-### Recipe: get all inputs
+### Recipe: get all inputs and run the ot-geckopipe
 
 Use the VM in the `open-target-genetics-dev` machine called `gp-deploy`. The VM is preconfigured with the necessary
 utilities to run a release.
@@ -83,12 +95,83 @@ utilities to run a release.
 - [ ] add ensembl file to bucket `gsutil cp -n homo_sapiens* gs://genetics-portal-dev-data/22.01/inputs/lut/`
 - [ ] update variables in bash script in `/scripts/prepare_inputs.sh` (input script)
 - [ ] run input script in VM to move files from staging to dev buckets
+    - Most of the inputs are used for the pipeline, but there are two static datasets which are copied, sumstats (sa)
+      and `v2g_credset`.
 - [ ] create a configuration file for release in `config`:
     - [ ] `cp src/main/resources/application.conf config/<release>.conf` and update as necessary.
 - [ ] update top level variables in `scripts/run_cluster.sh`: `release` and `config` should be the only changes 
   necessary. 
 - [ ] run script `scripts/run_cluster.sh` from root directory. This script builds a jar file, pushes it to GS 
-  storage, starts a cluster and runs all steps. 
+  storage, starts a cluster and runs all steps. Some of the jobs will fail because of missing dependencies. Consult 
+  `documentation/step_dependencies` for the correct order. 
+- [ ] inform genetics team that the outputs are ready, and they will run the ML pipeline to generate the `l2g` 
+  outputs. The file we need for the final step (`manhattan`) is typically found under 
+  `genetics-portal-dev-staging/l2g/<date>/predictions/l2g.full.220128.parquet` in the staging area. 
+- [ ] Copy L2G file from the staging area to the development area (updating dates as necessary): `gsutil -m cp -r 
+  gs://genetics-portal-dev-staging/l2g/220128/predictions/l2g.full.220128.parquet gs://genetics-portal-dev-data/22.01/outputs/l2g/`
+- [ ] Run the `manhattan` step.
+- [ ] Check all the expected output directories are present using the ammonite script `amm scripts/check_outputs.sc`.
+
+### Recipe to create infrastructure
+
+- [ ] Using the [genetics backend project](https://github.com/opentargets/genetics-backend.git) start two VMs: one each 
+  for ES and Clickhouse using the helper scripts: `infrastructure/gcp/genetics/create-clickhouse-node.sh` and 
+  `infrastructure/gcp/genetics/create-elasticsearch-node.sh`
+- [ ] export variables for the two created VMs:(bind the internal GCP IP address, this assumes you're in a GCP VM yourself.)
+  - `export ES_HOST=$(gcloud compute instances list | grep -i run | grep elasticsearch | awk '{ print $4 }' | tail -1)`
+  - `export CLICKHOUSE_HOST=$(gcloud compute instances list | grep -i run | grep clickhouse | awk '{ print $4 }' | tail 
+    -1)`
+- [ ] run the script `loaders/clickhouse/create_and_load_everything_from_scratch.sh` in the `genetics-backend` 
+  repository, providing a link to the input files. 
+  - `./create_and_load_everything_from_scratch.sh gs://genetics-portal-dev-data/22.01.2/outputs`
+- [ ] Once loading is complete, 'bake' the instances so that we can deploy the images using Terraform.
+  - Find the latest running image: `gcloud compute instances list --project=open-targets-genetics-dev | grep -i run | 
+    grep [elasticsearch|clickhouse] | awk '{ print $1 }' | tail -1`
+  - Bake image using scripts in `genetics-backend/gcp/bake_[es|ch]_node.sh` with the image found above. These create 
+    disk images which we can deploy using the Terraform defined in the [genetics terraform repo](https://github.com/opentargets/terraform-google-genetics-portal)
   
-Once this is done, the genetics team needs to run the `l2g` ML pipeline to create the last input necessary for the 
-`manhattan` step.
+#### Updating Terraform XYZ
+
+Using the [genetics terraform repository](ttps://github.com/opentargets/terraform-google-genetics-portal): 
+
+> For this use the master branch and remember to pull changes from the remote before making your changes
+
+- [ ] Create a new profile which will define the deployment.
+  - `cp profiles/deployment_context.devgen2111 profiles/deployment_context.devgen<release>`
+  - Update the release tag above, and change `2111` to match the most recent release number to minimise the number 
+    of changes we need to make.
+- [ ] Update the configuration in the `devgen` file created above. To see what fields are often changed you can look 
+  at the difference between previous releases with the command `diff deployment_context.devgen2111 
+  deployment_context.devgen2106`. Fields that typically always need updating:
+    - `config_release_name`: matches the context file name suffix
+    - `config_dns_subdomain_prefix`: same as `config_release_name`
+    - `config_vm_elastic_search_image`: Image you baked earlier
+    - `config_vm_clickhouse_image`: Image you baked earlier
+    - `config_vm_api_image_version`: latest API. From the [API repository](https://github.com/opentargets/genetics-api) 
+      run `git checkout master && git pull && git tag --list` to see options. It's typically the last one.
+    - `config_vm_webapp_release`: this will be the latest tagged version of the the [web app](https://github.com/opentargets/genetics-app)
+    - `DEVOPS_CONTEXT_PLATFORM_APP_CONFIG_API_URL`: update URL to include `config_release_name`.
+- [ ] Activate `xyz` profile
+  - `make tfactivate profile=xyz`
+- [ ] Set remote backend (so multiple users can share state)
+  - `make tfbackendremote`
+- [ ] Activate the deployment context you configured earlier.
+  - `make depactivate profile=devgen<release>`
+- [ ] Download all dependencies
+  - `make tfinit`
+- [ ] Check for existing Terraform state (things that are already deployed)
+  - `terraform state list`. If this is the first time running these commands nothing will be displayed. After you 
+    have deployed the infrastructure running this command will show you what is currently available.
+- [ ] Inspect the plan: `make tfplan`. This will show you what Terraform plans to do
+- [ ] Execute the plan: `make tfapply`. Terraform will ask for confirmation of the changes.
+- [ ] Push your deployed changes to github so others can use them if necessary: `git add profiles/deployment_context.
+  devgen<release> && git commit -m "Deployment configuration for <release>" && git push`
+  
+### Recipe: Big Query
+
+This step assumes that you have generated/collected all of the data as specified in the "get all inputs and run the 
+ot-geckopipe" recipe. 
+
+- [ ] If you don't have it already, clone the [genetics output support repository](https://github.com/opentargets/genetics-output-support)
+- [ ] Update the variables under heading `Variables for sync data` in the `config.tfvars` file. 
+- [ ] Run the shell command `make bigquerydev`
