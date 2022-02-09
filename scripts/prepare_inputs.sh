@@ -14,7 +14,7 @@ sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 b_lut='220105'
 trait_efo='2021-02-08'
 v2d_version='220208'
-coloc='220113_merged'
+coloc='220127'
 finemapping='210923'
 qtl='220105'
 # listed under gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005/
@@ -63,11 +63,11 @@ do
 done
 
 echo "Add colocation files to v2d inputs"
-$gscp -r $staging/coloc/$coloc/coloc_processed_w_betas.parquet $v2d
+$gscp -r $staging/coloc/$coloc/coloc_processed_w_betas_fixed.parquet $v2d
 
 
 echo "Add versioned v2g inputs"
-$gscp -r $staging/v2g/interval $v2g
+$gscp -r $staging/v2g/interval $v2g/interval
 $gscp -r $staging/v2g/qtl/$qtl $v2g/qtl/
 
 echo "Add variant annotations from previous release"
