@@ -93,7 +93,13 @@ split -a 3 --additional-suffix=vcf -d -n l/64 vep_csq_file.vcf vep_
 
 ## Variant to Gene table
 
-TBD
+### Inputs
+
+| conf field | notes |
+| --- | --- |
+| conf.vep.homoSapiensConsScores | Notes taken directly from comment in code (might not be correct) load consequence table from file extracted from ensembl website https://www.ensembl.org/info/genome/variation/predicted_data.html#consequences and merged with OT eco scores table. We filter by only v2g_scores and get last token from the accession terms |
+| conf.ensembl.lut | Creates a gene index |
+| conf.variantGene.path | This is the output of the `variant-gene` step, so we assume there is a dependency between them. |
 
 ## Variant to disease table
 
