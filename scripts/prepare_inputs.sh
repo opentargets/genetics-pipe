@@ -5,7 +5,7 @@ set -x
 echo "Preparing to copy genetics resources"
 staging='gs://genetics-portal-dev-staging'
 dev_data='gs://genetics-portal-dev-data'
-release='22.02.2'
+release='22.02.3'
 previous_inputs='gs://genetics-portal-dev-data/21.10/inputs'
 sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 
@@ -13,9 +13,9 @@ sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 # files in the staging bucket and select the best one.
 # find with gsutil ls gs://genetics-portal-dev-staging/lut/biofeature_labels/
 b_lut='220105'
-trait_efo='2021-02-08'
+trait_efo='2021-02-14'
 # find with gsutil ls gs://genetics-portal-dev-staging/v2d/
-v2d_version='220208'
+v2d_version='220210'
 # find with gsutil ls gs://genetics-portal-dev-staging/coloc/
 coloc='220127'
 # find with gsutil ls gs://genetics-portal-dev-staging/v2g/qtl/
