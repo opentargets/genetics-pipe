@@ -12,7 +12,7 @@ sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 # Some files are tagged with a date and we need to select the correct one. Right now we have to look at the available
 # files in the staging bucket and select the best one.
 # find with gsutil ls gs://genetics-portal-dev-staging/lut/biofeature_labels/
-b_lut='220105'
+b_lut='220212'
 trait_efo='2021-02-14'
 # find with gsutil ls gs://genetics-portal-dev-staging/v2d/
 v2d_version='220210'
