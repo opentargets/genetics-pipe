@@ -45,13 +45,13 @@ echo "copy static files from previous release"
 lut_files=('biofeature_labels.json' 'vep_consequences.tsv' 'v2g_scoring_source_weights.141021.json')
 for i in "${lut_files[@]}"
 do
-  echo "Copy $i to $lut"
+  echo "Copy $previous_inputs/lut/$i to $lut"
   $gscp $previous_inputs/lut/$i $lut/$i
 done
 
 echo "Add date versioned LUT inputs"
 # add date versioned lut inputs
-
+echo "Copy $staging/lut/biofeature_labels/$b_lut/biofeature_labels.w_composites.json to $lut/biofeature_lut_$b_lut.w_composites.json"
 $gscp $staging/lut/biofeature_labels/$b_lut/biofeature_labels.w_composites.json \
 "$lut/biofeature_lut_$b_lut.w_composites.json"
 
@@ -65,7 +65,7 @@ v2d_files=( 'studies.parquet' \
             'ld.parquet')
 for i in "${v2d_files[@]}"
 do
-	echo "Copy $i to $v2d"
+	echo "Copy $staging/v2d/$v2d_version/$i to $v2d/$i"
     $gscp -r $staging/v2d/$v2d_version/$i $v2d/$i
 done
 
