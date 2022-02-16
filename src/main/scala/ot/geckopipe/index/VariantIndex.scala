@@ -64,11 +64,15 @@ object VariantIndex {
   class Builder(val conf: Configuration, val ss: SparkSession) extends LazyLogging {
     def load: VariantIndex = {
       logger.info("loading variant index as specified in the configuration")
-      val vIdx = ss.read.parquet(conf.variantIndex.path).persist(StorageLevels.DISK_ONLY)
+      val vIdx = ss.read.parquet(conf.variantIndex.path).cache()
 
       new VariantIndex(vIdx)
     }
 
+    /**
+      * @param columnsWithAliases columns to select from raw data
+      * @return dataframe with columnsWithAliases
+      */
     def loadRawVariantIndex(columnsWithAliases: Seq[(String, String)]): DataFrame = {
       val indexCols = indexColumns.map(c => col(c).asc)
       val sortCols = sortColumns.map(c => col(c).asc)
@@ -121,8 +125,9 @@ object VariantIndex {
       }
 
       logger.info("building variant index as specified in the configuration")
-      val raw = loadRawVariantIndex(rawColumnsWithAliases).persist(StorageLevels.DISK_ONLY)
-      val nearests = computeNearests(raw).persist(StorageLevels.DISK_ONLY)
+      val raw = loadRawVariantIndex(rawColumnsWithAliases).cache()
+
+      val nearests = computeNearests(raw).cache()
       val jointNearest = raw.join(nearests, columns, "left_outer")
 
       new VariantIndex(jointNearest)
