@@ -25,6 +25,7 @@ lazy val root = (project in file("."))
     libraryDependencies ++= scalaMiniTestSeq,
     libraryDependencies ++= codeDeps,
     libraryDependencies ++= sparkDeps,
+    libraryDependencies ++= gcp,
     testFrameworks += new TestFramework("minitest.runner.Framework"),
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", "org.apache.hadoop.fs.FileSystem") =>
