@@ -8,7 +8,7 @@ skinparam artifact {
      backgroundColor<<dependencies>> darkturquoise
  }
 ' steps
-artifact vg as "variant-gene" <<noDependencies>>
+artifact vg as "variant-gene" <<dependencies>>
 artifact vi as "variant-index" <<noDependencies>>
 artifact dictionaries <<dependencies>>
 artifact vd as "variant-disease" <<dependencies>>
@@ -21,10 +21,11 @@ artifact l2g <<input>>
 
 vi --> dictionaries
 vi --> vd
+vi --> vg
 vi --> vdc
 vi --> dn
 vd --> dvg
-vg --> sd
+vg --> dvg
 dvg --> sd
 l2g --> manhattan
 sd --> manhattan

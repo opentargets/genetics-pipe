@@ -1,3 +1,22 @@
+A document to try and understand how steps work and how they can best be ported to the ETL.
+
+# Gene index
+
+There is no current gene index step. There should be because it is done as a Python script which must be manually 
+run before the pipeline can be as multiple steps depend on it.
+
+The only fields which this has that the target index doesn't are `tss` and `exon`. `tss` can be recreated (see 
+ticket 1929) and `exon` is not used. Since we're going to have this integrated in the ETL, when a step uses Gene 
+Index we'll just use the outputs of the target step. 
+
+## Output
+- gene-index for internal use by other steps
+- `lut/gene-index`
+
+## Inputs
+- Output of target step from ETL
+- configuration value of biotypes to exclude.
+
 # Variant index notes
 
 Main.scala
@@ -27,9 +46,89 @@ VariantIndex.scala
 
 `Main.variantToGene()`
     - loads variantIndex
-    - computes distance
-        - this has a dependency on `conf.ensembl.lut`. The exact same calculation is done in the `variant-index`.
     - computes 4 `V2GIndex.Components`
-    - calls V2GIndex.build
+        - VEP:
+            - loads consequences table `conf.vep.homoSapientsConsScores`
+            - loads raw variant index
+        - Distance 
+            - this has a dependency on `conf.ensembl.lut`. 
+            - The exact same calculation is done in the `variant-index`.
+        - QTL
+            - uses variant index
+            - loads `conf.qtl.path`
+        - Interval
+            - uses variant index
+            - loads `conf.interval.path`
+    - calls V2GIndex.build with the assembled components to create a single DF
     - saves in `configuration.format` format under `configuration.variantGene.path`
+
+## Inputs
+
+- target index outputs to create `geneIndex`
+- variant-gene outputs is in `conf.variantGene.path`
+- variant-gene inputs(!!) in `conf.variantGene.raw`
+- File under `conf.vep.homoSapiensConsScores`
+- `conf.qtl.path` for QTL
+- `conf.interval.path` for Interval
+
+# Dictionaries (delete)
+
+> these should be the outputs of the variant-, gene- and variant-disease indexes
+- This step creates four outputs under `/ouputs/lut` which are loaded into CH:
+  - variant-index (direct copy of variant-index)
+  - studies-index (subset of V2D)
+  - overlap-index (subset of V2D)
+  - gene-index (direct copy of gene-index)
+- They appear to be doing something which should be handled in GOS by just loading the correct indexes to the 
+  correct places.
+  
+## Inputs
+
+- `conf.ensembl.lut` for gene-index
+- `conf.variant-disease.overlapping` for overlap-index
+- `conf.variant-disease.studies` for study-index
+- `conf.variant-disease.efo` for study-index
+- `conf.variant-index.path` for variant-index
+
+# Distance-nearest (delete)
+
+> This should be output by the variant-index itself.
+- Reads in the variant-index
+- Calculates `Distance` (like the variant index step, and the variant to gene step)
+- Saves output in `c.nearest.path`
+> This doesn't seem to be actually used anywhere. It isn't a downstream dependency of any other step, and it isn't 
+> loaded into either BQ, CH or ES. 
+
+# Variant-disease-coloc
+
+- Reads in the variant-index
+- Reads in the gene-index
+- Reads in `c.variantDisease.coloc`
+- Writes `c.output + "/v2d_coloc/"`
+
+# Variant-disease
+
+> This should output the /lut/studies-index since it's calculated here.
+> This should output the /lut/overlap-index since it's calculated here.
+- Reads in variant-index
+- `V2DIndex.build`
+  - read: 
+    `conf.variantDisease.studies` 
+    `conf.variantDisease.efos`
+    `conf.variantDisease.topLoci`
+    `conf.variantDisease.finemapping`
+- Writes `c.variantDisease.path`
+
+# Disease-to-Variant-to-Gene
+
+- Reads:
+    V2G index
+    V2D index
+- Writes:
+    `c.diseaseVariantGene.path`
+  
+# Scored-datasets
+
+# Manhattan
+
 

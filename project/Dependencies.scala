@@ -32,4 +32,8 @@ object Dependencies {
     "org.apache.spark" %% "spark-graphx" % sparkVersion % "provided",
     "org.apache.spark" %% "spark-mllib" % sparkVersion % "provided"
   )
+  lazy val gcp = Seq(
+    "com.google.cloud" % "google-cloud-dataproc" % "2.3.2" % "provided",
+    "com.google.cloud" % "google-cloud-storage" % "2.4.2" % "provided"
+  )
 }

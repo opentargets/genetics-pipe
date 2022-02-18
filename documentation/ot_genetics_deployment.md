@@ -104,11 +104,18 @@ utilities to run a release.
 - [ ] run script `scripts/run_cluster.sh` from root directory. This script builds a jar file, pushes it to GS 
   storage, starts a cluster and runs all steps. Some of the jobs will fail because of missing dependencies. Consult 
   `documentation/step_dependencies` for the correct order. 
+   - In general run in the following phases (some steps can be run concurrently): 
+      - variant-index (30m), variant-gene (180min)
+      - dictionaries, variant-disease (2min), distance-nearest (140min), variant-disease-coloc (2min)
+      - disease-variant-gene (25min)
+      - scored datasets (130min)
+      - manhattan (25min)
 - [ ] inform genetics team that the outputs are ready, and they will run the ML pipeline to generate the `l2g` 
   outputs. The file we need for the final step (`manhattan`) is typically found under 
   `genetics-portal-dev-staging/l2g/<date>/predictions/l2g.full.220128.parquet` in the staging area. 
 - [ ] Copy L2G file from the staging area to the development area (updating dates as necessary): `gsutil -m cp -r 
-  gs://genetics-portal-dev-staging/l2g/220128/predictions/l2g.full.220128.parquet gs://genetics-portal-dev-data/22.01/outputs/l2g/`
+  gs://genetics-portal-dev-staging/l2g/220212/predictions/l2g.full.220212.parquet/part-* 
+  gs://genetics-portal-dev-data/22.02.2/outputs/l2g/`
 - [ ] Run the `manhattan` step.
 - [ ] Check all the expected output directories are present using the ammonite script `amm scripts/check_outputs.sc`.
 
@@ -121,14 +128,40 @@ utilities to run a release.
   - `export ES_HOST=$(gcloud compute instances list | grep -i run | grep elasticsearch | awk '{ print $4 }' | tail -1)`
   - `export CLICKHOUSE_HOST=$(gcloud compute instances list | grep -i run | grep clickhouse | awk '{ print $4 }' | tail 
     -1)`
+- [ ] activate the correct python environment: `conda activate backend-genetics`
 - [ ] run the script `loaders/clickhouse/create_and_load_everything_from_scratch.sh` in the `genetics-backend` 
   repository, providing a link to the input files. 
+  - There can be a short delay while the instances start up and complete their installations of ES and CH. You can 
+    test if they are ready by running `curl $ES_HOST:9200` and `curl $CLICKHOUSE_HOST:8123` which should both return 
+    a non-error response. 
+  - Note this process is slow: ~17 hours!
   - `./create_and_load_everything_from_scratch.sh gs://genetics-portal-dev-data/22.01.2/outputs`
 - [ ] Once loading is complete, 'bake' the instances so that we can deploy the images using Terraform.
   - Find the latest running image: `gcloud compute instances list --project=open-targets-genetics-dev | grep -i run | 
     grep [elasticsearch|clickhouse] | awk '{ print $1 }' | tail -1`
   - Bake image using scripts in `genetics-backend/gcp/bake_[es|ch]_node.sh` with the image found above. These create 
     disk images which we can deploy using the Terraform defined in the [genetics terraform repo](https://github.com/opentargets/terraform-google-genetics-portal)
+     - For example: 
+       - `./bake_ch_node.sh $(gcloud compute instances list --project=open-targets-genetics-dev | grep -i 
+       run | grep clickhouse | awk '{ print $1 }' | tail -1)`
+       - `./bake_es_node.sh $(gcloud compute instances list --project=open-targets-genetics-dev | grep -i run | grep elasticsearch | awk '{ print $1 }' | tail -1)`
+
+#### Sanity checks
+
+- You should check the size of the images and counts in ES and Clickhouse to get an idea of whether there were any 
+  problems in loading the data. 
+- Clickhouse:
+  - SSH into image: `gcloud compute ssh --zone "europe-west1-c" "devgen2202-ch-11-clickhouse-gc34"  --tunnel-through-iap --project "open-targets-genetics-dev" -- -L 8123:localhost:8123`
+  - Execute the following command (using either Clickhouse-client or another DB manager) to get counts:
+  
+```sql
+SELECT table,
+sum(rows) as rows,
+formatReadableSize(sum(bytes)) as size
+FROM system.parts
+WHERE active
+GROUP BY table;
+```
   
 #### Updating Terraform XYZ
 

@@ -39,6 +39,16 @@ To run the jar using Google's dataproc consult the script in `./scripts/run_clus
 and submit a separate job for each step. The steps need to be executed in the correct order, so don't run 
 asynchronously or change the specified order of the steps.
 
+## Run using a Google Dataproc Workflow
+
+The _simplest_ way to run everything is using the workflow defined in `./scripts/dataproc-workflow.sc`. From within 
+Intellij you can run it as a worksheet. The workflow defines each of the steps as a Dataproc job and runs it on a 
+cluster. The cluster is automatically started and stopped, and jobs are parallelized where possible. 
+
+Alternatively you can run it from Ammonite but you need to ensure that all of the required jars are on the classpath.
+This can be done by executing the following command `sbt Compile/fullClasspath/exportToAmmoniteScript && amm 
+--predef target/scala-2.12/fullClasspath-Compile.sc`. From here you can copy/paste the workflow into Ammonite. 
+
 ## Configuration
 
 The configuration is defined in `/src/main/resources/application.conf`. You can provide an external configuration 
@@ -93,7 +103,13 @@ split -a 3 --additional-suffix=vcf -d -n l/64 vep_csq_file.vcf vep_
 
 ## Variant to Gene table
 
-TBD
+### Inputs
+
+| conf field | notes |
+| --- | --- |
+| conf.vep.homoSapiensConsScores | Notes taken directly from comment in code (might not be correct) load consequence table from file extracted from ensembl website https://www.ensembl.org/info/genome/variation/predicted_data.html#consequences and merged with OT eco scores table. We filter by only v2g_scores and get last token from the accession terms |
+| conf.ensembl.lut | Creates a gene index |
+| conf.variantGene.path | This is the output of the `variant-gene` step, so we assume there is a dependency between them. |
 
 ## Variant to disease table
 
