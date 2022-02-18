@@ -12,9 +12,10 @@ import scala.jdk.CollectionConverters.asJavaIterableConverter
 val projectId = "open-targets-genetics-dev"
 val region = "europe-west1"
 
-val jar = "gs://genetics-portal-dev-data/22.02.3/jars/ot-pipe-a09fb88.jar"
-val configPath = "gs://genetics-portal-dev-data/22.02.3/conf"
-val config = "2202_3.conf"
+val jarPath = "gs://genetics-portal-dev-data/22.02.4/jars"
+val configPath = "gs://genetics-portal-dev-data/22.02.4/conf"
+val jar = "ot-pipe-c33d9c7.jar"
+val config = "2202_4.conf"
 
 val gcpUrl = s"$region-dataproc.googleapis.com:443"
 
@@ -29,7 +30,7 @@ val workflowTemplateServiceClient: WorkflowTemplateServiceClient =
 // Configure the jobs within the workflow.
 def sparkJob(step: String): SparkJob = SparkJob
   .newBuilder
-  .setMainJarFileUri(jar)
+  .setMainJarFileUri(s"$jarPath/$jar")
   .addArgs(step)
   .addFileUris(s"$configPath/$config")
   .putProperties("spark.executor.extraJavaOptions", s"-Dconfig.file=$config")
@@ -91,7 +92,7 @@ val diseaseVariantGene: OrderedJob = OrderedJob
   .newBuilder
   .setStepId(diseaseVariantGeneIdx)
   .setSparkJob(sparkJob(diseaseVariantGeneIdx))
-  .addPrerequisiteStepIds(variantDiseaseIdx)
+  .addAllPrerequisiteStepIds(Seq(variantDiseaseIdx, variantGeneIdx).asJava)
   .build
 
 val scoredDatasets: OrderedJob = OrderedJob
@@ -151,7 +152,7 @@ val workflowTemplate = WorkflowTemplate
   .newBuilder
   .addJobs(variantIndex)
   .addJobs(dictionaries)
-  .addJobs(distanceNearest)
+//  .addJobs(distanceNearest)
   .addJobs(variantGene)
   .addJobs(variantDisease)
   .addJobs(variantDiseaseColoc)
