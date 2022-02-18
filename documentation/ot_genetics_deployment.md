@@ -114,7 +114,8 @@ utilities to run a release.
   outputs. The file we need for the final step (`manhattan`) is typically found under 
   `genetics-portal-dev-staging/l2g/<date>/predictions/l2g.full.220128.parquet` in the staging area. 
 - [ ] Copy L2G file from the staging area to the development area (updating dates as necessary): `gsutil -m cp -r 
-  gs://genetics-portal-dev-staging/l2g/220128/predictions/l2g.full.220128.parquet gs://genetics-portal-dev-data/22.01/outputs/l2g/`
+  gs://genetics-portal-dev-staging/l2g/220212/predictions/l2g.full.220212.parquet/part-* 
+  gs://genetics-portal-dev-data/22.02.2/outputs/l2g/`
 - [ ] Run the `manhattan` step.
 - [ ] Check all the expected output directories are present using the ammonite script `amm scripts/check_outputs.sc`.
 

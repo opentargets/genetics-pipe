@@ -5,6 +5,10 @@ A document to try and understand how steps work and how they can best be ported 
 There is no current gene index step. There should be because it is done as a Python script which must be manually 
 run before the pipeline can be as multiple steps depend on it.
 
+The only fields which this has that the target index doesn't are `tss` and `exon`. `tss` can be recreated (see 
+ticket 1929) and `exon` is not used. Since we're going to have this integrated in the ETL, when a step uses Gene 
+Index we'll just use the outputs of the target step. 
+
 ## Output
 - gene-index for internal use by other steps
 - `lut/gene-index`
@@ -92,6 +96,8 @@ VariantIndex.scala
 - Reads in the variant-index
 - Calculates `Distance` (like the variant index step, and the variant to gene step)
 - Saves output in `c.nearest.path`
+> This doesn't seem to be actually used anywhere. It isn't a downstream dependency of any other step, and it isn't 
+> loaded into either BQ, CH or ES. 
 
 # Variant-disease-coloc
 
