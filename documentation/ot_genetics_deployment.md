@@ -44,6 +44,9 @@ the command I use is this as an example
 
 ```python create_genes_dictionary.py -o "./" -z -n homo_sapiens_core_104_38```
 
+The above example uses Ensembl '104'. The most recent version is '105'. If the versions have not changed from the 
+previous release feel free to copy the input file from the previous releases' input directory.
+
 ### VEP consequences
 
 The TSV file is provided by the _genetics team_. If the file is not present in the staging bucket ask the Genetics team
@@ -91,32 +94,43 @@ utilities to run a release.
 
 - [ ] clone required repository: `git clone git@github.com:opentargets/genetics-backend.git`
 - [ ] set up environment: `conda activate backend-genetics`
-- [ ] update Ensembl version and run script: `python create_genes_dictionary.py -o "./" -z -n homo_sapiens_core_105_38`
-- [ ] add ensembl file to bucket `gsutil cp -n homo_sapiens* gs://genetics-portal-dev-data/22.01/inputs/lut/`
+- [ ] update Ensembl version and run script from `backend-genetics/makeLUTs`: `python create_genes_dictionary.py -o "./" 
+  -z -n homo_sapiens_core_105_38`
+- [ ] add ensembl file to bucket `gsutil cp -n homo_sapiens* gs://genetics-portal-dev-data/22.03/inputs/lut/`
 - [ ] update variables in bash script in `/scripts/prepare_inputs.sh` (input script)
 - [ ] run input script in VM to move files from staging to dev buckets
     - Most of the inputs are used for the pipeline, but there are two static datasets which are copied, sumstats (sa)
       and `v2g_credset`.
+    - It's to pipe the STDOUT of the script to a file which can be provided to the genetics/data team for 
+      confirmation the correct files were used. `./scripts/prepare_inputs.sh >> genetics_input_log.txt`
 - [ ] create a configuration file for release in `config`:
     - [ ] `cp src/main/resources/application.conf config/<release>.conf` and update as necessary.
-- [ ] update top level variables in `scripts/run_cluster.sh`: `release` and `config` should be the only changes 
-  necessary. 
-- [ ] run script `scripts/run_cluster.sh` from root directory. This script builds a jar file, pushes it to GS 
-  storage, starts a cluster and runs all steps. Some of the jobs will fail because of missing dependencies. Consult 
-  `documentation/step_dependencies` for the correct order. 
-   - In general run in the following phases (some steps can be run concurrently): 
-      - variant-index (30m), variant-gene (180min)
-      - dictionaries, variant-disease (2min), distance-nearest (140min), variant-disease-coloc (2min)
-      - disease-variant-gene (25min)
-      - scored datasets (130min)
-      - manhattan (25min)
+- [ ] Run genetics-pipe. There are two options here, you can use either a Dataproc workflow (requires Scala) or 
+  using bash scripts. The former is easier.
+  - [ ] __Workflow option__: Open the worksheet `scripts/dataproc-workflow.sc`, update top level variables (should 
+    only be the input and output directories) and run. You can terminate the worksheet on your local machine once it 
+    has started since Dataproc will run in the background. The advantage of using the workflow is that Dataproc will 
+    create the specified cluster, run the steps in the right order, then destroy the cluster without the need for 
+    any manual intervention. 
+  - [ ] __Script options:__:
+    - [ ] update top level variables in `scripts/run_cluster.sh`: `release` and `config` should be the only changes 
+    necessary. 
+    - [ ] run script `scripts/run_cluster.sh` from root directory. This script builds a jar file, pushes it to GS 
+      storage, starts a cluster and runs all steps. Some of the jobs will fail because of missing dependencies. Consult 
+      `documentation/step_dependencies` for the correct order. 
+       - In general run in the following phases (some steps can be run concurrently): 
+          - variant-index (30m), variant-gene (180min)
+          - dictionaries, variant-disease (2min), distance-nearest (140min), variant-disease-coloc (2min)
+          - disease-variant-gene (25min)
+          - scored datasets (130min)
+          - manhattan (25min) (Run this _after_ the following steps)
 - [ ] inform genetics team that the outputs are ready, and they will run the ML pipeline to generate the `l2g` 
   outputs. The file we need for the final step (`manhattan`) is typically found under 
   `genetics-portal-dev-staging/l2g/<date>/predictions/l2g.full.220128.parquet` in the staging area. 
 - [ ] Copy L2G file from the staging area to the development area (updating dates as necessary): `gsutil -m cp -r 
   gs://genetics-portal-dev-staging/l2g/220212/predictions/l2g.full.220212.parquet/part-* 
   gs://genetics-portal-dev-data/22.02.2/outputs/l2g/`
-- [ ] Run the `manhattan` step.
+- [ ] Run the `manhattan` step using either scripts for the workflow `scripts/dataproc-workflow-manhattan.sc`
 - [ ] Check all the expected output directories are present using the ammonite script `amm scripts/check_outputs.sc`.
 
 ### Recipe to create infrastructure
@@ -162,6 +176,28 @@ FROM system.parts
 WHERE active
 GROUP BY table;
 ```
+The database in the 22.02 release shows:
+```
+┌─table──────────────────┬───────rows─┬─size───────┐
+│ genes                  │      19569 │ 3.59 MiB   │
+│ studies                │      50719 │ 2.08 MiB   │
+│ variants               │   72858944 │ 5.41 GiB   │
+│ v2d_by_stchr           │   20488888 │ 323.71 MiB │
+│ v2d_sa_gwas            │  582828390 │ 29.51 GiB  │
+│ v2g_structure          │          9 │ 3.40 KiB   │
+│ v2d_coloc              │    4458533 │ 306.86 MiB │
+│ l2g_by_gsl             │    3580861 │ 155.29 MiB │
+│ v2d_credset            │   38834105 │ 1.34 GiB   │
+│ v2d_by_chrpos          │   20488888 │ 414.83 MiB │
+│ manhattan              │     279116 │ 44.22 MiB  │
+│ v2g_scored             │ 1030927072 │ 20.09 GiB  │
+│ d2v2g_scored           │ 1658712886 │ 41.05 GiB  │
+│ studies_overlap        │   14570115 │ 154.52 MiB │
+│ l2g_by_slg             │    3580861 │ 168.87 MiB │
+│ v2d_sa_molecular_trait │  442006706 │ 14.63 GiB  │
+└────────────────────────┴────────────┴────────────┘
+```
+As far as I know, we would not expect order of magnitude changes. 
   
 #### Updating Terraform XYZ
 
