@@ -130,7 +130,8 @@ utilities to run a release.
 - [ ] Copy L2G file from the staging area to the development area (updating dates as necessary): `gsutil -m cp -r 
   gs://genetics-portal-dev-staging/l2g/220212/predictions/l2g.full.220212.parquet/part-* 
   gs://genetics-portal-dev-data/22.02.2/outputs/l2g/`
-- [ ] Run the `manhattan` step using either scripts for the workflow `scripts/dataproc-workflow-manhattan.sc`
+- [ ] Run the `manhattan` step using either scripts for the workflow `scripts/dataproc-workflow-manhattan.sc`. Note 
+  that the workflow assumes all prior steps have been completed and the inputs are available.
 - [ ] Check all the expected output directories are present using the ammonite script `amm scripts/check_outputs.sc`.
 
 ### Recipe to create infrastructure
@@ -168,7 +169,7 @@ utilities to run a release.
   - SSH into image: `gcloud compute ssh --zone "europe-west1-c" "devgen2202-ch-11-clickhouse-gc34"  --tunnel-through-iap --project "open-targets-genetics-dev" -- -L 8123:localhost:8123`
   - Execute the following command (using either Clickhouse-client or another DB manager) to get counts:
   
-```sql
+```
 SELECT table,
 sum(rows) as rows,
 formatReadableSize(sum(bytes)) as size
