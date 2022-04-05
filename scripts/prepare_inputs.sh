@@ -5,7 +5,7 @@ set -x
 echo "Preparing to copy genetics resources"
 staging='gs://genetics-portal-dev-staging'
 dev_data='gs://genetics-portal-dev-data'
-release='22.02.3'
+release='22.04'
 previous_inputs='gs://genetics-portal-dev-data/21.10/inputs'
 sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 
@@ -15,17 +15,17 @@ sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 b_lut='220212'
 trait_efo='2021-02-14'
 # find with gsutil ls gs://genetics-portal-dev-staging/v2d/
-v2d_version='220210'
+v2d_version='220401'
 # find with gsutil ls gs://genetics-portal-dev-staging/coloc/
-coloc='220127'
+coloc='220331'
 # find with gsutil ls gs://genetics-portal-dev-staging/v2g/qtl/
-qtl='220105'
+qtl='220331'
 # listed under gs://genetics-portal-dev-staging/finemapping/
-finemapping='220113_merged'
+finemapping='220224_merged'
 # listed under gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005/gwas
-gwas='220208'
+gwas='220330'
 # listed under gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005/molecular_trait
-molecular_trait='220105'
+molecular_trait='220330'
 
 # -n flag so as not to clobber existing.
 gscp='gsutil -m cp -n'
