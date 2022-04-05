@@ -12,10 +12,10 @@ import scala.jdk.CollectionConverters.asJavaIterableConverter
 val projectId = "open-targets-genetics-dev"
 val region = "europe-west1"
 
-val jarPath = "gs://genetics-portal-dev-data/22.02.4/jars"
-val configPath = "gs://genetics-portal-dev-data/22.02.4/conf"
+val jarPath = "gs://genetics-portal-dev-data/22.04/jars"
+val configPath = "gs://genetics-portal-dev-data/22.04/conf"
 val jar = "ot-pipe-c33d9c7.jar"
-val config = "2202_4.conf"
+val config = "2204.conf"
 
 val gcpUrl = s"$region-dataproc.googleapis.com:443"
 
