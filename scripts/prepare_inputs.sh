@@ -13,7 +13,7 @@ sumstats='gs://genetics-portal-dev-sumstats/filtered/pvalue_0.005'
 # files in the staging bucket and select the best one.
 # find with gsutil ls gs://genetics-portal-dev-staging/lut/biofeature_labels/
 b_lut='220212'
-trait_efo='2021-02-14'
+#trait_efo='2021-02-14'
 # find with gsutil ls gs://genetics-portal-dev-staging/v2d/
 v2d_version='220401'
 # find with gsutil ls gs://genetics-portal-dev-staging/coloc/
@@ -59,7 +59,7 @@ echo "Add versioned v2d inputs"
 v2d_files=( 'studies.parquet' \
             'ld_analysis_input.tsv' \
             'locus_overlap.parquet' \
-            $"trait_efo-$trait_efo.parquet" \
+            'trait_efo.parquet' \
             'finemapping.parquet' \
             'toploci.parquet' \
             'ld.parquet')
