@@ -61,7 +61,8 @@ The following __inputs__ are required:
 - `vep.homo-sapiens-cons-scores`
 - `interval.path`
 - `qtl.path`
-- `variant-gene.weights`
+- ~~variant-gene.weights~~ Deprecated as of 30 May 2022. Weights should be specified in the configuration field 
+  `variant-gene.weights`
 - `variant-disease.studies`
 - `variant-disease.toploci`
 - `variant-disease.finemapping`

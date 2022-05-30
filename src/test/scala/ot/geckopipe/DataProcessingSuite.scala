@@ -14,7 +14,6 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     val configuration = createTestConfiguration()
     createRawVariantIndexParquet(configuration.variantIndex.raw)(ss)
     createEnsemblLutJson(configuration.ensembl.lut)(ss)
-    createV2GWeights(configuration.variantGene.weights)(ss)
 
     Main.run(CommandLineArgs(command = Some("variant-index")), configuration)(ss)
 
@@ -280,8 +279,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
       variantIndex = VariantSection(raw = s"$inputFolder/variant-annotation.parquet/",
                                     path = s"$outputFolder/variant-index/",
                                     tssDistance = 500000),
-      variantGene =
-        VariantGeneSection(path = s"$outputFolder/v2g/", weights = s"$inputFolder/v2g_weights/"),
+      variantGene = VariantGeneSection(path = s"$outputFolder/v2g/", weights = Seq.empty),
       variantDisease = VariantDiseaseSection(
         path = s"$outputFolder/v2d/",
         studies = s"$inputFolder/v2d/studies.parquet",
@@ -392,24 +390,6 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     14412,
     "protein_coding"
   )
-
-  case class V2GWeight(source_id: String, weight: Double)
-
-  private def createV2GWeights(path: String)(implicit ss: SparkSession): Unit = {
-    import ss.implicits._
-
-    val w = Seq(
-      V2GWeight("vep", 1.0),
-      V2GWeight("eqtl", 0.66),
-      V2GWeight("pqtl", 0.66),
-      V2GWeight("javierre2016", 0.33),
-      V2GWeight("andersson2014", 0.33),
-      V2GWeight("thurman2012", 0.33),
-      V2GWeight("canonical_tss", 0.33)
-    )
-
-    w.toDF().write.json(path)
-  }
 
   private def createEnsemblLutJson(path: String)(implicit ss: SparkSession): Unit = {
     import ss.implicits._

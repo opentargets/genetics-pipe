@@ -39,8 +39,8 @@ class V2GIndex(val table: DataFrame) extends LazyLogging {
       "gene_id"
     )
 
-    val weights: DataFrame = ss.read.json(configuration.variantGene.weights)
-    val weightSum: Double = weights.select("weight").collect().map(_.getDouble(0)).sum
+    val weights: DataFrame = configuration.variantGene.weights.toDF()
+    val weightSum: Double = configuration.variantGene.weights.map(_.weight).sum
 
     table
       .groupBy(cols.map(col): _*)

@@ -25,7 +25,11 @@ case class ScoredDatasetsSection(variantGeneByOverall: String,
                                  diseaseVariantGeneByOverall: String,
                                  diseaseVariantGeneScored: String)
 
-case class VariantGeneSection(path: String, weights: String)
+/**
+  * Leaving this as snake case because it's converted to a data-frame elsewhere in the code.
+  */
+case class SourceIdAndWeight(source_id: String, weight: Double)
+case class VariantGeneSection(path: String, weights: Seq[SourceIdAndWeight])
 case class DiseaseVariantGeneSection(path: String)
 
 case class VariantDiseaseSection(path: String,

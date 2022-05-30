@@ -19,7 +19,6 @@ The files in `dev` are used to run the pipeline, typically using Dataproc.
 | `vep.homo-sapiens-cons-scores` | *should be in staging bucket* | /lut/vep_consequences.tsv |
 | `interval.path` |v2g/interval/\* | /v2g/interval/\*/\*/\<date\>/data.parquet |
 | `qtl.path` | v2g/qtl/\<date\>/ | v2g/qlt/\<date\> |
-| `variant-gene.weights` | *carried over from previous release* | lut/v2g_scoring_source_weights.date.json |
 | `variant-disease.studies` | v2d/\<date\>/studies.parquet | v2d/studies.parquet |
 | `variant-disease.toploci` | v2d/\<date\>/toploci.parquet | v2d/toploci.parquet|
 | `variant-disease.finemapping` | v2d/\<date\>/finemapping.parquet/ | v2d/finemapping.parquet |
