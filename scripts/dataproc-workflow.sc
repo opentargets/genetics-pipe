@@ -13,9 +13,9 @@ val projectId = "open-targets-genetics-dev"
 val region = "europe-west1"
 
 val jarPath = "gs://genetics-portal-dev-data/22.03/jars"
-val configPath = "gs://genetics-portal-dev-data/22.03/conf"
+val configPath = "gs://genetics-portal-dev-data/22.05.0/conf"
 val jar = "ot-pipe-c33d9c7.jar"
-val config = "2203_1.conf"
+val config = "2205_0.conf"
 
 val gcpUrl = s"$region-dataproc.googleapis.com:443"
 
