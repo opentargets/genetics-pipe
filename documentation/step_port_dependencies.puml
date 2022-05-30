@@ -1,0 +1,32 @@
+@startuml
+
+skinparam artifact {
+     backgroundColor<<port>> greenyellow
+     backgroundColor<<delete>> crimson
+ }
+' steps
+artifact vg as "variant-gene" <<port>>
+artifact vi as "variant-index" <<port>>
+artifact dictionaries <<delete>>
+artifact vd as "variant-disease" <<port>>
+artifact vdc as "variant-disease-coloc" <<port>>
+artifact dn as "distance-nearest" <<delete>>
+artifact dvg as "disease-variant-gene" <<port>>
+artifact sd as "scored-datasets" <<port>>
+artifact manhattan <<port>>
+artifact l2g <<input>>
+
+vi --> dictionaries
+vi --> vd
+vi --> vg
+vi --> vdc
+vi --> dn
+vd --> dvg
+vg --> dvg
+dvg --> sd
+l2g --> manhattan
+sd --> manhattan
+vdc --> manhattan
+
+
+@enduml

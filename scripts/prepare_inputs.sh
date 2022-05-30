@@ -84,8 +84,8 @@ $gscp -r $staging/v2g/qtl/$qtl $v2g/qtl/
 echo "Add variant annotations from previous release"
 # In theory these files could be updated in future, but we're still using the Jan 2019 ones
 # so they are effectively static.
-echo "copy $previous_inputs/variant-annotation/190129 to $va"
-$gscp -r $previous_inputs/variant-annotation/190129 $va
+echo "copy $previous_inputs/variant-annotation/ to $va"
+$gscp -r $previous_inputs/variant-annotation/ $va
 
 
 echo "COPY STATIC INPUTS: SUMSTATS AND CREDSET"

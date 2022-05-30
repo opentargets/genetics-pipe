@@ -30,6 +30,6 @@ dvg --> sd
 l2g --> manhattan
 sd --> manhattan
 vdc --> manhattan
-
+vg ..> l2g
 
 @enduml

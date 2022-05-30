@@ -55,3 +55,11 @@ project/plugins/project/
 out/
 
 worksheets/data/
+.vscode/
+.metals/
+.bsp/
+outputs/
+project/.bloop
+project/metals.sbt
+project/project/
+

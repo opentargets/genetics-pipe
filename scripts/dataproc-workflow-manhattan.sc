@@ -13,9 +13,9 @@ val projectId = "open-targets-genetics-dev"
 val region = "europe-west1"
 
 val jarPath = "gs://genetics-portal-dev-data/22.03/jars"
-val configPath = "gs://genetics-portal-dev-data/22.05.0/conf"
+val configPath = "gs://genetics-portal-dev-data/22.03/conf"
 val jar = "ot-pipe-c33d9c7.jar"
-val config = "2205_0.conf"
+val config = "2203_1.conf"
 
 val gcpUrl = s"$region-dataproc.googleapis.com:443"
 
@@ -37,76 +37,12 @@ def sparkJob(step: String): SparkJob = SparkJob
   .putProperties("spark.driver.extraJavaOptions", s"-Dconfig.file=$config")
   .build
 
-val variantIdx = "variant-index"
-val variantDiseaseIdx = "variant-disease"
-val variantGeneIdx = "variant-gene"
-val scoredDatasetIdx = "scored-datasets"
 val manhattanIdx = "manhattan"
-val diseaseVariantGeneIdx = "disease-variant-gene"
-val distanceIdx = "distance-nearest"
-val dictionariesIdx = "dictionaries"
-val colocIdx = "variant-disease-coloc"
-
-val variantIndex: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(variantIdx)
-  .setSparkJob(sparkJob(variantIdx))
-  .build
-
-val dictionaries: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(dictionariesIdx)
-  .setSparkJob(sparkJob(dictionariesIdx))
-  .addPrerequisiteStepIds(variantIdx)
-  .build
-
-val distanceNearest: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(distanceIdx)
-  .setSparkJob(sparkJob(distanceIdx))
-  .addPrerequisiteStepIds(variantIdx)
-  .build
-
-val variantGene: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(variantGeneIdx)
-  .setSparkJob(sparkJob(variantGeneIdx))
-  .addPrerequisiteStepIds(variantIdx)
-  .build
-
-val variantDisease: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(variantDiseaseIdx)
-  .setSparkJob(sparkJob(variantDiseaseIdx))
-  .addPrerequisiteStepIds(variantIdx)
-  .build
-
-val variantDiseaseColoc: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(colocIdx)
-  .setSparkJob(sparkJob(colocIdx))
-  .addPrerequisiteStepIds(variantIdx)
-  .build
-
-val diseaseVariantGene: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(diseaseVariantGeneIdx)
-  .setSparkJob(sparkJob(diseaseVariantGeneIdx))
-  .addAllPrerequisiteStepIds(Seq(variantDiseaseIdx, variantGeneIdx).asJava)
-  .build
-
-val scoredDatasets: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(scoredDatasetIdx)
-  .setSparkJob(sparkJob(scoredDatasetIdx))
-  .addAllPrerequisiteStepIds(Seq(variantGeneIdx, diseaseVariantGeneIdx).asJava)
-  .build
 
 val manhattan: OrderedJob = OrderedJob
   .newBuilder
   .setStepId(manhattanIdx)
   .setSparkJob(sparkJob(manhattanIdx))
-  .addAllPrerequisiteStepIds(Seq(colocIdx, scoredDatasetIdx).asJava)
   .build
 
 // Configure the cluster placement for the workflow.// Configure the cluster placement for the workflow.
@@ -150,15 +86,7 @@ val workflowTemplatePlacement = WorkflowTemplatePlacement.newBuilder.setManagedC
 // Create the inline workflow template.
 val workflowTemplate = WorkflowTemplate
   .newBuilder
-  .addJobs(variantIndex)
-  .addJobs(dictionaries)
-  .addJobs(distanceNearest)
-  .addJobs(variantGene)
-  .addJobs(variantDisease)
-  .addJobs(variantDiseaseColoc)
-  .addJobs(diseaseVariantGene)
-  .addJobs(scoredDatasets)
-//  .addJobs(manhattan)
+  .addJobs(manhattan)
   .setPlacement(workflowTemplatePlacement)
   .build
 
@@ -168,5 +96,5 @@ val instantiateInlineWorkflowTemplateAsync = workflowTemplateServiceClient.insta
 instantiateInlineWorkflowTemplateAsync.get
 
 // Print out a success message.
-println("Workflow ran successfully.")
+println("Manhattan Workflow ran successfully.")
 workflowTemplateServiceClient.close()
