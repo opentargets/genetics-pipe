@@ -2,8 +2,9 @@ package ot.geckopipe
 
 import com.typesafe.config.ConfigFactory
 import com.typesafe.scalalogging.LazyLogging
-import pureconfig.{ConfigReader, ConfigSource}
+import pureconfig.{ConfigFieldMapping, ConfigReader, ConfigSource}
 import pureconfig.ConfigReader.Result
+import pureconfig.generic.ProductHint
 
 /**
   * Case class to map to a gtex section in the configuration file.
@@ -70,6 +71,11 @@ case class Configuration(output: String,
                          manhattan: ManhattanSection)
 
 object Configuration extends LazyLogging {
+  import pureconfig.generic.auto._
+
+  // We need this additional implicit so that PureConfig doesn't try and map the snake case field to `source-_id`.
+  implicit val swImp: ProductHint[SourceIdAndWeight] =
+    ProductHint.apply[SourceIdAndWeight](fieldMapping = ConfigFieldMapping(identity))
   lazy val config: Result[Configuration] = load
 
   def load: ConfigReader.Result[Configuration] = {
