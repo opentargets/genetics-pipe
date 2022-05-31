@@ -1,7 +1,6 @@
 import Dependencies._
 
 val buildResolvers = Seq(
-  "Local Maven Repository" at "file://" + Path.userHome.absolutePath + "/.m2/repository",
   "Maven repository" at "https://download.java.net/maven/2/",
   "Typesafe Repo" at "https://repo.typesafe.com/typesafe/releases/",
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
@@ -16,16 +15,10 @@ lazy val root = (project in file("."))
         scalaVersion := "2.12.12",
         version := "1.0.0"
       )),
-    name := "ot-geckopipe",
+    name := "etl-genetics",
     resolvers ++= buildResolvers,
     // from Dependencies.scala
-    libraryDependencies += scalaCheck,
-    libraryDependencies ++= configDeps,
-    libraryDependencies ++= loggingDeps,
-    libraryDependencies ++= scalaMiniTestSeq,
-    libraryDependencies ++= codeDeps,
-    libraryDependencies ++= sparkDeps,
-    libraryDependencies ++= gcp,
+    libraryDependencies ++= dependencies,
     testFrameworks += new TestFramework("minitest.runner.Framework"),
     assembly / assemblyMergeStrategy := {
       case PathList("META-INF", "services", "org.apache.hadoop.fs.FileSystem") =>

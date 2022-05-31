@@ -2,6 +2,9 @@ import sbt._
 
 object Dependencies {
 
+  lazy val dependencies
+    : Seq[ModuleID] = configDeps ++ loggingDeps ++ codeDeps ++ testingDeps ++ sparkDeps ++ gcp
+
   lazy val configDeps = Seq(
     "com.github.pureconfig" %% "pureconfig" % "0.14.1"
   )
@@ -17,20 +20,16 @@ object Dependencies {
   )
 
   lazy val miniTestVersion = "2.9.6"
-  lazy val scalaMiniTestSeq = Seq(
+  lazy val testingDeps = Seq(
     "io.monix" %% "minitest" % miniTestVersion % "test",
-    "io.monix" %% "minitest-laws" % miniTestVersion % "test"
+    "io.monix" %% "minitest-laws" % miniTestVersion % "test",
+    "org.scalacheck" %% "scalacheck" % "1.14.3"
   )
-
-  lazy val scalaCheck = "org.scalacheck" %% "scalacheck" % "1.14.3"
 
   lazy val sparkVersion = "3.1.2"
   lazy val sparkDeps = Seq(
-    "com.github.fommil.netlib" % "all" % "1.1.2" pomOnly (),
     "org.apache.spark" %% "spark-core" % sparkVersion % "provided",
-    "org.apache.spark" %% "spark-sql" % sparkVersion % "provided",
-    "org.apache.spark" %% "spark-graphx" % sparkVersion % "provided",
-    "org.apache.spark" %% "spark-mllib" % sparkVersion % "provided"
+    "org.apache.spark" %% "spark-sql" % sparkVersion % "provided"
   )
   lazy val gcp = Seq(
     "com.google.cloud" % "google-cloud-dataproc" % "2.3.2" % "provided",
