@@ -1,11 +1,11 @@
-sudo: required
-language: scala
 dist: xenial
+language: scala
 scala:
-  - 2.11.12
+  - 2.12.12
 jdk:
   - openjdk8
 script:
+  - sbt ++$TRAVIS_SCALA_VERSION scalafmtCheckAll
   - sbt ++$TRAVIS_SCALA_VERSION clean compile
   - sbt ++$TRAVIS_SCALA_VERSION coverage test coverageReport
   - sbt ++$TRAVIS_SCALA_VERSION assembly
@@ -15,10 +15,9 @@ deploy:
     secure: "J0W8KYmHnm1oXgdXRwzFqeXk/WByuY6GraTlmC1hoeWBkJ+BU7sVVrHwikbDz2TouHvSpMq3dhqpkpZJ+IX+l4nMS4Nhu6n/hmNbwXSmwbJkAnoLS7JhX+541aI/uFhLis2GVlgCKkBwBxET+DZvCbdwTiqc0yZR0i6LJCProWMKiXwYTllsOWsruqUujW8XUUZx051TPfVobVk/S0a1k+gSMydMyELiwPB9hdrrLWbFaA42jKGVJ0WzZ9H/3WD8pZawIwG006qcn2prltz94E/a9KTZVY6z64w1JcFkJE49MSDBb/CF+q3Hbl8vet6KnRmLUGjxM2PR+ohtFbSOi0SDqP5c39vAdYN1QIbxk36mwknPEKmTDgXUZeHLycqU3aEtPBVpDOmCg1JyaTAgpBQvMsU1z6hl2992wScHxBWccDMgdWbx3+uhMtv3SRj0kVG5e7gx+ZWk6PkO1wuQuKl7o72bS8HeFRTLzS7FuxG8gZgecZeMq1dyiSj9jdbHTIS06ovUNttML+Zx5MWYL1sLTH8Hw2vwbI+xxyvKVEMxgML1fHcy4GkQHxIvbZReH0P/vbl07gLZMOzK/A1QwEvEURosTOXKRK7ttfzRTXzZXG3SDK3yBcJI0UbOTba4bRwjrho9ktTwFhMPzBY/8LLa8jPqUPDuLJ+O9YghWmg="
   file_glob: true
   file:
-    - "target/scala-2.11/ot-geckopipe-assembly-*"
+    - "target/scala-2.12/etl-genetics-*"
   on:
     repo: opentargets/genetics-pipe
-#    tags: true
+    tags: true
+    all_branches: false
   skip_cleanup: true
-after_success:
-  - bash <(curl -s https://codecov.io/bash)
