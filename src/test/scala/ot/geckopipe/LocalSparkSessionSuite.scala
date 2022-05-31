@@ -7,9 +7,9 @@ import org.apache.spark.sql.SparkSession
 class LocalSparkSessionSuite(sessionName: String, config: Option[SparkConf] = None)
     extends SimpleTestSuite {
 
-  private[this] lazy val defaultSparkConf: SparkConf = new SparkConf().setMaster("local[*]")
+  lazy val defaultSparkConf: SparkConf = new SparkConf().setMaster("local[*]")
 
-  implicit private[this] lazy val sparkSession: SparkSession = SparkSession
+  implicit lazy val sparkSession: SparkSession = SparkSession
     .builder()
     .appName(sessionName)
     .config(config.getOrElse(defaultSparkConf))

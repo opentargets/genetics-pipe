@@ -17,10 +17,12 @@ object Distance extends LazyLogging {
     Distance(vIdx, conf, conf.nearest.tssDistance, GeneIndex.BioTypes.ApprovedBioTypes)
   }
 
-  def apply(vIdx: VariantIndex,
-            conf: Configuration,
-            tssDistance: Long,
-            biotypes: GeneIndex.BioTypes)(implicit ss: SparkSession): Component = {
+  def apply(
+      vIdx: VariantIndex,
+      conf: Configuration,
+      tssDistance: Long,
+      biotypes: GeneIndex.BioTypes
+  )(implicit ss: SparkSession): Component = {
 
     val genes = GeneIndex(conf.ensembl.lut, biotypes).sortByTSS.table
       .selectBy(GeneIndex.columns)
@@ -32,9 +34,11 @@ object Distance extends LazyLogging {
       .withColumn("type_id", lit("distance"))
       .withColumn("source_id", lit("canonical_tss"))
       .withColumn("feature", lit("unspecified"))
-      .join(genes,
-            (col("chr_id") === col("chr")) and
-              (abs(col("position") - col("tss")) <= tssDistance))
+      .join(
+        genes,
+        (col("chr_id") === col("chr")) and
+          (abs(col("position") - col("tss")) <= tssDistance)
+      )
       .withColumn("d", abs(col("position") - col("tss")))
       .withColumn("distance_score", when(col("d") > 0, lit(1.0) / col("d")).otherwise(1.0))
 

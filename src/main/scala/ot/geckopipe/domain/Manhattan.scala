@@ -2,46 +2,50 @@ package ot.geckopipe.domain
 
 import org.apache.spark.sql.expressions.Window
 import org.apache.spark.sql.functions._
-import org.apache.spark.sql.{DataFrame, SparkSession}
+import org.apache.spark.sql.{DataFrame, Dataset, SparkSession}
 import ot.geckopipe.Configuration
 
 import scala.util.Random
 
-case class Manhattan(study: String,
-                     chrom: String,
-                     pos: Long,
-                     ref: String,
-                     alt: String,
-                     pval: Double,
-                     pval_mantissa: Double,
-                     pval_exponent: Long,
-                     odds: Option[Double],
-                     oddsL: Option[Double],
-                     oddsU: Option[Double],
-                     direction: Option[String],
-                     beta: Option[Double],
-                     betaL: Option[Double],
-                     betaU: Option[Double],
-                     credibleSetSize: Long,
-                     ldSetSize: Long,
-                     uniq_variants: Long,
-                     top10_genes_raw_ids: List[String],
-                     top10_genes_raw_score: List[Double],
-                     top10_genes_coloc_ids: List[String],
-                     top10_genes_coloc_score: List[Double],
-                     top10_genes_l2g_ids: List[String],
-                     top10_genes_l2g_score: List[Double])
+case class Manhattan(
+    study: String,
+    chrom: String,
+    pos: Long,
+    ref: String,
+    alt: String,
+    pval: Double,
+    pval_mantissa: Double,
+    pval_exponent: Long,
+    odds: Option[Double],
+    oddsL: Option[Double],
+    oddsU: Option[Double],
+    direction: Option[String],
+    beta: Option[Double],
+    betaL: Option[Double],
+    betaU: Option[Double],
+    credibleSetSize: Long,
+    ldSetSize: Long,
+    uniq_variants: Long,
+    top10_genes_raw_ids: List[String],
+    top10_genes_raw_score: List[Double],
+    top10_genes_coloc_ids: List[String],
+    top10_genes_coloc_score: List[Double],
+    top10_genes_l2g_ids: List[String],
+    top10_genes_l2g_score: List[Double]
+)
 
 object Manhattan {
-  private def computeTopNGenes(uniqCols: List[String],
-                               geneIdCol: String,
-                               geneScoreCol: String,
-                               outputCol: String,
-                               n: Int)(df: DataFrame): DataFrame = {
+  private def computeTopNGenes(
+      uniqCols: List[String],
+      geneIdCol: String,
+      geneScoreCol: String,
+      outputCol: String,
+      n: Int
+  )(df: DataFrame): DataFrame = {
 
     val outExpr = uniqCols ++ List(
-      s"${outputCol}.id as ${outputCol}_ids",
-      s"${outputCol}.score as ${outputCol}_score",
+      s"$outputCol.id as ${outputCol}_ids",
+      s"$outputCol.score as ${outputCol}_score"
     )
 
     // take top scored > 0 genes dense ranked filtered by 1 and take top N genes
@@ -56,10 +60,12 @@ object Manhattan {
       .filter(col(tmpC) <= n)
       .groupBy(uniqCols.map(col): _*)
       .agg(
-        sort_array(collect_set(
-                     struct(col(geneScoreCol).as("score"), col(geneIdCol).as("id"))
-                   ),
-                   asc = false).as(outputCol)
+        sort_array(
+          collect_set(
+            struct(col(geneScoreCol).as("score"), col(geneIdCol).as("id"))
+          ),
+          asc = false
+        ).as(outputCol)
       )
       .selectExpr(outExpr: _*)
   }
@@ -85,9 +91,11 @@ object Manhattan {
       .withColumnRenamed("left_pos", "pos")
       .withColumnRenamed("left_ref", "ref")
       .withColumnRenamed("left_alt", "alt")
-      .filter((round(col("coloc_h4"), 2) >= 0.95) and
-        (col("coloc_log2_h4_h3") >= log2(lit(5D))) and
-        !(col("right_type") === "gwas"))
+      .filter(
+        (round(col("coloc_h4"), 2) >= 0.95) and
+          (col("coloc_log2_h4_h3") >= log2(lit(5d))) and
+          !(col("right_type") === "gwas")
+      )
       .transform(computeTopNGenes(cols, "right_gene_id", "coloc_h4", "top10_genes_coloc", 10))
   }
 
@@ -112,15 +120,17 @@ object Manhattan {
         first(col("beta")).as("beta"),
         first(col("beta_ci_lower")).as("betaL"),
         first(col("beta_ci_upper")).as("betaU"),
-        countDistinct(when(col("posterior_prob") > 0D, col(randomC)).otherwise(null))
+        countDistinct(when(col("posterior_prob") > 0d, col(randomC)).otherwise(null))
           .as("credibleSetSize"),
-        countDistinct(when(col("overall_r2") > 0D, col(randomC)).otherwise(null))
+        countDistinct(when(col("overall_r2") > 0d, col(randomC)).otherwise(null))
           .as("ldSetSize"),
         countDistinct(col(randomC)).as("uniq_variants")
       )
   }
 
-  def apply(configuration: Configuration)(implicit sparkSession: SparkSession) = {
+  def apply(
+      configuration: Configuration
+  )(implicit sparkSession: SparkSession): Dataset[Manhattan] = {
     import sparkSession.implicits._
     val conf = configuration.manhattan
 

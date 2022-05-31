@@ -34,9 +34,11 @@ object QTL extends LazyLogging {
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")
     val qtls = load(conf.qtl.path)
-    // TODO WARN this is a temporal hack until we fix the qtl dataset and properly capture 2230 smallest entries
-      .withColumn("qtl_pval",
-                  when($"qtl_pval" === 0d, lit(Double.MinPositiveValue)).otherwise($"qtl_pval"))
+      // TODO WARN this is a temporal hack until we fix the qtl dataset and properly capture 2230 smallest entries
+      .withColumn(
+        "qtl_pval",
+        when($"qtl_pval" === 0d, lit(Double.MinPositiveValue)).otherwise($"qtl_pval")
+      )
       .withColumn("qtl_score", -log(10, col("qtl_pval")))
 
     val vIdxS = vIdx.table.select(VariantIndex.columns.head, VariantIndex.columns.tail: _*)

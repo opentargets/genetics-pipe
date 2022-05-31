@@ -43,12 +43,16 @@ class Commands(val c: Configuration)(implicit val ss: SparkSession) extends Lazy
 
     val coloc = ss.read
       .parquet(c.variantDisease.coloc)
-      .join(broadcast(gIdx),
-            col("left_chrom") === col("chr") and
-              col("right_gene_id") === col("gene_id"),
-            "left_outer")
-      .where(col("right_gene_id").isNull or
-        col("right_gene_id") === col("gene_id"))
+      .join(
+        broadcast(gIdx),
+        col("left_chrom") === col("chr") and
+          col("right_gene_id") === col("gene_id"),
+        "left_outer"
+      )
+      .where(
+        col("right_gene_id").isNull or
+          col("right_gene_id") === col("gene_id")
+      )
       .filter(!isnan(col("coloc_h3")))
 
     val colocVariantFiltered = coloc
@@ -90,11 +94,13 @@ class Commands(val c: Configuration)(implicit val ss: SparkSession) extends Lazy
     logger.info("exec variant-gene-scored command")
 
     // chr_id, position, ref_allele, alt_allele, gene_id,
-    val cols = List("chr_id" -> "tag_chrom",
-                    "position" -> "tag_pos",
-                    "ref_allele" -> "tag_ref",
-                    "alt_allele" -> "tag_alt",
-                    "gene_id" -> "gene_id")
+    val cols = List(
+      "chr_id" -> "tag_chrom",
+      "position" -> "tag_pos",
+      "ref_allele" -> "tag_ref",
+      "alt_allele" -> "tag_alt",
+      "gene_id" -> "gene_id"
+    )
     val v2g = V2GIndex.load(c)
     val d2v2g = ss.read.format(c.format).load(c.diseaseVariantGene.path)
     val v2gScores = v2g.computeScores(c).orderBy(cols.take(2).map(x => col(x._1)): _*).persist()

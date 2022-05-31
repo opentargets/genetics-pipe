@@ -10,8 +10,8 @@ import ot.geckopipe.{Configuration, Distance}
 
 /** represents a cached table of variants with all variant columns
   *
-  * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
-  * this table is persisted and sorted by (chr_id, position) by default
+  * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also this table is
+  * persisted and sorted by (chr_id, position) by default
   */
 class VariantIndex(val table: DataFrame) {
   def schema: StructType = table.schema
@@ -23,12 +23,14 @@ class VariantIndex(val table: DataFrame) {
 /** The companion object helps to build VariantIndex from Configuration and SparkSession */
 object VariantIndex {
 
-  case class VIRow(chr_id: String,
-                   position: Long,
-                   ref_allele: String,
-                   alt_allele: String,
-                   d: Long,
-                   gene_id: String)
+  case class VIRow(
+      chr_id: String,
+      position: Long,
+      ref_allele: String,
+      alt_allele: String,
+      d: Long,
+      gene_id: String
+  )
 
   val rawColumnsWithAliases: Seq[(String, String)] =
     Seq(
@@ -45,11 +47,13 @@ object VariantIndex {
     )
 
   val rawColumnsWithAliasesMinimal: Seq[(String, String)] =
-    Seq(("chrom_b38", "chr_id"),
-        ("pos_b38", "position"),
-        ("ref", "ref_allele"),
-        ("alt", "alt_allele"),
-        ("vep.transcript_consequences", "transcript_consequences"))
+    Seq(
+      ("chrom_b38", "chr_id"),
+      ("pos_b38", "position"),
+      ("ref", "ref_allele"),
+      ("alt", "alt_allele"),
+      ("vep.transcript_consequences", "transcript_consequences")
+    )
 
   /** variant_id is represented as 1_123_T_C but split into columns 1 23456 T C */
   val columns: List[String] = List("chr_id", "position", "ref_allele", "alt_allele")
@@ -69,9 +73,10 @@ object VariantIndex {
       new VariantIndex(vIdx)
     }
 
-    /**
-      * @param columnsWithAliases columns to select from raw data
-      * @return dataframe with columnsWithAliases
+    /** @param columnsWithAliases
+      *   columns to select from raw data
+      * @return
+      *   dataframe with columnsWithAliases
       */
     def loadRawVariantIndex(columnsWithAliases: Seq[(String, String)]): DataFrame = {
       val indexCols = indexColumns.map(c => col(c).asc)
@@ -94,7 +99,8 @@ object VariantIndex {
 
         val nearests =
           Distance(vidx, conf, conf.variantIndex.tssDistance, GeneIndex.BioTypes.ApprovedBioTypes)(
-            ss).table
+            ss
+          ).table
 
         val nearestGenes = nearests
           .as[VIRow]
@@ -106,10 +112,10 @@ object VariantIndex {
           .withColumnRenamed("gene_id", "gene_id_any")
 
         // just prot coding genes
-        val nearestsPC = Distance(vidx,
-                                  conf,
-                                  conf.variantIndex.tssDistance,
-                                  GeneIndex.BioTypes.ProteinCoding)(ss).table
+        val nearestsPC =
+          Distance(vidx, conf, conf.variantIndex.tssDistance, GeneIndex.BioTypes.ProteinCoding)(
+            ss
+          ).table
 
         val nearestPCGenes = nearestsPC
           .as[VIRow]
