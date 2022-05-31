@@ -16,13 +16,15 @@ object VEP extends LazyLogging {
 
   /** load consequence table from file extracted from ensembl website
     *
-    * https://www.ensembl.org/info/genome/variation/predicted_data.html#consequences and
-    * merged with OT eco scores table. We filter by only v2g_scores and get last token from
-    * the accession terms
+    * https://www.ensembl.org/info/genome/variation/predicted_data.html#consequences and merged with
+    * OT eco scores table. We filter by only v2g_scores and get last token from the accession terms
     *
-    * @param from file to load the lookup table
-    * @param ss the implicit sparksession
-    * @return a dataframe with all normalised columns
+    * @param from
+    *   file to load the lookup table
+    * @param ss
+    *   the implicit sparksession
+    * @return
+    *   a dataframe with all normalised columns
     */
   def loadConsequenceTable(from: String)(implicit ss: SparkSession): DataFrame = {
     val cleanAccessions = udf((accession: String) => {
@@ -36,7 +38,8 @@ object VEP extends LazyLogging {
         StructField("display_term", StringType) ::
         StructField("impact", StringType) ::
         StructField("v2g_score", DoubleType) ::
-        StructField("eco_score", DoubleType) :: Nil)
+        StructField("eco_score", DoubleType) :: Nil
+    )
 
     val csqs = ss.read
       .format("csv")
@@ -73,10 +76,12 @@ object VEP extends LazyLogging {
 
     // return the max pair with label and score from the two lists of labels with scores
     val getMaxCsqLabel = udf((labels: Seq[String], scores: Seq[Double]) =>
-      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._1)
+      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._1
+    )
 
     val getMaxCsqScore = udf((labels: Seq[String], scores: Seq[Double]) =>
-      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._2)
+      (labels zip scores).sortBy(_._2)(Ordering[Double].reverse).head._2
+    )
 
     logger.info("load VEP table from raw variant index")
     val raw = VariantIndex
@@ -99,7 +104,7 @@ object VEP extends LazyLogging {
       .withColumn("feature", lit("unspecified"))
       .withColumn("fpred_max_label", getMaxCsqLabel(col("fpred_labels"), col("fpred_scores")))
       .withColumn("fpred_max_score", getMaxCsqScore(col("fpred_labels"), col("fpred_scores")))
-      .where(col("fpred_max_score") > 0F)
+      .where(col("fpred_max_score") > 0f)
 
     new Component {
 

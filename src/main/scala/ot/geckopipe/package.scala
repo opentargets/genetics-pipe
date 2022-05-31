@@ -1,4 +1,3 @@
 package ot
 
-package object geckopipe {
-}
+package object geckopipe {}

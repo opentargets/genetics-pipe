@@ -42,7 +42,7 @@ samt=$sa/molecular_trait
 echo "copy static files from previous release"
 # copy static files from previous release
 #lut
-lut_files=('biofeature_labels.json' 'vep_consequences.tsv' 'v2g_scoring_source_weights.141021.json')
+lut_files=('biofeature_labels.json' 'vep_consequences.tsv' )
 for i in "${lut_files[@]}"
 do
   echo "Copy $previous_inputs/lut/$i to $lut"

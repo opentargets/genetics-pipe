@@ -1,7 +1,5 @@
 # Genetics-pipe
 
-
-[![codecov](https://codecov.io/gh/opentargets/genetics-pipe/branch/master/graph/badge.svg)](https://codecov.io/gh/opentargets/genetics-pipe)
 [![Build Status](https://travis-ci.com/opentargets/genetics-pipe.svg?branch=master)](https://travis-ci.com/opentargets/genetics-pipe)
 
 **Everything is grch38 based**. ETL pipeline used to integrate and generate the following tables: 
@@ -19,19 +17,15 @@ In order to use this pipeline the input data must follow an exact pattern descri
 
 ### Build the code
 
-You need `sbt >= 1.1.5`
- 
-```sh
-sbt compile
-sbt test
-sbt assembly
-```
+The `sbt assembly` command will generate a _fat-jar_ standalone _jar_ that you can run locally or submit to 
+a spark cluster. This _jar_ already contains a default configuration file (`src/main/resources/reference.conf`) 
+which includes present values. The configuration library follows Typesafe's documented [configuration priority 
+settings](https://github.com/lightbend/config#standard-behavior). In short, to add your own configuration file from 
+the command line use `-Dconfig.file=path/to/config-file`. Any fields not present in that file will be resolved using 
+the `reference.conf` file. 
 
-Assembly command will generate a _fat-jar_ standalone _jar_ that you can run locally or submit to 
-a spark cluster. This _jar_ already contains a default configuration file that you might want to copy
-and edit for your own data.
-
-To use your own configuration you need to pass `-f where/file/application.conf` to any executed command.
+An example configuration file is provided under `configuration/example.conf` which lists all of the inputs which 
+need to be specified. Updating this file is sufficient to run a genetics release. 
 
 ## Build a spark cluster on Google Cloud
 
@@ -51,7 +45,7 @@ This can be done by executing the following command `sbt Compile/fullClasspath/e
 
 ## Configuration
 
-The configuration is defined in `/src/main/resources/application.conf`. You can provide an external configuration 
+The configuration is defined in `/src/main/resources/reference.conf`. You can provide an external configuration 
 with a subset of keys overwritten, for instance, only overwriting the keys specifying inputs. 
 
 The following __inputs__ are required:
@@ -61,7 +55,8 @@ The following __inputs__ are required:
 - `vep.homo-sapiens-cons-scores`
 - `interval.path`
 - `qtl.path`
-- `variant-gene.weights`
+- ~~variant-gene.weights~~ Deprecated as of 30 May 2022. Weights should be specified in the configuration field 
+  `variant-gene.weights`
 - `variant-disease.studies`
 - `variant-disease.toploci`
 - `variant-disease.finemapping`
@@ -87,19 +82,6 @@ For running internally within Open Targets consult the [additional documentation
 | `manhattan` | `l2g`, `scored-datasets`, `variant-disease-coloc` | `manhattan` |
 
 For a graphical representation of the dependencies see `./documentation/step_dependencies.puml`
-
-## Variant index generation
-
-You will need vep consequences file from ensembl ftp
-
-- unzip it
-- split into more or equal to 64 pieces
-
-Example command to run in order to split the vep file
-
-```sh
-split -a 3 --additional-suffix=vcf -d -n l/64 vep_csq_file.vcf vep_
-``` 
 
 ## Variant to Gene table
 

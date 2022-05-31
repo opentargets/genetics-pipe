@@ -53,17 +53,20 @@ object V2DIndex extends LazyLogging {
         StructField("beta_ci_upper", DoubleType) ::
         StructField("pval_mantissa", DoubleType) ::
         StructField("pval_exponent", LongType) ::
-        StructField("pval", DoubleType) :: Nil)
+        StructField("pval", DoubleType) :: Nil
+    )
 
   def build(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): V2DIndex = {
     val studies = buildStudiesIndex(conf.variantDisease.studies, conf.variantDisease.efos).cache()
     val topLoci = buildTopLociIndex(conf.variantDisease.toploci).cache()
     val ldLoci = buildLDIndex(conf.variantDisease.ld)
-      .drop("ld_available",
-            "pics_mu",
-            "pics_postprob",
-            "pics_95perc_credset",
-            "pics_99perc_credset")
+      .drop(
+        "ld_available",
+        "pics_mu",
+        "pics_postprob",
+        "pics_95perc_credset",
+        "pics_99perc_credset"
+      )
       .cache()
     val fmLoci = buildFMIndex(conf.variantDisease.finemapping).cache()
 
@@ -76,15 +79,17 @@ object V2DIndex extends LazyLogging {
 
     // ED WILL FIX THIS PROBLEMATIC ISSUE ABOUT TOPLOCI -> EXPANDED ONE
     // EACH TOPLOCI MUST BE IN THE EXPANDED TABLE
-    val joinCols = Seq("study_id",
-                       "lead_chrom",
-                       "lead_pos",
-                       "lead_ref",
-                       "lead_alt",
-                       "tag_chrom",
-                       "tag_pos",
-                       "tag_ref",
-                       "tag_alt")
+    val joinCols = Seq(
+      "study_id",
+      "lead_chrom",
+      "lead_pos",
+      "lead_ref",
+      "lead_alt",
+      "tag_chrom",
+      "tag_pos",
+      "tag_ref",
+      "tag_alt"
+    )
     val ldAndFm = ldLoci.join(fmLoci, joinCols, "full_outer")
     val indexExpanded =
       svPairs.join(ldAndFm, Seq("study_id", "lead_chrom", "lead_pos", "lead_ref", "lead_alt"))
@@ -103,7 +108,8 @@ object V2DIndex extends LazyLogging {
                 (col("alt_allele") === col("tag_alt")))),
           "inner"
         )
-        .drop("chr_id", "position", "ref_allele", "alt_allele"))
+        .drop("chr_id", "position", "ref_allele", "alt_allele")
+    )
   }
 
   def buildStudiesIndex(path: String, efos: String)(implicit ss: SparkSession): DataFrame = {
@@ -129,19 +135,25 @@ object V2DIndex extends LazyLogging {
       .withColumn("pub_title", when(length($"pub_title") > 0, $"pub_title"))
       .withColumn("pub_author", when(length($"pub_author") > 0, $"pub_author"))
       .withColumn("trait_reported", when(length($"trait_reported") > 0, $"trait_reported"))
-      .withColumn("ancestry_replication",
-                  filter(coalesce(col("ancestry_replication"), typedLit(Array.empty[String])),
-                         c => length(c) > 0))
-      .withColumn("ancestry_initial",
-                  filter(coalesce(col("ancestry_initial"), typedLit(Array.empty[String])),
-                         c => length(c) > 0))
+      .withColumn(
+        "ancestry_replication",
+        filter(
+          coalesce(col("ancestry_replication"), typedLit(Array.empty[String])),
+          c => length(c) > 0
+        )
+      )
+      .withColumn(
+        "ancestry_initial",
+        filter(coalesce(col("ancestry_initial"), typedLit(Array.empty[String])), c => length(c) > 0)
+      )
       .withColumn("source", regexp_extract(col("study_id"), pattern, 1))
       .drop(efoColumns.tail: _*)
       .join(efoDF, Seq(efoColumns.head), "left_outer")
       .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
-      .withColumn("trait_category",
-                  coalesce(when(length($"trait_category") > 0, $"trait_category"),
-                           lit("Uncategorised")))
+      .withColumn(
+        "trait_category",
+        coalesce(when(length($"trait_category") > 0, $"trait_category"), lit("Uncategorised"))
+      )
       .filter($"trait_reported".isNotNull)
       .orderBy(col("study_id").asc)
 
@@ -187,14 +199,16 @@ object V2DIndex extends LazyLogging {
 
   def buildOverlapIndex(path: String)(implicit ss: SparkSession): DataFrame = {
     val aCols = Seq("A_study_id", "A_chrom", "A_pos", "A_ref", "A_alt")
-    val bCols = Seq("B_study_id",
-                    "B_chrom",
-                    "B_pos",
-                    "B_ref",
-                    "B_alt",
-                    "A_distinct",
-                    "AB_overlap",
-                    "B_distinct")
+    val bCols = Seq(
+      "B_study_id",
+      "B_chrom",
+      "B_pos",
+      "B_ref",
+      "B_alt",
+      "A_distinct",
+      "AB_overlap",
+      "B_distinct"
+    )
 
     val selectCols = (aCols ++ bCols).map(col)
     ss.read

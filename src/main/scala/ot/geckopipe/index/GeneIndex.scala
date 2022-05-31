@@ -4,6 +4,8 @@ import org.apache.spark.sql.functions.col
 import org.apache.spark.sql.{DataFrame, SparkSession}
 import enumeratum._
 
+import scala.collection.immutable
+
 /** This class represents a full table of gene with its transcripts grch37 */
 class GeneIndex(val table: DataFrame) {
   def sortByTSS: GeneIndex =
@@ -26,7 +28,7 @@ object GeneIndex {
 
      You use it to implement the `val values` member
      */
-    val values = findValues
+    val values: immutable.IndexedSeq[BioTypes] = findValues
 
     case object ProteinCoding extends BioTypes("protein_coding", Set("protein_coding"))
 
@@ -53,18 +55,10 @@ object GeneIndex {
 
   /** A subset of all possible gene columns that can be included
     *
-    * {
-    * "gene_id": "ENSG00000223972",
-    * "gene_name": "DDX11L1",
-    * "description": "DEAD/H (Asp-Glu-Ala-Asp/His) box helicase 11 like 1 [Source:HGNC Symbol;Acc:37102]",
-    * "biotype": "pseudogene",
-    * "chr": "1",
-    * "tss": 11869,
-    * "start": 11869,
-    * "end": 14412,
-    * "fwdstrand": 1,
-    * "exons": "[11869,12227,12613,12721,13221,14409]"
-    * }
+    * { "gene_id": "ENSG00000223972", "gene_name": "DDX11L1", "description": "DEAD/H
+    * (Asp-Glu-Ala-Asp/His) box helicase 11 like 1 [Source:HGNC Symbol;Acc:37102]", "biotype":
+    * "pseudogene", "chr": "1", "tss": 11869, "start": 11869, "end": 14412, "fwdstrand": 1, "exons":
+    * "[11869,12227,12613,12721,13221,14409]" }
     */
   val columns: Seq[String] = Seq("chr", "gene_id", "tss", "start", "end", "biotype")
   val indexColumns: Seq[String] = Seq("chr")
@@ -72,17 +66,23 @@ object GeneIndex {
 
   /** load and transform lut gene from ensembl
     *
-    * @param from mostly from config.ensembl.lut
-    * @param ss implicit sparksession
-    * @return the processed dataframe
+    * @param from
+    *   mostly from config.ensembl.lut
+    * @param ss
+    *   implicit sparksession
+    * @return
+    *   the processed dataframe
     */
-  def apply(from: String, bioTypes: BioTypes = BioTypes.ApprovedBioTypes)(
-      implicit ss: SparkSession): GeneIndex = {
+  def apply(from: String, bioTypes: BioTypes = BioTypes.ApprovedBioTypes)(implicit
+      ss: SparkSession
+  ): GeneIndex = {
     val indexCols = indexColumns.map(c => col(c).asc)
     val genes = ss.read
       .json(from)
-      .where((col("biotype") isInCollection bioTypes.set) and
-        !(col("chr") isInCollection chromosomes))
+      .where(
+        (col("biotype") isInCollection bioTypes.set) and
+          !(col("chr") isInCollection chromosomes)
+      )
       .repartitionByRange(indexCols: _*)
 
     new GeneIndex(genes)

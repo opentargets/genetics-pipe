@@ -11,19 +11,22 @@ import ot.geckopipe.index.VariantIndex
 object Interval extends LazyLogging {
   val features: Seq[String] = Seq("interval_score", "interval_score_q")
 
-  case class IntervalRow(chrom: String,
-                         start: Long,
-                         end: Long,
-                         gene_id: String,
-                         bio_feature: String)
+  case class IntervalRow(
+      chrom: String,
+      start: Long,
+      end: Long,
+      gene_id: String,
+      bio_feature: String
+  )
 
-  val schema = StructType(
+  val schema: StructType = StructType(
     StructField("chr_id", StringType) ::
       StructField("position_start", LongType) ::
       StructField("position_end", LongType) ::
       StructField("gene_id", StringType) ::
       StructField("score", DoubleType) ::
-      StructField("feature", StringType) :: Nil)
+      StructField("feature", StringType) :: Nil
+  )
 
   def load(from: String)(implicit ss: SparkSession): DataFrame = {
     ss.read
@@ -33,8 +36,8 @@ object Interval extends LazyLogging {
   }
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
-    val extractValidTokensFromPathUDF = udf(
-      (path: String) => extractValidTokensFromPath(path, "/interval/"))
+    val extractValidTokensFromPathUDF =
+      udf((path: String) => extractValidTokensFromPath(path, "/interval/"))
     val fromRangeToArray = udf((l1: Long, l2: Long) => (l1 to l2).toArray)
 
     logger.info("generate pchic dataset from file and aggregating by range and gene")

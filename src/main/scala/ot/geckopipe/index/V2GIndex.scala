@@ -10,8 +10,8 @@ import ot.geckopipe.index.Indexable._
 
 /** represents a cached table of variants with all variant columns
   *
-  * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also
-  * this table is persisted and sorted by (chr_id, position) by default
+  * columns as chr_id, position, ref_allele, alt_allele, variant_id, rs_id. Also this table is
+  * persisted and sorted by (chr_id, position) by default
   */
 class V2GIndex(val table: DataFrame) extends LazyLogging {
 
@@ -39,8 +39,8 @@ class V2GIndex(val table: DataFrame) extends LazyLogging {
       "gene_id"
     )
 
-    val weights: DataFrame = ss.read.json(configuration.variantGene.weights)
-    val weightSum: Double = weights.select("weight").collect().map(_.getDouble(0)).sum
+    val weights: DataFrame = configuration.variantGene.weights.toDF()
+    val weightSum: Double = configuration.variantGene.weights.map(_.weight).sum
 
     table
       .groupBy(cols.map(col): _*)
@@ -96,12 +96,12 @@ object V2GIndex extends LazyLogging {
         StructField("interval_score_q", DoubleType) ::
         StructField("d", LongType) ::
         StructField("distance_score", DoubleType) ::
-        StructField("distance_score_q", DoubleType) :: Nil)
+        StructField("distance_score_q", DoubleType) :: Nil
+    )
 
   /** all data sources to incorporate needs to meet this format at the end
     *
-    * One example of the shape of the data could be
-    * "1_123_T_C ENSG0000001 gtex uberon_0001 1
+    * One example of the shape of the data could be "1_123_T_C ENSG0000001 gtex uberon_0001 1
     */
   val features: Seq[String] = Seq("feature", "type_id", "source_id")
 
@@ -118,7 +118,8 @@ object V2GIndex extends LazyLogging {
     val geneIDs = broadcast(
       GeneIndex(conf.ensembl.lut).table
         .selectBy(GeneIndex.idColumn :: Nil)
-        .orderBy(GeneIndex.idColumn))
+        .orderBy(GeneIndex.idColumn)
+    )
 
     logger.info("build variant to gene dataset union the list of datasets")
 
@@ -127,10 +128,10 @@ object V2GIndex extends LazyLogging {
 
     logger.info(s"compose the list of features to include: ${allFeatures.mkString("[", ", ", "]")}")
     logger.info(s"and filter by columns: ${schema.fieldNames.mkString("[", ", ", "]")}")
-    val processedDts = datasets.map(
-      el =>
-        (allFeatures diff el.features)
-          .foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null))))
+    val processedDts = datasets.map(el =>
+      (allFeatures diff el.features)
+        .foldLeft(el.table)((agg, el) => agg.withColumn(el, lit(null)))
+    )
 
     val allDts = concatDatasets(processedDts, (columns ++ allFeatures).distinct)
       .withColumn("fpred_labels", coalesce(col("fpred_labels"), typedLit(Array.empty[String])))
