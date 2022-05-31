@@ -1,5 +1,10 @@
 package ot.geckopipe
 
+import com.typesafe.config.ConfigFactory
+import com.typesafe.scalalogging.LazyLogging
+import pureconfig.{ConfigReader, ConfigSource}
+import pureconfig.ConfigReader.Result
+
 /**
   * Case class to map to a gtex section in the configuration file.
   *
@@ -49,7 +54,7 @@ case class ManhattanSection(locusGene: String,
 
 case class Configuration(output: String,
                          format: String,
-                         sampleFactor: Double,
+                         programName: String,
                          sparkUri: Option[String],
                          logLevel: String,
                          ensembl: EnsemblSection,
@@ -64,6 +69,16 @@ case class Configuration(output: String,
                          scoredDatasets: ScoredDatasetsSection,
                          manhattan: ManhattanSection)
 
-object Configuration {
-  // companion object but nothing at the moment
+object Configuration extends LazyLogging {
+  lazy val config: Result[Configuration] = load
+
+  def load: ConfigReader.Result[Configuration] = {
+    logger.info("load configuration from file")
+    val config = ConfigFactory.load()
+
+    val obj = ConfigSource.fromConfig(config).load[Configuration]
+    logger.debug(s"configuration properly case classed ${obj.toString}")
+
+    obj
+  }
 }

@@ -28,10 +28,10 @@ object Indexable {
     }
 
     /** save the dataframe as tsv file using filename as a output path */
-    def savetoCSV(to: String)(implicit sampleFactor: Double = 0d): Unit = functions.saveToCSV(df, to)
+    def savetoCSV(to: String): Unit = functions.saveToCSV(df, to)
 
     /** save the dataframe as tsv file using filename as a output path */
-    def saveToJSON(to: String)(implicit sampleFactor: Double = 0d): Unit = functions.saveToJSON(df, to)
+    def saveToJSON(to: String): Unit = functions.saveToJSON(df, to)
   }
 
 }

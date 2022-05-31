@@ -47,36 +47,20 @@ object functions extends LazyLogging {
   })
 
   /** save the dataframe as tsv file using filename as a output path */
-  def saveToJSON(table: DataFrame, to: String)(implicit sampleFactor: Double = 0d): Unit = {
+  def saveToJSON(table: DataFrame, to: String): Unit = {
     logger.info("write datasets to output files")
-    if (sampleFactor > 0d) {
-      table
-        .sample(withReplacement = false, sampleFactor)
-        .write
-        .json(to)
-    } else {
-      table.write.json(to)
-    }
+
+    table.write.json(to)
   }
 
   /** save the dataframe as tsv file using filename as a output path */
-  def saveToCSV(table: DataFrame, to: String)(implicit sampleFactor: Double = 0d): Unit = {
+  def saveToCSV(table: DataFrame, to: String): Unit = {
     logger.info("write datasets to output files")
-    if (sampleFactor > 0d) {
-      table
-        .sample(withReplacement = false, sampleFactor)
-        .write
-        .format("csv")
-        .option("header", "true")
-        .option("delimiter", "\t")
-        .save(to)
-    } else {
-      table.write
-        .format("csv")
-        .option("header", "true")
-        .option("delimiter", "\t")
-        .save(to)
-    }
+    table.write
+      .format("csv")
+      .option("header", "true")
+      .option("delimiter", "\t")
+      .save(to)
   }
 
   def loadFromJSON(uri: String, withSchema: StructType)(implicit ss: SparkSession): DataFrame =

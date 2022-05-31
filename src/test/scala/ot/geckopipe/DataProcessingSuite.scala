@@ -15,8 +15,6 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     createRawVariantIndexParquet(configuration.variantIndex.raw)(ss)
     createEnsemblLutJson(configuration.ensembl.lut)(ss)
 
-    Main.run(CommandLineArgs(command = Some("variant-index")), configuration)(ss)
-
     import ss.implicits._
     val variants = ss.read
       .schema(Encoders.product[Variant2].schema)
@@ -33,7 +31,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     createVariantIndexParquet(configuration.variantIndex.path)(ss)
     createEnsemblLutJson(configuration.ensembl.lut)(ss)
 
-    Main.run(CommandLineArgs(command = Some("distance-nearest")), configuration)(ss)
+//    Main.run(CommandLineArgs(command = Some("distance-nearest")), configuration)(ss)
 
     import ss.implicits._
     val nearest = ss.read
@@ -67,7 +65,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     createQtlParquet(configuration.qtl.path)(ss)
     createIntervalParquet(configuration.interval.path)(ss)
 
-    Main.run(CommandLineArgs(command = Some("variant-gene")), configuration)(ss)
+//    Main.run(CommandLineArgs(command = Some("variant-gene")), configuration)(ss)
 
     import ss.implicits._
     val v2gs = ss.read
@@ -116,7 +114,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     createLdParquet(configuration.variantDisease.ld)(ss)
     createFineMappingParquet(configuration.variantDisease.finemapping)(ss)
 
-    Main.run(CommandLineArgs(command = Some("variant-disease")), configuration)(ss)
+//    Main.run(CommandLineArgs(command = Some("variant-disease")), configuration)(ss)
 
     import ss.implicits._
     val v2d = ss.read
@@ -172,7 +170,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     createV2GJson(configuration.variantGene.path)(ss)
     createV2DJson(configuration.variantDisease.path)(ss)
 
-    Main.run(CommandLineArgs(command = Some("disease-variant-gene")), configuration)(ss)
+//    Main.run(CommandLineArgs(command = Some("disease-variant-gene")), configuration)(ss)
 
     import ss.implicits._
     val d2v2gs = ss.read
@@ -192,7 +190,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     createOverlapParquet(configuration.variantDisease.overlapping)(ss)
     createEnsemblLutJson(configuration.ensembl.lut)(ss)
 
-    Main.run(CommandLineArgs(command = Some("dictionaries")), configuration)(ss)
+//    Main.run(CommandLineArgs(command = Some("dictionaries")), configuration)(ss)
 
     import ss.implicits._
 
@@ -239,7 +237,7 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
     createEnsemblLutJson(configuration.ensembl.lut)(ss)
     createV2DColocParquet(configuration.variantDisease.coloc)(ss)
 
-    Main.run(CommandLineArgs(command = Some("variant-disease-coloc")), configuration)(ss)
+//    Main.run(CommandLineArgs(command = Some("variant-disease-coloc")), configuration)(ss)
 
     import ss.implicits._
 
@@ -266,10 +264,10 @@ object DataProcessingSuite extends LocalSparkSessionSuite("spark-tests") {
 
     val configuration = Configuration(
       output = outputFolder,
-      sampleFactor = 0, //disabled,
       format = "json",
       sparkUri = Some("local[*]"),
       logLevel = "INFO",
+      programName = "name",
       ensembl = EnsemblSection(lut = s"$inputFolder/hg38.json"),
       vep = VEPSection(homoSapiensConsScores = s"$inputFolder/vep_consequences.tsv"),
       interval = IntervalSection(path = s"$inputFolder/v2g/interval/*/*/data.parquet/"),
