@@ -1,11 +1,18 @@
 import Dependencies._
 
+import scala.sys.process.Process
+
 val buildResolvers = Seq(
   "Maven repository" at "https://download.java.net/maven/2/",
   "Typesafe Repo" at "https://repo.typesafe.com/typesafe/releases/",
   "Sonatype Snapshots" at "https://oss.sonatype.org/content/repositories/snapshots",
   "Sonatype Releases" at "https://oss.sonatype.org/content/repositories/releases"
 )
+
+lazy val jarName = {
+  val commit = Process(s"git log --oneline").lineStream.head.take(7)
+  s"etl-genetics-$commit.jar"
+}
 
 lazy val root = (project in file("."))
   .settings(
@@ -27,5 +34,6 @@ lazy val root = (project in file("."))
         MergeStrategy.concat
       case PathList("META-INF", _ @_*) => MergeStrategy.discard
       case _                           => MergeStrategy.first
-    }
+    },
+    assembly / assemblyJarName := jarName
   )
