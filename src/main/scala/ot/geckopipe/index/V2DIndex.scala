@@ -26,7 +26,7 @@ object V2DIndex extends LazyLogging {
         StructField("n_initial", LongType) ::
         StructField("n_replication", LongType) ::
         StructField("n_cases", LongType) ::
-        StructField("trait_category", DoubleType) ::
+        StructField("trait_category", StringType) ::
         StructField("num_assoc_loci", LongType) ::
         StructField("lead_chrom", StringType) ::
         StructField("lead_pos", LongType) ::
@@ -152,7 +152,7 @@ object V2DIndex extends LazyLogging {
       .withColumn("trait_efos", coalesce(col("trait_efos"), typedLit(Array.empty[String])))
       .withColumn(
         "trait_category",
-        coalesce(when(length($"trait_category") > 0, $"trait_category"), lit("Uncategorised"))
+        coalesce(col("trait_category"), lit("Uncategorised"))
       )
       .filter($"trait_reported".isNotNull)
       .orderBy(col("study_id").asc)
