@@ -33,7 +33,7 @@ object V2DIndex extends LazyLogging {
         StructField("lead_ref", StringType) ::
         StructField("lead_alt", StringType) ::
         StructField("tag_chrom", StringType) ::
-        StructField("tag_pos", LongType) ::
+        StructField("tag_pos", IntegerType) ::
         StructField("tag_ref", StringType) ::
         StructField("tag_alt", StringType) ::
         StructField("overall_r2", DoubleType) ::
