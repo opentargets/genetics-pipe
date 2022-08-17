@@ -64,7 +64,6 @@ object V2DIndex extends LazyLogging {
         "ld_available",
         "pics_mu",
         "pics_postprob",
-        "pics_95perc_credset",
         "pics_99perc_credset"
       )
       .cache()
