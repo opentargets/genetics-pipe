@@ -116,6 +116,7 @@ class Commands(val c: Configuration)(implicit val ss: SparkSession) extends Lazy
 
     d2v2gScored.write
       .format(c.format)
+      .option("maxRecordsPerFile", 1000000)
       .save(c.scoredDatasets.diseaseVariantGeneScored)
 
   }
