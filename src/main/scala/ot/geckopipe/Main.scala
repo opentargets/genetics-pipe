@@ -18,14 +18,6 @@ class Commands(val c: Configuration)(implicit val ss: SparkSession) extends Lazy
     vidx.table.write.parquet(c.variantIndex.path)
   }
 
-  def distanceNearest(): Unit = {
-    logger.info("exec distance-nearest command")
-    val vIdx = VariantIndex.builder(c).load
-
-    val nearestDF = Distance(vIdx, c)
-    nearestDF.table.write.json(c.nearest.path)
-  }
-
   def variantDiseaseColoc(): Unit = {
     logger.info("exec distance-nearest command")
     val variantColumns = VariantIndex.columns.map(col)
