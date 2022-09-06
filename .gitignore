@@ -13,18 +13,9 @@ open-targets-genetics-63ea40a7fb68.json
 
 /*.csv
 /*.conf
-#### java ####
-# Compiled class file
-*.class
+.bsp
+.bloop
 
-# Log file
-*.log
-
-# BlueJ files
-*.ctxt
-
-# Mobile Tools for Java (J2ME)
-.mtj.tmp/
 
 # Package Files #
 *.jar
@@ -33,10 +24,6 @@ open-targets-genetics-63ea40a7fb68.json
 *.zip
 *.tar.gz
 *.rar
-
-# virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
-hs_err_pid*
-
 
 #### sbt ####
 # Simple Build Tool

@@ -7,15 +7,16 @@
 
 import com.google.cloud.dataproc.v1.{ClusterConfig, DiskConfig, GceClusterConfig, InstanceGroupConfig, ManagedCluster, OrderedJob, RegionName, SoftwareConfig, SparkJob, WorkflowTemplate, WorkflowTemplatePlacement, WorkflowTemplateServiceClient, WorkflowTemplateServiceSettings}
 
-import scala.jdk.CollectionConverters.asJavaIterableConverter
+import scala.collection.JavaConverters.asJavaIterableConverter
 
 val projectId = "open-targets-genetics-dev"
 val region = "europe-west1"
 
-val jarPath = "gs://genetics-portal-dev-data/22.03/jars"
-val configPath = "gs://genetics-portal-dev-data/22.05.0/conf"
-val jar = "ot-pipe-c33d9c7.jar"
-val config = "2205_0.conf"
+val configPath = "gs://genetics-portal-dev-data/22.05.2/conf"
+val jar = "gs://genetics-portal-dev-data/22.05.2/jars/etl-genetics-59c881b.jar"
+val config = "2205_2.conf"
+val workflow2Execute = "full"
+require(Set("l2g", "full") contains workflow2Execute)
 
 val gcpUrl = s"$region-dataproc.googleapis.com:443"
 
@@ -30,7 +31,7 @@ val workflowTemplateServiceClient: WorkflowTemplateServiceClient =
 // Configure the jobs within the workflow.
 def sparkJob(step: String): SparkJob = SparkJob
   .newBuilder
-  .setMainJarFileUri(s"$jarPath/$jar")
+  .setMainJarFileUri(jar)
   .addArgs(step)
   .addFileUris(s"$configPath/$config")
   .putProperties("spark.executor.extraJavaOptions", s"-Dconfig.file=$config")
@@ -57,13 +58,6 @@ val dictionaries: OrderedJob = OrderedJob
   .newBuilder
   .setStepId(dictionariesIdx)
   .setSparkJob(sparkJob(dictionariesIdx))
-  .addPrerequisiteStepIds(variantIdx)
-  .build
-
-val distanceNearest: OrderedJob = OrderedJob
-  .newBuilder
-  .setStepId(distanceIdx)
-  .setSparkJob(sparkJob(distanceIdx))
   .addPrerequisiteStepIds(variantIdx)
   .build
 
@@ -145,26 +139,39 @@ val clusterConfig: ClusterConfig = {
 }
 
 val managedCluster = ManagedCluster.newBuilder.setClusterName("genetics-cluster").setConfig(clusterConfig).build
-val workflowTemplatePlacement = WorkflowTemplatePlacement.newBuilder.setManagedCluster(managedCluster).build
+val workflowCluster = WorkflowTemplatePlacement.newBuilder.setManagedCluster(managedCluster).build
 
 // Create the inline workflow template.
 val workflowTemplate = WorkflowTemplate
   .newBuilder
   .addJobs(variantIndex)
-  .addJobs(dictionaries)
-  .addJobs(distanceNearest)
   .addJobs(variantGene)
+
+
+
+val parent = RegionName.format(projectId, region)
+
+val l2gWorkflow = workflowTemplate.setPlacement(workflowCluster).build()
+val fullWorkflow = workflowTemplate
+  .addJobs(dictionaries)
   .addJobs(variantDisease)
   .addJobs(variantDiseaseColoc)
   .addJobs(diseaseVariantGene)
   .addJobs(scoredDatasets)
-//  .addJobs(manhattan)
-  .setPlacement(workflowTemplatePlacement)
+  .addJobs(manhattan)
+  .setPlacement(workflowCluster)
   .build
 
+val instantiateInlineWorkflowTemplateAsync = workflow2Execute match {
+  case "l2g" =>
+     workflowTemplateServiceClient.instantiateInlineWorkflowTemplateAsync(parent, l2gWorkflow)
+  case "full" =>
+    println("Preparing to run jobs:")
+    fullWorkflow.getJobsList.forEach(it => println(it))
+    workflowTemplateServiceClient.instantiateInlineWorkflowTemplateAsync(parent, fullWorkflow)
+  case _ => throw new IllegalArgumentException("Unknown workflow selected.")
+}
 
-val parent = RegionName.format(projectId, region)
-val instantiateInlineWorkflowTemplateAsync = workflowTemplateServiceClient.instantiateInlineWorkflowTemplateAsync(parent, workflowTemplate)
 instantiateInlineWorkflowTemplateAsync.get
 
 // Print out a success message.

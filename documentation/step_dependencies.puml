@@ -13,7 +13,6 @@ artifact vi as "variant-index" <<noDependencies>>
 artifact dictionaries <<dependencies>>
 artifact vd as "variant-disease" <<dependencies>>
 artifact vdc as "variant-disease-coloc" <<dependencies>>
-artifact dn as "distance-nearest" <<dependencies>>
 artifact dvg as "disease-variant-gene" <<dependencies>>
 artifact sd as "scored-datasets" <<dependencies>>
 artifact manhattan <<dependencies>>
@@ -23,7 +22,6 @@ vi --> dictionaries
 vi --> vd
 vi --> vg
 vi --> vdc
-vi --> dn
 vd --> dvg
 vg --> dvg
 dvg --> sd

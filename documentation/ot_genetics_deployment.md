@@ -116,7 +116,7 @@ utilities to run a release.
 - [ ] update variables in bash script in `/scripts/prepare_inputs.sh` (input script)
 - [ ] run input script in VM to move files from staging to dev buckets
     - Most of the inputs are used for the pipeline, but there are two static datasets which are copied, sumstats (sa)
-      and `v2g_credset`.
+      and `v2d_credset`.
     - It's to pipe the STDOUT of the script to a file which can be provided to the genetics/data team for 
       confirmation the correct files were used. `./scripts/prepare_inputs.sh >> genetics_input_log.txt`
 - [ ] create a configuration file for release in `config`:
@@ -136,7 +136,7 @@ utilities to run a release.
       `documentation/step_dependencies` for the correct order. 
        - In general run in the following phases (some steps can be run concurrently): 
           - variant-index (30m), variant-gene (180min)
-          - dictionaries, variant-disease (2min), distance-nearest (140min), variant-disease-coloc (2min)
+          - dictionaries, variant-disease (2min), variant-disease-coloc (2min)
           - disease-variant-gene (25min)
           - scored datasets (130min)
           - manhattan (25min) (Run this _after_ the following steps)
@@ -157,8 +157,7 @@ utilities to run a release.
   `infrastructure/gcp/genetics/create-elasticsearch-node.sh`
 - [ ] export variables for the two created VMs:(bind the internal GCP IP address, this assumes you're in a GCP VM yourself.)
   - `export ES_HOST=$(gcloud compute instances list | grep -i run | grep elasticsearch | awk '{ print $4 }' | tail -1)`
-  - `export CLICKHOUSE_HOST=$(gcloud compute instances list | grep -i run | grep clickhouse | awk '{ print $4 }' | tail 
-    -1)`
+  - `export CLICKHOUSE_HOST=$(gcloud compute instances list | grep -i run | grep clickhouse | awk '{ print $4 }' | tail -1)`
 - [ ] activate the correct python environment: `conda activate backend-genetics`
 - [ ] run the script `loaders/clickhouse/create_and_load_everything_from_scratch.sh` in the `genetics-backend` 
   repository, providing a link to the input files. 
