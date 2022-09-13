@@ -85,6 +85,8 @@ class Commands(val c: Configuration)(implicit val ss: SparkSession) extends Lazy
   def scoredDatasets(): Unit = {
     logger.info("exec variant-gene-scored command")
 
+    val writeOptions = Map("maxRecordsPerFile" -> "1000000")
+
     // chr_id, position, ref_allele, alt_allele, gene_id,
     val cols = List(
       "chr_id" -> "tag_chrom",
@@ -104,11 +106,12 @@ class Commands(val c: Configuration)(implicit val ss: SparkSession) extends Lazy
     val v2gScored = v2g.table.join(v2gScores, cols.map(_._1))
     v2gScored.write
       .format(c.format)
+      .options(writeOptions)
       .save(c.scoredDatasets.variantGeneScored)
 
     d2v2gScored.write
       .format(c.format)
-      .option("maxRecordsPerFile", 1000000)
+      .options(writeOptions)
       .save(c.scoredDatasets.diseaseVariantGeneScored)
 
   }
