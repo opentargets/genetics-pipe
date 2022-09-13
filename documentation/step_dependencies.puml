@@ -15,11 +15,13 @@ artifact vd as "variant-disease" <<dependencies>>
 artifact vdc as "variant-disease-coloc" <<dependencies>>
 artifact dvg as "disease-variant-gene" <<dependencies>>
 artifact sd as "scored-datasets" <<dependencies>>
+artifact s as "search" <<dependencies>>
 artifact manhattan <<dependencies>>
 artifact l2g <<input>>
 
 vi --> dictionaries
 vi --> vd
+vi --> s
 vi --> vg
 vi --> vdc
 vd --> dvg

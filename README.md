@@ -69,17 +69,18 @@ For running internally within Open Targets consult the [additional documentation
 
 ### Running steps
 
-| Step name | Dependencies | Output |
-| --- | --- | --- |
-| `variant-gene` |  | `v2g` |
-| `variant-index` |  | `variant-index` |
-| `dictionaries` | `variant-index` | `lut` |
-| `variant-disease` | `variant-index` | `v2d` |
-| `variant-disease-coloc` | `variant-index` | `v2d_coloc` |
-| `distance-nearest` | `variant-index` | `distance/canonical_tss` |
-| `disease-variant-gene` |  `variant-disease` | `d2v2g` |
-| `scored-datasets` | `variant-gene`, `disease-variant-gene` | `v2g_by_overall`, `v2g_scored`, `d2v2g_by_overall`, `d2v2g_scored` |
-| `manhattan` | `l2g`, `scored-datasets`, `variant-disease-coloc` | `manhattan` |
+| Step name               | Dependencies | Output                                                             |
+|-------------------------| --- |--------------------------------------------------------------------|
+| `variant-gene`          |  | `v2g`                                                              |
+| `variant-index`         |  | `variant-index`                                                    |
+| `dictionaries`          | `variant-index` | `lut`                                                              |
+| `search`                  | `variant-index` | `search`                                                           |
+| `variant-disease`       | `variant-index` | `v2d`                                                              |
+| `variant-disease-coloc` | `variant-index` | `v2d_coloc`                                                        |
+| `distance-nearest`      | `variant-index` | `distance/canonical_tss`                                           |
+| `disease-variant-gene`  |  `variant-disease` | `d2v2g`                                                            |
+| `scored-datasets`       | `variant-gene`, `disease-variant-gene` | `v2g_by_overall`, `v2g_scored`, `d2v2g_by_overall`, `d2v2g_scored` |
+| `manhattan`             | `l2g`, `scored-datasets`, `variant-disease-coloc` | `manhattan`                                                        |
 
 For a graphical representation of the dependencies see `./documentation/step_dependencies.puml`
 
@@ -100,6 +101,12 @@ TBD
 ## Disease to variant to gene table
 
 This table is a inner join between _v2g_ and _v2d_
+
+## Search
+
+This step produces simplified outputs of `variant`, `gene` and `study` in JSON-LD format suitable for ingestion into 
+Elasticsearch. Only fields which are used for searching by the [API](https://github.com/opentargets/genetics-api) are 
+included.
 
 # Copyright
 Copyright 2014-2018 Biogen, Celgene Corporation, EMBL - European Bioinformatics Institute, GlaxoSmithKline, Takeda Pharmaceutical Company and Wellcome Sanger Institute

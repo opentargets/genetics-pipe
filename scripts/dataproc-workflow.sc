@@ -44,9 +44,9 @@ val variantGeneIdx = "variant-gene"
 val scoredDatasetIdx = "scored-datasets"
 val manhattanIdx = "manhattan"
 val diseaseVariantGeneIdx = "disease-variant-gene"
-val distanceIdx = "distance-nearest"
 val dictionariesIdx = "dictionaries"
 val colocIdx = "variant-disease-coloc"
+val searchIdx = "search"
 
 val variantIndex: OrderedJob = OrderedJob
   .newBuilder
@@ -58,6 +58,13 @@ val dictionaries: OrderedJob = OrderedJob
   .newBuilder
   .setStepId(dictionariesIdx)
   .setSparkJob(sparkJob(dictionariesIdx))
+  .addPrerequisiteStepIds(variantIdx)
+  .build
+
+val search: OrderedJob = OrderedJob
+  .newBuilder
+  .setStepId(searchIdx)
+  .setSparkJob(sparkJob(searchIdx))
   .addPrerequisiteStepIds(variantIdx)
   .build
 
@@ -159,6 +166,7 @@ val fullWorkflow = workflowTemplate
   .addJobs(diseaseVariantGene)
   .addJobs(scoredDatasets)
   .addJobs(manhattan)
+  .addJobs(search)
   .setPlacement(workflowCluster)
   .build
 

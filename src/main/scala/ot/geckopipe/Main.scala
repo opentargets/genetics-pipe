@@ -181,9 +181,58 @@ class Commands(val c: Configuration)(implicit val ss: SparkSession) extends Lazy
       .save(c.output.stripSuffix("/").concat("/lut/genes-index/"))
   }
 
+  def search(): Unit = {
+    val searchFormat = "json"
+    val searchPath = c.output.stripSuffix("/").concat("/search")
+
+    logger.info("Generate search table: Variant")
+    VariantIndex
+      .builder(c)
+      .load
+      .flatten
+      .table
+      .select(
+        concat_ws(
+          "_",
+          col("chr_id"),
+          col("position"),
+          col("ref_allele"),
+          col("alt_allele")
+        ) as "variant_id",
+        col("rs_id")
+      )
+      .write
+      .format(searchFormat)
+      .save(searchPath.concat("/variant"))
+
+    logger.info("Generate search table: Studies")
+    V2DIndex
+      .buildStudiesIndex(c.variantDisease.studies, c.variantDisease.efos)
+      .select(
+        "study_id",
+        "pmid",
+        "num_assoc_loci",
+        "pub_author",
+        "pub_journal",
+        "pub_title",
+        "trait_reported"
+      )
+      .write
+      .format(searchFormat)
+      .save(searchPath.concat("/study"))
+
+    // gene_id, gene_name
+    logger.info("Generate search table: Genes")
+    GeneIndex(c.ensembl.lut).table
+      .select("gene_id", "gene_name")
+      .write
+      .format(searchFormat)
+      .save(searchPath.concat("/gene"))
+  }
   def buildAll(): Unit = {
     variantIndex()
     dictionaries()
+    search()
     variantDiseaseColoc()
     variantToDisease()
     variantToGene()
@@ -255,6 +304,7 @@ object Main extends LazyLogging {
       case "disease-variant-gene"  => cmds.diseaseToVariantToGene()
       case "dictionaries"          => cmds.dictionaries()
       case "manhattan"             => cmds.manhattan()
+      case "search"                => cmds.search()
       case _ =>
         logger.warn(s"Unrecognised step $step. Exiting...")
         sys.exit(0)
