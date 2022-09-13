@@ -104,9 +104,9 @@ object functions extends LazyLogging {
       val tmpDF = df.withColumn(tmpCol.toString, split(variantID, "_"))
 
       val modDF = intoColNames.zipWithIndex
-        .foldLeft(tmpDF)((df, pair) => {
+        .foldLeft(tmpDF) { (df, pair) =>
           df.withColumn(prefix + pair._1, tmpCol.getItem(pair._2).cast(withColTypes(pair._2)))
-        })
+        }
         .drop(tmpCol)
 
       Success(modDF)
@@ -122,9 +122,9 @@ object functions extends LazyLogging {
   def concatDatasets(datasets: Seq[DataFrame], columns: Seq[String]): DataFrame = {
     logger.info("build variant to gene dataset union the list of datasets")
     val dts =
-      datasets.tail.foldLeft(datasets.head.select(columns.head, columns.tail: _*))((aggDt, dt) => {
+      datasets.tail.foldLeft(datasets.head.select(columns.head, columns.tail: _*)) { (aggDt, dt) =>
         aggDt.union(dt.select(columns.head, columns.tail: _*))
-      })
+      }
 
     dts
   }
@@ -139,7 +139,7 @@ object functions extends LazyLogging {
     * @return
     *   the triplet of (type_name, source_nmae, tissue_name)
     */
-  def extractValidTokensFromPath(path: String, usingToken: String): Array[String] = {
+  def extractValidTokensFromPath(path: String, usingToken: String): Array[String] =
     path
       .split(usingToken)
       .last
@@ -147,7 +147,6 @@ object functions extends LazyLogging {
       .withFilter(_.nonEmpty)
       .map(_.toLowerCase)
       .take(2)
-  }
 
   val decileList: Seq[Double] = (10 to 100 by 10).map(_ / 100d)
 

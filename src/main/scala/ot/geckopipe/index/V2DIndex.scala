@@ -160,7 +160,7 @@ object V2DIndex extends LazyLogging {
   }
 
   def buildTopLociIndex(path: String)(implicit ss: SparkSession): DataFrame = {
-    val toDouble = udf((mantissa: Double, exponent: Double) => {
+    val toDouble = udf { (mantissa: Double, exponent: Double) =>
       val result = mantissa * Math.pow(10, exponent)
       result match {
         case Double.PositiveInfinity => Double.MaxValue
@@ -169,7 +169,7 @@ object V2DIndex extends LazyLogging {
         case -0.0                    => -Double.MinPositiveValue
         case _                       => result
       }
-    })
+    }
 
     ss.read
       .parquet(path)

@@ -27,9 +27,8 @@ object VEP extends LazyLogging {
     *   a dataframe with all normalised columns
     */
   def loadConsequenceTable(from: String)(implicit ss: SparkSession): DataFrame = {
-    val cleanAccessions = udf((accession: String) => {
-      accession.split("/").lastOption.getOrElse(accession)
-    })
+    val cleanAccessions =
+      udf((accession: String) => accession.split("/").lastOption.getOrElse(accession))
 
     val csqSchema = StructType(
       StructField("accession", StringType) ::
@@ -70,9 +69,8 @@ object VEP extends LazyLogging {
     // broadcast the small Map to be used in each worker as it is loaded into memory
     val csqScoresBc = ss.sparkContext.broadcast(csqsMap)
 
-    val udfCsqScores = udf((csqs: mutable.WrappedArray[String]) => {
-      csqs.map(csqScoresBc.value.getOrElse(_, 0.0))
-    })
+    val udfCsqScores =
+      udf((csqs: mutable.WrappedArray[String]) => csqs.map(csqScoresBc.value.getOrElse(_, 0.0)))
 
     // return the max pair with label and score from the two lists of labels with scores
     val getMaxCsqLabel = udf((labels: Seq[String], scores: Seq[Double]) =>

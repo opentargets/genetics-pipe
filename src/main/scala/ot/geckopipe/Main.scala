@@ -113,9 +113,8 @@ class Commands(val c: Configuration)(implicit val ss: SparkSession) extends Lazy
 
   }
 
-  def manhattan(): Unit = {
+  def manhattan(): Unit =
     Manhattan(c).write.format(c.format).save(c.manhattan.path)
-  }
 
   def variantToDisease(): Unit = {
     logger.info("exec variant-disease command")
@@ -282,15 +281,13 @@ object Main extends LazyLogging {
     }
   }
 
-  def main(args: Array[String]): Unit = {
+  def main(args: Array[String]): Unit =
     getSessionContext match {
       case Some(ctx) => args.foreach(runEtlStep(_, ctx))
       case None =>
         logger.info("Unable to generate session context.")
         sys.exit(0)
     }
-
-  }
 
   def runEtlStep(step: String, context: Session): Unit = {
     val cmds: Commands = new Commands(context.configuration)(context.sparkSession)
