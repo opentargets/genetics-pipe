@@ -70,22 +70,20 @@ object Manhattan {
       .selectExpr(outExpr: _*)
   }
 
-  def makeL2G(cols: List[String])(df: DataFrame): DataFrame = {
+  def makeL2G(cols: List[String])(df: DataFrame): DataFrame =
     df.withColumnRenamed("study_id", "study")
       .filter(col("y_proba_full_model") >= 0.5)
       .transform(computeTopNGenes(cols, "gene_id", "y_proba_full_model", "top10_genes_l2g", 10))
-  }
 
-  def makeD2V2G(cols: List[String])(df: DataFrame): DataFrame = {
+  def makeD2V2G(cols: List[String])(df: DataFrame): DataFrame =
     df.withColumnRenamed("study_id", "study")
       .withColumnRenamed("lead_chrom", "chrom")
       .withColumnRenamed("lead_pos", "pos")
       .withColumnRenamed("lead_ref", "ref")
       .withColumnRenamed("lead_alt", "alt")
       .transform(computeTopNGenes(cols, "gene_id", "overall_score", "top10_genes_raw", 10))
-  }
 
-  def makeD2VColoc(cols: List[String])(df: DataFrame): DataFrame = {
+  def makeD2VColoc(cols: List[String])(df: DataFrame): DataFrame =
     df.withColumnRenamed("left_study", "study")
       .withColumnRenamed("left_chrom", "chrom")
       .withColumnRenamed("left_pos", "pos")
@@ -97,7 +95,6 @@ object Manhattan {
           !(col("right_type") === "gwas")
       )
       .transform(computeTopNGenes(cols, "right_gene_id", "coloc_h4", "top10_genes_coloc", 10))
-  }
 
   def makeD2V(cols: List[String])(df: DataFrame): DataFrame = {
     val tagVariantCols = List("tag_chrom", "tag_pos", "tag_ref", "tag_alt").map(col)

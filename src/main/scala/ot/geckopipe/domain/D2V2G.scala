@@ -1,6 +1,6 @@
 package ot.geckopipe.domain
 
-case class D2V2G( //V2D fields
+case class D2V2G( // V2D fields
     study_id: String,
     pmid: Option[String] = None,
     pub_date: Option[String] = None,

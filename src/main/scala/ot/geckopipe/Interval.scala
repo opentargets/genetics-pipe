@@ -28,12 +28,11 @@ object Interval extends LazyLogging {
       StructField("feature", StringType) :: Nil
   )
 
-  def load(from: String)(implicit ss: SparkSession): DataFrame = {
+  def load(from: String)(implicit ss: SparkSession): DataFrame =
     ss.read
       .parquet(from)
       .withColumn("filename", input_file_name)
       .withColumnRenamed("bio_feature", "feature")
-  }
 
   def apply(vIdx: VariantIndex, conf: Configuration)(implicit ss: SparkSession): Component = {
     val extractValidTokensFromPathUDF =
