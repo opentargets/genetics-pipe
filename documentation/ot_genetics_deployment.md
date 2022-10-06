@@ -150,6 +150,19 @@ utilities to run a release.
   that the workflow assumes all prior steps have been completed and the inputs are available.
 - [ ] Check all the expected output directories are present using the ammonite script `amm scripts/check_outputs.sc`.
 
+#### Recipe: Rerun ETL only pipeline
+
+__Use case:__ An issue was identified with the data and the ETL needs to be rerun, but we don't want to recreate the 
+inputs / move static files around. Often we're just updating a single input file, but the change will propagate 
+between steps so we need to rerun the whole ETL.
+
+- [ ] Delete ETL outputs (non-static files) using `amm scripts/delete_etl_outputs`
+- [ ] Update ETL configuration with new value
+- [ ] Push configuration to correct bucket
+- [ ] Update workflow with new configuration file (if necessary)
+- [ ] Execute workflow
+- [ ] [Recreate infrastructure](#Recipe-to-create-infrastructure)
+
 ### Recipe to create infrastructure
 
 - [ ] Using the [genetics backend project](https://github.com/opentargets/genetics-backend.git) start two VMs: one each 
